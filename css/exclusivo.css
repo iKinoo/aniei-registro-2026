@@ -1,0 +1,181 @@
+body { margin:0px; }
+body, p {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	color: #000099;
+	font-size: 11px;
+}
+
+p.barra {
+	background-color: #000099;
+	padding: 5px;
+	font-weight: bold;
+	color: #FFFFFF;
+	text-align: center;
+}
+
+.bordear_tabla { border: solid 1px #000000; }
+.bordear_tabla th { border-bottom: solid 1px #000000; background-color: #c5dbff;}
+.bordear_verde{ border: 1px solid #235637; }
+.bordear_centro{ border-right: solid 1px #006633; }
+
+a.menu {
+	font-weight: bold;
+	color: #FFFFFF;
+	text-decoration: none;
+}
+a.menu:hover {
+	color: #F0F0F0;
+	text-decoration: underline;
+}
+
+#cerrar_sesion {
+	background-color:#CC3300;
+	color:#FFFFFF;
+	border: 1px solid #EEEEEE;
+	text-align: center;
+	clear: both;
+	float: right;
+	font-family: Verdana;
+	font-size: 8pt;
+	font-weight: bolder;
+	width: 100px;
+}
+
+#cerrar_sesion a { color:#FFFFFF; text-decoration: none; }
+
+#index {
+	background-color:#CC3300;
+	color:#FFFFFF;
+	border: 1px solid #EEEEEE;
+	text-align: center;
+	clear: both;
+	float: left;
+	font-family: Verdana;
+	font-size: 8pt;
+	font-weight: bolder;
+	width: 100px;
+}
+
+#index a { color:#FFFFFF; text-decoration: none; }
+
+.alerta {
+	background-color:#EDF4FC;
+	color:#0033FF;
+	border: 3px solid #EEEEEE;
+	text-align: center;
+	clear: both;
+	float: none;
+	font-family: Verdana;
+	font-size: 12pt;
+	font-weight: bolder;
+	width: 450px;
+	height: 45pt;
+	vertical-align: middle;
+}
+
+#cpanel td {
+	vertical-align: middle;
+}
+
+#cpanel td a { 
+	display: block;
+	vertical-align: middle;
+	text-decoration : none;
+	/*border: 1px solid #DDD;*/
+	font-size:11px;
+	padding: 1px;
+	text-align: center;
+	width:150px;
+}
+
+#cpanel td a:link    {  color : #808080; }
+#cpanel td a:hover   { 
+	color : #333; 
+	background-color: #f1e8e6;
+	border: 1px solid #c24733;
+	padding: 0px;
+}
+
+#cpanel td a:active  {  color : #808080;  }
+#cpanel td a:visited {  color : #808080;  }
+
+table table tr td[valign=top] {
+	padding-top: 8px;
+}
+
+.paginador { margin-bottom: 10px; }
+.paginador a {
+	padding: 5px;
+	margin: 1px;
+}
+
+
+/*********** PAGINADOR ****************/
+.paginador a:hover{
+	border: 1px solid #003399;
+	background-color: #E1DFFF;
+	margin: 0px;
+	text-decoration: none;
+}
+
+.paginador span#pagina_actual {
+	border: 1px solid #DD6F00;
+	background-color:#FFFFCC;
+	padding: 5px;
+	margin-right: 3px;
+}
+
+.paginador a.pagiPrimera { background:url(../img/btn_primero.png) 3px 5px no-repeat; }
+.paginador a.pagiPrimera:hover { background:url(../img/btn_primero.png) 4px 6px no-repeat; }
+
+.paginador a.pagiAnterior { background:url(../img/btn_anterior.png) 5px 5px no-repeat;  }
+.paginador a.pagiAnterior:hover { background:url(../img/btn_anterior.png) 6px 6px no-repeat;  }
+
+.paginador a.pagiSiguiente { background:url(../img/btn_siguiente.png) 5px 5px no-repeat;  }
+.paginador a.pagiSiguiente:hover { background:url(../img/btn_siguiente.png) 6px 6px no-repeat;  }
+
+.paginador a.pagiUltima { background:url(../img/btn_ultimo.png) 3px 5px no-repeat;  }
+.paginador a.pagiUltima:hover { background:url(../img/btn_ultimo.png) 4px 6px no-repeat;  }
+
+.paginador img { cursor: pointer; }
+
+/***************************************************/
+/*** autoComplete *****/
+	div#example div {
+		/* height:520px; /* antes 480px */
+		/*overflow:auto;*/
+	}
+	
+	.suggestionBox {
+		position:absolute;
+		float: left;
+		margin: 25px 0px 0px 0px;
+		width:300px;
+		overflow: auto;
+		background-color: #C7F1F3;
+		border: 1px solid #009999;
+		color: #6161F3;
+		font: 12px Verdana, Arial, Helvetica, sans-serif;
+	}
+	
+	.suggestionList li {
+		margin: 3px 0px 3px -10px;
+		padding: 0px 0px 3px 0px;
+		cursor: pointer;
+		list-style: none;
+		text-align: left;
+	}
+	
+	.suggestionList li:hover, .ac_over, li.hover {
+		background-color: #FFFF80;
+		font-weight:bold;
+		color: #000000;
+	}
+	
+	p#informacion {
+		font-size: 12px;
+		font-family:Verdana, Arial, Helvetica, sans-serif;
+	}
+	
+	p#informacion span { font-weight: bold; }
+/*************************************/
