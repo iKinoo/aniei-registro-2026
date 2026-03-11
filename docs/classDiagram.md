@@ -63,14 +63,15 @@ classDiagram
         +Timestamp fecha_hora_marcaje
     }
 
-    class depositos {
-        +Integer id_deposito
+    class comprobantes_pago {
+        +Integer id_comprobante
         +Integer id_usuario
-        +String banco_sucursal
-        +String ciudad
-        +String referencia
+        +String archivo_url
+        +String archivo_nombre
+        +String archivo_mime
+        +Integer archivo_tamanio
         +Numeric monto
-        +Timestamp fecha_deposito
+        +Boolean es_grupal
         +Timestamp fecha_registro
     }
 
@@ -95,7 +96,7 @@ classDiagram
     usuarios "*" --> "1" estados : Radica en
 
     %% Relaciones Operativas
-    depositos "*" --> "1" usuarios : Pagado por
+    comprobantes_pago "*" --> "1" usuarios : Pagado por
     facturaciones "1" --> "1" usuarios : Solicitada por
     facturaciones "*" --> "1" estados : Estado Fiscal
 

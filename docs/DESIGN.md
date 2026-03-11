@@ -21,7 +21,8 @@
 11. [Diagramas de Flujo](#11-diagramas-de-flujo)
 12. [Módulo de Registro Grupal](#12-módulo-de-registro-grupal)
 13. [Estrategia de Infraestructura Intercambiable](#13-estrategia-de-infraestructura-intercambiable)
-14. [Decisiones de Diseño (ADRs)](#14-decisiones-de-diseño-adrs)
+14. [Data Mapper Pattern (ORM ↔ Dominio)](#14-data-mapper-pattern-orm--dominio)
+15. [Decisiones de Diseño (ADRs)](#15-decisiones-de-diseño-adrs)
 
 ---
 
@@ -44,10 +45,10 @@ El sistema se construye sobre Next.js aprovechando **Server Actions** como punto
 | ID    | Requisito                                                                 | Prioridad |
 |-------|---------------------------------------------------------------------------|-----------|
 | RF-01 | Registro individual de asistente (datos personales + institución)         | Alta      |
-| RF-02 | Registro de depósito/comprobante de pago                                  | Alta      |
+| RF-02 | Carga de comprobante de pago (imagen/PDF) durante el registro              | Alta      |
 | RF-03 | Envío de correo de confirmación de inscripción                            | Alta      |
 | RF-04 | Generación y envío de constancia PDF de inscripción                       | Alta      |
-| RF-05 | Registro grupal: una persona registra N asistentes de su misma institución| Media     |
+| RF-05 | Registro grupal: una persona registra N asistentes de su misma institución (un solo comprobante, feedback de costo total) | Media     |
 | RF-06 | Solicitud de facturación                                                  | Media     |
 | RF-07 | Verificación de inscripción (flujo admin o automático)                    | Media     |
 
@@ -100,7 +101,9 @@ La clave es separar **qué hace el sistema** (dominio + casos de uso) de **cómo
 │                         ▲ implementa                             │
 │  ┌──────────────────────┴────────────────────────────────────┐  │
 │  │              INFRASTRUCTURE LAYER                          │  │
-│  │    repositories/ → Implementaciones concretas (PG, etc.)  │  │
+│  │    database/     → Prisma schema, client, migraciones     │  │
+│  │    mappers/      → Data Mappers (PrismaType ↔ Entidad)   │  │
+│  │    repositories/ → Implementaciones concretas (Prisma)    │  │
 │  │    services/     → Email, PDF, Storage (adapters)         │  │
 │  │    config/       → Dependency Injection container         │  │
 │  └───────────────────────────────────────────────────────────┘  │
@@ -150,7 +153,7 @@ src/
 ├── core/                         # ── DOMAIN LAYER (puro TypeScript) ──
 │   ├── entities/
 │   │   ├── Usuario.ts
-│   │   ├── Deposito.ts
+│   │   ├── ComprobantePago.ts    # Reemplaza Deposito legacy (archivo subido)
 │   │   ├── Facturacion.ts
 │   │   ├── Actividad.ts
 │   │   ├── AsistenciaActividad.ts
@@ -160,10 +163,11 @@ src/
 │   │   ├── Telefono.ts
 │   │   ├── FolioRecibo.ts
 │   │   ├── CodigoBarras.ts
-│   │   └── Monto.ts
+│   │   ├── Monto.ts
+│   │   └── ArchivoComprobante.ts # Validación de tipo/tamaño de archivo
 │   ├── errors/
 │   │   ├── RegistroError.ts
-│   │   ├── DepositoError.ts
+│   │   ├── ComprobanteError.ts
 │   │   └── GrupoRegistroError.ts
 │   └── enums/
 │       └── Genero.ts
@@ -171,29 +175,37 @@ src/
 ├── application/                  # ── APPLICATION LAYER ──
 │   ├── ports/                    # Interfaces (contratos)
 │   │   ├── IUsuarioRepository.ts
-│   │   ├── IDepositoRepository.ts
+│   │   ├── IComprobantePagoRepository.ts
 │   │   ├── IFacturacionRepository.ts
 │   │   ├── IEmailService.ts
 │   │   ├── IPdfService.ts
 │   │   └── IStorageService.ts
 │   ├── use-cases/
-│   │   ├── RegistrarUsuario.ts
-│   │   ├── RegistrarGrupo.ts           # Modular
-│   │   ├── RegistrarDeposito.ts
+│   │   ├── RegistrarUsuario.ts         # Incluye subida de comprobante
+│   │   ├── RegistrarGrupo.ts           # Modular (un solo comprobante)
 │   │   ├── EnviarConfirmacion.ts
 │   │   ├── GenerarConstancia.ts
 │   │   └── SolicitarFacturacion.ts
 │   └── dtos/
-│       ├── RegistroUsuarioDTO.ts
-│       ├── RegistroGrupoDTO.ts
-│       ├── DepositoDTO.ts
+│       ├── RegistroUsuarioDTO.ts       # Incluye archivo comprobante
+│       ├── RegistroGrupoDTO.ts         # Un comprobante para todo el grupo
 │       └── FacturacionDTO.ts
 │
 ├── infrastructure/               # ── INFRASTRUCTURE LAYER ──
+│   ├── database/
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma             # Esquema Prisma (fuente de verdad BD)
+│   │   │   └── migrations/               # Migraciones auto-generadas
+│   │   └── client.ts                     # Singleton PrismaClient
+│   ├── mappers/                          # ── DATA MAPPERS (Prisma ↔ Domain) ──
+│   │   ├── UsuarioMapper.ts              # PrismaUsuario ↔ Usuario (entidad)
+│   │   ├── ComprobantePagoMapper.ts      # PrismaComprobante ↔ ComprobantePago
+│   │   └── FacturacionMapper.ts          # PrismaFacturacion ↔ Facturacion
 │   ├── repositories/
-│   │   ├── PostgresUsuarioRepository.ts
-│   │   ├── PostgresDepositoRepository.ts
-│   │   └── PostgresFacturacionRepository.ts
+│   │   ├── PrismaUsuarioRepository.ts    # Usa PrismaClient + UsuarioMapper
+│   │   ├── PrismaComprobantePagoRepository.ts
+│   │   ├── PrismaFacturacionRepository.ts
+│   │   └── PrismaCatalogoRepository.ts
 │   ├── services/
 │   │   ├── email/
 │   │   │   ├── ResendEmailService.ts       # Adaptador Resend
@@ -206,9 +218,6 @@ src/
 │   │       ├── SupabaseStorageService.ts   # Adaptador Supabase Storage
 │   │       ├── S3StorageService.ts         # Adaptador AWS S3
 │   │       └── LocalStorageService.ts      # Adaptador filesystem local
-│   ├── database/
-│   │   ├── connection.ts                   # Pool de conexiones PG
-│   │   └── migrations/
 │   └── config/
 │       └── container.ts                    # Dependency Injection / Factory
 │
@@ -240,13 +249,15 @@ graph TB
     end
 
     subgraph Domain["🧠 Domain Layer (Pure TypeScript)"]
-        Entities["Entities<br/>Usuario · Deposito<br/>Facturacion · GrupoRegistro"]
-        VO["Value Objects<br/>Email · FolioRecibo<br/>Monto · CodigoBarras"]
+        Entities["Entities<br/>Usuario · ComprobantePago<br/>Facturacion · GrupoRegistro"]
+        VO["Value Objects<br/>Email · FolioRecibo<br/>Monto · CodigoBarras<br/>ArchivoComprobante"]
         DErr["Domain Errors"]
     end
 
     subgraph Infrastructure["🔌 Infrastructure Layer (Adapters)"]
-        Repos["Repositories<br/>PostgresUsuarioRepo<br/>PostgresDepositoRepo"]
+        Repos["Repositories<br/>PrismaUsuarioRepo<br/>PrismaComprobanteRepo"]
+        Mappers["Data Mappers<br/>UsuarioMapper<br/>DepositoMapper<br/>FacturacionMapper"]
+        ORM["Prisma ORM<br/>(PrismaClient)"]
         EmailSvc["Email Adapters<br/>Resend · Nodemailer · SendGrid"]
         PdfSvc["PDF Adapters<br/>ReactPdf · Puppeteer"]
         StoreSvc["Storage Adapters<br/>Supabase · S3 · Local"]
@@ -264,7 +275,9 @@ graph TB
     Ports -.->|"implementa"| PdfSvc
     Ports -.->|"implementa"| StoreSvc
 
-    Repos -->|"query/insert"| DB
+    Repos -->|"usa"| Mappers
+    Repos -->|"query/insert"| ORM
+    ORM -->|"SQL"| DB
 
     style Domain fill:#1a1a2e,stroke:#e94560,color:#fff
     style Application fill:#16213e,stroke:#0f3460,color:#fff
@@ -302,16 +315,15 @@ classDiagram
         +asignarFolio(folio: FolioRecibo): void
     }
 
-    class Deposito {
-        -idDeposito: number | null
+    class ComprobantePago {
+        -idComprobante: number | null
         -idUsuario: number
-        -bancoSucursal: string
-        -ciudad: string
-        -referencia: string
-        -monto: Monto
-        -fechaDeposito: Date
+        -archivoUrl: string
+        -archivo: ArchivoComprobante
+        -monto: Monto | null
+        -esGrupal: boolean
         -fechaRegistro: Date
-        +static create(props): Deposito
+        +static create(props): ComprobantePago
     }
 
     class Facturacion {
@@ -333,10 +345,13 @@ classDiagram
         -responsable: Usuario
         -miembros: Usuario[]
         -idInstitucionCompartida: number
-        +static create(responsable, miembros): GrupoRegistro
+        -responsableYaRegistrado: boolean
+        +static create(responsable, miembros, yaRegistrado?): GrupoRegistro
         +agregarMiembro(m: Usuario): void
         +obtenerTodos(): Usuario[]
+        +obtenerNuevosRegistros(): Usuario[]
         +totalIntegrantes(): number
+        +esResponsableExistente(): boolean
     }
 
     class Email {
@@ -366,6 +381,16 @@ classDiagram
         +esMayorQue(otro: Monto): boolean
     }
 
+    class ArchivoComprobante {
+        <<value-object>>
+        -nombre: string
+        -mime: string
+        -tamanio: number
+        +static create(nombre: string, mime: string, tamanio: number): ArchivoComprobante
+        +esImagenValida(): boolean
+        +esPdfValido(): boolean
+    }
+
     class Telefono {
         <<value-object>>
         -numero: string
@@ -386,7 +411,8 @@ classDiagram
     Usuario *-- Telefono
     Usuario *-- FolioRecibo
     Usuario *-- CodigoBarras
-    Deposito *-- Monto
+    ComprobantePago *-- Monto
+    ComprobantePago *-- ArchivoComprobante
     GrupoRegistro "1" *-- "1" Usuario : responsable
     GrupoRegistro "1" *-- "*" Usuario : miembros
 ```
@@ -421,11 +447,10 @@ classDiagram
         +verificar(id: number): Promise~void~
     }
 
-    class IDepositoRepository {
+    class IComprobantePagoRepository {
         <<port>>
-        +crear(deposito: Deposito): Promise~Deposito~
-        +buscarPorUsuario(idUsuario: number): Promise~Deposito[]~
-        +buscarPorReferencia(ref: string): Promise~Deposito | null~
+        +crear(comprobante: ComprobantePago): Promise~ComprobantePago~
+        +buscarPorUsuario(idUsuario: number): Promise~ComprobantePago | null~
     }
 
     class IFacturacionRepository {
@@ -460,8 +485,28 @@ classDiagram
         +eliminar(ruta: string): Promise~void~
     }
 
-    class PostgresUsuarioRepo {
+    class UsuarioMapper {
+        <<data-mapper>>
+        +toDomain(prismaUsuario): Usuario
+        +toPersistence(usuario): PrismaUsuarioCreateInput
+    }
+
+    class ComprobantePagoMapper {
+        <<data-mapper>>
+        +toDomain(prismaComprobante): ComprobantePago
+        +toPersistence(comprobante): PrismaComprobanteCreateInput
+    }
+
+    class FacturacionMapper {
+        <<data-mapper>>
+        +toDomain(prismaFacturacion): Facturacion
+        +toPersistence(facturacion): PrismaFacturacionCreateInput
+    }
+
+    class PrismaUsuarioRepo {
         <<adapter>>
+        -prisma: PrismaClient
+        -mapper: UsuarioMapper
     }
     class ResendEmailService {
         <<adapter>>
@@ -473,7 +518,8 @@ classDiagram
         <<adapter>>
     }
 
-    IUsuarioRepository <|.. PostgresUsuarioRepo
+    IUsuarioRepository <|.. PrismaUsuarioRepo
+    PrismaUsuarioRepo --> UsuarioMapper : usa
     IEmailService <|.. ResendEmailService
     IPdfService <|.. ReactPdfService
     IStorageService <|.. SupabaseStorageService
@@ -485,7 +531,8 @@ El container es una **simple factory** que decide qué adaptador concreto instan
 
 ```
 container.ts
-├── getUsuarioRepository()   → PostgresUsuarioRepository (o SupabaseUsuarioRepository)
+├── getUsuarioRepository()   → PrismaUsuarioRepository(prismaClient)
+├── getComprobantePagoRepository() → PrismaComprobantePagoRepository(prismaClient)
 ├── getEmailService()        → ResendEmailService | NodemailerEmailService | ...
 ├── getPdfService()          → ReactPdfService | PuppeteerPdfService
 └── getStorageService()      → SupabaseStorageService | S3StorageService | LocalStorageService
@@ -497,8 +544,9 @@ container.ts
 EMAIL_PROVIDER=resend | sendgrid | nodemailer
 STORAGE_PROVIDER=supabase | s3 | local
 PDF_PROVIDER=react-pdf | puppeteer
-DB_PROVIDER=postgres-direct | supabase-client
 ```
+
+> **Nota:** Los repositorios siempre usan Prisma internamente. Si se desea migrar de ORM, se crean nuevas implementaciones de los repositorios con el nuevo ORM y sus mappers correspondientes.
 
 ---
 
@@ -510,24 +558,20 @@ DB_PROVIDER=postgres-direct | supabase-client
 classDiagram
     class RegistrarUsuario {
         -usuarioRepo: IUsuarioRepository
+        -comprobanteRepo: IComprobantePagoRepository
+        -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
-        -storageService: IStorageService
         +execute(dto: RegistroUsuarioDTO): Promise~ResultadoRegistro~
     }
 
     class RegistrarGrupo {
         -usuarioRepo: IUsuarioRepository
+        -comprobanteRepo: IComprobantePagoRepository
+        -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
-        -storageService: IStorageService
         +execute(dto: RegistroGrupoDTO): Promise~ResultadoRegistroGrupo~
-    }
-
-    class RegistrarDeposito {
-        -depositoRepo: IDepositoRepository
-        -usuarioRepo: IUsuarioRepository
-        +execute(dto: DepositoDTO): Promise~Deposito~
     }
 
     class GenerarConstancia {
@@ -550,16 +594,17 @@ classDiagram
     }
 
     RegistrarUsuario ..> IUsuarioRepository
+    RegistrarUsuario ..> IComprobantePagoRepository
+    RegistrarUsuario ..> IStorageService
     RegistrarUsuario ..> IEmailService
     RegistrarUsuario ..> IPdfService
-    RegistrarUsuario ..> IStorageService
 
     RegistrarGrupo ..> IUsuarioRepository
+    RegistrarGrupo ..> IComprobantePagoRepository
+    RegistrarGrupo ..> IStorageService
     RegistrarGrupo ..> IEmailService
     RegistrarGrupo ..> IPdfService
-    RegistrarGrupo ..> IStorageService
 
-    RegistrarDeposito ..> IDepositoRepository
     GenerarConstancia ..> IPdfService
     GenerarConstancia ..> IStorageService
     EnviarConfirmacion ..> IEmailService
@@ -574,9 +619,9 @@ classDiagram
 |-----------------|------------------------------------------------------------------------------------|
 | **Actor**       | Asistente                                                                          |
 | **Precondición**| El correo no está registrado previamente                                           |
-| **Flujo**       | 1. Asistente llena formulario → 2. Validación → 3. Crear entidad Usuario → 4. Persistir → 5. Generar constancia PDF → 6. Almacenar PDF → 7. Enviar correo de confirmación con constancia adjunta |
-| **Postcondición**| Usuario creado, correo enviado, constancia PDF almacenada                         |
-| **Error**       | Correo duplicado → `RegistroError.CORREO_DUPLICADO`                               |
+| **Flujo**       | 1. Asistente llena formulario + adjunta comprobante de pago (imagen/PDF) → 2. Validación (Zod: datos + archivo; Dominio: reglas de negocio) → 3. Subir comprobante a storage → 4. Crear entidad Usuario → 5. Crear entidad ComprobantePago con URL → 6. Persistir usuario y comprobante → 7. Generar constancia PDF → 8. Almacenar constancia → 9. Enviar correo de confirmación con constancia adjunta |
+| **Postcondición**| Usuario creado, comprobante almacenado, correo enviado, constancia PDF generada    |
+| **Error**       | Correo duplicado → `RegistroError.CORREO_DUPLICADO` · Archivo inválido → `ComprobanteError.TIPO_NO_PERMITIDO` |
 
 #### UC-02: Registrar Grupo
 
@@ -584,8 +629,10 @@ classDiagram
 |-----------------|------------------------------------------------------------------------------------|
 | **Actor**       | Responsable del grupo                                                              |
 | **Precondición**| Módulo de grupo **activado** en configuración del sistema                          |
-| **Flujo**       | 1. Responsable llena su formulario + datos de N miembros → 2. Campos compartidos (institución, estado) se heredan → 3. Se crea `GrupoRegistro` → 4. Se persisten todos los usuarios → 5. Se genera constancia para cada uno → 6. Se envía correo de confirmación al responsable y opcionalmente a cada miembro |
-| **Postcondición**| N+1 usuarios creados, correos enviados, constancias generadas                     |
+| **Flujo**       | 1. Responsable llena su formulario + datos de N miembros (cada miembro con su propio `tipo_usuario`) → 2. UI muestra feedback del **costo total** según número de integrantes → 3. Responsable adjunta **un solo comprobante** de pago que cubre a todo el grupo → 4. Campos compartidos (institución, estado) se heredan; `tipo_usuario` **NO se hereda** → 5. Se verifica si el responsable ya está registrado individualmente → 6. Se sube comprobante a storage → 7. Se crea `GrupoRegistro` → 8. Si el responsable ya existe, solo se persisten los miembros nuevos → 9. Se genera constancia para cada miembro nuevo → 10. Se envía correo de confirmación al responsable y a cada miembro |
+| **Postcondición**| Miembros nuevos creados, un comprobante grupal almacenado, correos enviados, constancias generadas |
+| **Variante**    | **Responsable ya registrado:** No se crea usuario duplicado; solo se registran los N miembros. **Responsable nuevo:** Se registra junto con los miembros (N+1 usuarios). |
+| **Nota**        | No se requiere un comprobante individual por cada miembro del grupo. El `tipo_usuario` de cada miembro es independiente del responsable. |
 
 #### UC-03: Generar Constancia
 
@@ -608,15 +655,17 @@ sequenceDiagram
     participant Val as Zod Schema<br/>(Validación)
     participant UC as RegistrarUsuario<br/>(Use Case)
     participant Dom as Usuario<br/>(Entity)
-    participant Repo as IUsuarioRepository<br/>(Port → Adapter)
-    participant PDF as IPdfService<br/>(Port → Adapter)
+    participant Comp as ComprobantePago<br/>(Entity)
+    participant Repo as IUsuarioRepository<br/>(Port → PrismaAdapter + Mapper)
+    participant CompRepo as IComprobantePagoRepository
     participant Store as IStorageService<br/>(Port → Adapter)
+    participant PDF as IPdfService<br/>(Port → Adapter)
     participant Mail as IEmailService<br/>(Port → Adapter)
     participant DB as PostgreSQL
 
-    A->>CC: Llena formulario y envía
-    CC->>SA: submit (FormData)
-    SA->>Val: validar(formData)
+    A->>CC: Llena formulario + adjunta<br/>comprobante de pago (img/PDF)
+    CC->>SA: submit (FormData con archivo)
+    SA->>Val: validar(formData + file)
     
     alt Validación falla
         Val-->>SA: errors[]
@@ -624,7 +673,7 @@ sequenceDiagram
         CC-->>A: Muestra errores
     end
 
-    Val-->>SA: RegistroUsuarioDTO ✓
+    Val-->>SA: RegistroUsuarioDTO ✓ (incluye File)
 
     SA->>UC: execute(dto)
     
@@ -633,6 +682,10 @@ sequenceDiagram
     DB-->>Repo: null (no existe)
     Repo-->>UC: null ✓
 
+    Note over UC,Store: Subir comprobante de pago a storage
+    UC->>Store: subir("comprobantes/{uuid}.ext", fileBuffer, mime)
+    Store-->>UC: urlComprobante
+
     UC->>Dom: Usuario.create(props)
     Dom-->>UC: usuario (entidad)
 
@@ -640,6 +693,14 @@ sequenceDiagram
     Repo->>DB: INSERT INTO usuarios ...
     DB-->>Repo: usuario con id
     Repo-->>UC: usuario persistido
+
+    UC->>Comp: ComprobantePago.create(idUsuario, urlComprobante, archivo, monto)
+    Comp-->>UC: comprobante (entidad)
+
+    UC->>CompRepo: crear(comprobante)
+    CompRepo->>DB: INSERT INTO comprobantes_pago ...
+    DB-->>CompRepo: comprobante persistido
+    CompRepo-->>UC: ✓
 
     UC->>PDF: generarConstanciaInscripcion(datos)
     PDF-->>UC: pdfBuffer
@@ -667,36 +728,58 @@ sequenceDiagram
     participant UC as RegistrarGrupo<br/>(Use Case)
     participant Dom as GrupoRegistro<br/>(Entity)
     participant Repo as IUsuarioRepository
-    participant PDF as IPdfService
+    participant CompRepo as IComprobantePagoRepository
     participant Store as IStorageService
+    participant PDF as IPdfService
     participant Mail as IEmailService
     participant DB as PostgreSQL
 
-    R->>CC: Llena datos propios +<br/>datos de N miembros
-    CC->>SA: submit (FormData)
-    SA->>Val: validar(formData)
+    R->>CC: Llena datos propios +<br/>datos de N miembros<br/>(cada uno con su tipo_usuario)
+    Note over CC: UI muestra feedback:<br/>"Costo total: $X × N = $Total"<br/>(tipo_usuario NO se hereda)
+    R->>CC: Adjunta UN SOLO comprobante<br/>de pago (cubre a todo el grupo)
+    CC->>SA: submit (FormData con archivo)
+    SA->>Val: validar(formData + file)
     Val-->>SA: RegistroGrupoDTO ✓
 
     SA->>UC: execute(dto)
-    
-    Note over UC: Verifica que ningún correo<br/>esté ya registrado
 
-    loop Para cada correo en [responsable + miembros]
+    Note over UC: Verificar si el responsable<br/>ya está registrado
+    UC->>Repo: buscarPorCorreo(responsable.correo)
+    Repo->>DB: SELECT ...
+    DB-->>Repo: usuario existente | null
+
+    alt Responsable ya registrado
+        Note over UC: Responsable existe →<br/>NO se crea duplicado.<br/>Solo se registran los miembros.
+    else Responsable nuevo
+        Note over UC: Responsable no existe →<br/>Se incluye en los registros nuevos.
+    end
+
+    Note over UC: Verificar que ningún correo<br/>de miembro esté ya registrado
+    loop Para cada correo de miembros
         UC->>Repo: buscarPorCorreo(correo)
         Repo->>DB: SELECT ...
         DB-->>Repo: null ✓
     end
 
-    UC->>Dom: GrupoRegistro.create(responsable, miembros)
-    Note over Dom: Campos institución, estado<br/>se heredan del responsable<br/>a los miembros
+    Note over UC,Store: Subir comprobante grupal a storage
+    UC->>Store: subir("comprobantes/{uuid}.ext", fileBuffer, mime)
+    Store-->>UC: urlComprobante
+
+    UC->>Dom: GrupoRegistro.create(responsable, miembros, yaRegistrado)
+    Note over Dom: Campos institución, estado<br/>se heredan del responsable.<br/>tipo_usuario NO se hereda:<br/>cada miembro trae el suyo.
 
     Dom-->>UC: grupoRegistro
 
-    UC->>Repo: crearMuchos(grupoRegistro.obtenerTodos())
-    Repo->>DB: INSERT INTO usuarios ... (batch)
+    UC->>Repo: crearMuchos(grupoRegistro.obtenerNuevosRegistros())
+    Repo->>DB: INSERT INTO usuarios ... (batch, solo nuevos)
     DB-->>Repo: usuarios[]
 
-    loop Para cada usuario registrado
+    Note over UC: Crear comprobante grupal<br/>asociado al responsable (es_grupal = true)
+    UC->>CompRepo: crear(comprobantePago)
+    CompRepo->>DB: INSERT INTO comprobantes_pago ...
+    DB-->>CompRepo: ✓
+
+    loop Para cada miembro nuevo registrado
         UC->>PDF: generarConstanciaInscripcion(datos)
         PDF-->>UC: pdfBuffer
         UC->>Store: subir("constancias/{folio}.pdf", buffer)
@@ -709,7 +792,7 @@ sequenceDiagram
         UC->>Mail: enviarConstancia(miembro.correo, pdfBuffer)
     end
 
-    UC-->>SA: { success: true, registros: N+1 }
+    UC-->>SA: { success: true, registros: N(+1), costoTotal }
     SA-->>CC: resultado
     CC-->>R: Confirmación grupal
 ```
@@ -761,34 +844,49 @@ flowchart TD
     C -->|Individual| D
     C -->|Grupal| E[Mostrar formulario grupal<br/>Responsable + N miembros]
     
-    D --> F[Llenar campos:<br/>nombre, apellido, correo,<br/>teléfono, género, carrera,<br/>dependencia, institución,<br/>estado, cargo, tipo usuario]
+    D --> F[Llenar campos:<br/>nombre, apellido, correo,<br/>teléfono, género, carrera,<br/>dependencia, institución,<br/>estado, cargo, tipo usuario<br/>+ adjuntar comprobante de pago]
     
-    E --> G[Llenar campos responsable<br/>+ campos reducidos por miembro:<br/>nombre, apellido, correo,<br/>género, carrera]
+    E --> G[Llenar campos responsable<br/>+ campos por miembro:<br/>nombre, apellido, correo,<br/>género, carrera, tipo_usuario]
+    G --> G2[UI muestra costo total:<br/>precio × N integrantes]
+    G2 --> G3[Responsable adjunta UN SOLO<br/>comprobante de pago grupal]
     
-    F --> H{¿Validación OK?}
-    G --> H
+    F --> H{¿Validación OK?<br/>datos + archivo}
+    G3 --> H
     
     H -->|No| I[Mostrar errores<br/>en formulario]
     I --> F
     I --> G
     
-    H -->|Sí| J{"¿Correo(s) ya<br/>registrado(s)?"}
+    H -->|Sí| J0{¿Es registro<br/>individual?}
     
+    J0 -->|Sí| J{"¿Correo ya<br/>registrado?"}
     J -->|Sí| K[Error: correo<br/>duplicado]
     K --> F
-    K --> G
+    J -->|No| L
     
-    J -->|No| L["Crear entidad(es)<br/>Usuario / GrupoRegistro"]
+    J0 -->|No, es grupal| J1{"¿Responsable ya<br/>registrado?"}
+    J1 -->|Sí| J2[Usar usuario existente<br/>como responsable.<br/>No crear duplicado.]
+    J1 -->|No| J3[Incluir responsable<br/>en registros nuevos]
     
-    L --> M[Persistir en BD]
+    J2 --> J4{"¿Algún correo de<br/>miembro ya registrado?"}
+    J3 --> J4
+    J4 -->|Sí| K2[Error: correo de<br/>miembro duplicado]
+    K2 --> G
+    J4 -->|No| L
     
-    M --> N[Generar constancia PDF]
+    L[Subir comprobante<br/>de pago a storage]
     
-    N --> O[Almacenar PDF en storage]
+    L --> M["Crear entidad(es)<br/>Usuario / GrupoRegistro<br/>+ ComprobantePago<br/>(tipo_usuario individual por miembro)"]
     
-    O --> P[Enviar correo de confirmación<br/>+ constancia adjunta]
+    M --> N[Persistir en BD<br/>solo registros nuevos]
     
-    P --> Q([Mostrar página de confirmación<br/>con folio y enlace a constancia])
+    N --> O[Generar constancia PDF<br/>para cada nuevo registro]
+    
+    O --> P[Almacenar PDF en storage]
+    
+    P --> Q[Enviar correo de confirmación<br/>+ constancia adjunta]
+    
+    Q --> R([Mostrar página de confirmación<br/>con folio y enlace a constancia])
 ```
 
 ### 11.2 Flujo de Decisión: Módulo Grupal
@@ -844,6 +942,18 @@ ENABLE_GROUP_REGISTRATION=true | false
 3. **Server Action separado**: `registrar-grupo.action.ts` existe junto a `registrar-usuario.action.ts`.
 4. **UI condicional**: el componente `GrupoForm` solo se renderiza si la feature flag está activa.
 5. **Sin cambios en BD**: los miembros del grupo son `usuarios` regulares; la relación grupal se maneja a nivel de aplicación.
+6. **Un solo comprobante grupal**: el responsable sube un único comprobante de pago que cubre a todo el grupo. La UI muestra el costo total como feedback.
+
+#### Usuario ya registrado como responsable de grupo
+
+Si un usuario **ya se registró individualmente**, no podrá volver a registrarse, pero **sí podrá registrar un grupo** (otros usuarios a su nombre). En este caso:
+
+- El sistema detecta que el responsable ya existe en BD (por su correo).
+- **No se crea un nuevo registro** para el responsable; se reutiliza el existente.
+- Solo se registran los **nuevos miembros** del grupo.
+- El comprobante grupal se asocia al usuario responsable existente con `es_grupal = true`.
+
+Si el responsable **no está registrado**, se registra junto con los miembros (flujo N+1 original).
 
 #### Herencia de Campos en Grupo
 
@@ -853,7 +963,8 @@ Cuando se registra un grupo, los siguientes campos del **responsable** se **here
 |----------------------|--------------------------------------------------|
 | `id_institucion`     | Todos provienen de la misma institución           |
 | `id_entidad_federativa` | Se asume misma ubicación institucional        |
-| `id_tipo_usuario`    | Mismo tipo (e.g., todos son "estudiantes")        |
+
+> **Nota:** `id_tipo_usuario` **NO se hereda**. Cada miembro del grupo especifica su propio tipo de usuario. Un profesor puede inscribir estudiantes, y estos deben registrarse con su tipo correspondiente (e.g., "Alumno"), no con el tipo del responsable.
 
 Campos **individuales** que cada miembro debe proporcionar:
 
@@ -864,6 +975,7 @@ Campos **individuales** que cada miembro debe proporcionar:
 | `correo`             | Único por persona, para enviar constancia         |
 | `genero`             | Dato personal individual                          |
 | `carrera`            | Puede variar aunque sean de la misma institución  |
+| `id_tipo_usuario`    | Cada miembro tiene su propio tipo (alumno, académico, etc.) |
 
 ### 12.2 Diagrama de la Entidad GrupoRegistro
 
@@ -874,14 +986,16 @@ classDiagram
         -miembros: Usuario[]
         -idInstitucionCompartida: number
         -idEntidadCompartida: number
-        -idTipoUsuarioCompartido: number
+        -responsableYaRegistrado: boolean
 
-        +static create(responsable: Usuario, miembrosData: MiembroInput[]): GrupoRegistro
+        +static create(responsable: Usuario, miembrosData: MiembroInput[], responsableYaRegistrado?: boolean): GrupoRegistro
         +agregarMiembro(data: MiembroInput): void
         +removerMiembro(correo: Email): void
         +obtenerTodos(): Usuario[]
         +obtenerMiembros(): Usuario[]
+        +obtenerNuevosRegistros(): Usuario[]
         +totalIntegrantes(): number
+        +esResponsableExistente(): boolean
     }
 
     class MiembroInput {
@@ -891,9 +1005,10 @@ classDiagram
         +correo: string
         +genero: Genero
         +carrera: string | null
+        +idTipoUsuario: number
     }
 
-    note for GrupoRegistro "Hereda id_institucion,\nid_entidad_federativa y\nid_tipo_usuario del responsable\nhacia todos los miembros"
+    note for GrupoRegistro "Hereda id_institucion y\nid_entidad_federativa del responsable.\nNO hereda id_tipo_usuario:\ncada miembro define el suyo.\nSi el responsable ya está registrado,\nsolo se crean los miembros nuevos."
 
     GrupoRegistro --> MiembroInput : recibe datos mínimos
 ```
@@ -914,14 +1029,14 @@ graph LR
     end
 
     subgraph Actual["Adaptadores Actuales"]
-        A1["PostgresUsuarioRepo<br/>(pg pool directo)"]
+        A1["PrismaUsuarioRepo<br/>(Prisma ORM + Data Mapper)"]
         A2["ResendEmailService"]
         A3["ReactPdfService"]
         A4["SupabaseStorageService"]
     end
 
     subgraph Futuro["Adaptadores Futuros"]
-        F1["SupabaseUsuarioRepo<br/>(supabase-js client)"]
+        F1["DrizzleUsuarioRepo<br/>KyselyUsuarioRepo"]
         F2["SendGridEmailService<br/>NodemailerEmailService"]
         F3["PuppeteerPdfService"]
         F4["S3StorageService<br/>LocalStorageService"]
@@ -941,6 +1056,16 @@ graph LR
 
 ```
 // infrastructure/config/container.ts (pseudocódigo)
+
+import { prisma } from "@/infrastructure/database/client";
+
+function getUsuarioRepository(): IUsuarioRepository {
+    return new PrismaUsuarioRepository(prisma);
+}
+
+function getComprobantePagoRepository(): IComprobantePagoRepository {
+    return new PrismaComprobantePagoRepository(prisma);
+}
 
 function getEmailService(): IEmailService {
     switch (env.EMAIL_PROVIDER) {
@@ -963,7 +1088,8 @@ function getStorageService(): IStorageService {
 
 | Escenario                         | Qué cambia                              | Qué NO cambia                  |
 |-----------------------------------|------------------------------------------|---------------------------------|
-| Supabase → VPS con PostgreSQL     | `connection.ts` (connection string)      | Use Cases, Domain, Presentation |
+| Supabase → VPS con PostgreSQL     | `DATABASE_URL` en `.env`                 | Use Cases, Domain, Presentation |
+| Prisma → Drizzle                  | Repos, Mappers, esquema ORM              | Use Cases, Domain, Presentation |
 | Resend → SendGrid                 | Nuevo adapter `SendGridEmailService`     | Use Cases, Domain, Presentation |
 | Supabase Storage → S3             | Nuevo adapter `S3StorageService`         | Use Cases, Domain, Presentation |
 | Agregar nuevo proveedor de PDF    | Nuevo adapter implementando `IPdfService`| Use Cases, Domain, Presentation |
@@ -971,7 +1097,214 @@ function getStorageService(): IStorageService {
 
 ---
 
-## 14. Decisiones de Diseño (ADRs)
+## 14. Data Mapper Pattern (ORM ↔ Dominio)
+
+### 14.1 Concepto
+
+El **Data Mapper** es la pieza que aísla el dominio del ORM. Cada Mapper traduce entre dos mundos:
+
+- **`toDomain()`**: Convierte un objeto de Prisma (resultado de query) → Entidad de dominio (con Value Objects).
+- **`toPersistence()`**: Convierte una entidad de dominio → Input de creación/actualización de Prisma.
+
+El dominio **nunca** importa tipos de Prisma. Los repositorios son los únicos que conocen ambos mundos.
+
+```
+┌──────────────┐     toDomain()      ┌──────────────────┐
+│ PrismaClient │ ──────────────────▶  │ Entidad Dominio  │
+│  (query)     │                      │ (Value Objects)  │
+│              │ ◀──────────────────  │                  │
+└──────────────┘   toPersistence()    └──────────────────┘
+        ▲                                     ▲
+        │                                     │
+   Infraestructura                        Dominio
+   (conoce Prisma)                   (puro TypeScript)
+```
+
+### 14.2 Diagrama de Flujo del Data Mapper
+
+```mermaid
+sequenceDiagram
+    participant UC as Use Case
+    participant Repo as PrismaUsuarioRepo
+    participant Mapper as UsuarioMapper
+    participant Prisma as PrismaClient
+    participant DB as PostgreSQL
+
+    Note over UC,DB: LECTURA: buscarPorCorreo()
+    UC->>Repo: buscarPorCorreo(email)
+    Repo->>Prisma: prisma.usuarios.findUnique({ where: { correo } })
+    Prisma->>DB: SELECT * FROM usuarios WHERE correo = $1
+    DB-->>Prisma: row (PrismaUsuario)
+    Prisma-->>Repo: prismaUsuario
+    Repo->>Mapper: toDomain(prismaUsuario)
+    Note over Mapper: Crea Value Objects:<br/>Email.create(), Telefono.create(),<br/>FolioRecibo.create(), etc.
+    Mapper-->>Repo: Usuario (entidad dominio)
+    Repo-->>UC: Usuario
+
+    Note over UC,DB: ESCRITURA: crear()
+    UC->>Repo: crear(usuario)
+    Repo->>Mapper: toPersistence(usuario)
+    Note over Mapper: Extrae valores primitivos<br/>de los Value Objects
+    Mapper-->>Repo: PrismaUsuarioCreateInput
+    Repo->>Prisma: prisma.usuarios.create({ data })
+    Prisma->>DB: INSERT INTO usuarios ...
+    DB-->>Prisma: row insertado
+    Prisma-->>Repo: prismaUsuario
+    Repo->>Mapper: toDomain(prismaUsuario)
+    Mapper-->>Repo: Usuario (con id asignado)
+    Repo-->>UC: Usuario
+```
+
+### 14.3 Ejemplo Conceptual de un Mapper
+
+```typescript
+// infrastructure/mappers/UsuarioMapper.ts
+
+import type { usuarios as PrismaUsuario } from "@prisma/client";
+import { Usuario } from "@/core/entities/Usuario";
+import { Email } from "@/core/value-objects/Email";
+import { Telefono } from "@/core/value-objects/Telefono";
+import { FolioRecibo } from "@/core/value-objects/FolioRecibo";
+import { CodigoBarras } from "@/core/value-objects/CodigoBarras";
+
+export class UsuarioMapper {
+  static toDomain(raw: PrismaUsuario): Usuario {
+    return Usuario.create({
+      idUsuario: raw.id_usuario,
+      nombre: raw.nombre,
+      apellido: raw.apellido,
+      correo: Email.create(raw.correo),
+      telefono: raw.telefono
+        ? Telefono.create(raw.telefono, raw.lada, raw.extension)
+        : null,
+      genero: raw.genero,
+      carrera: raw.carrera,
+      dependencia: raw.dependencia,
+      folioRecibo: raw.folio_recibo
+        ? FolioRecibo.create(raw.folio_recibo)
+        : null,
+      codigoBarras: raw.codigo_barras
+        ? CodigoBarras.create(raw.codigo_barras)
+        : null,
+      idCargo: raw.id_cargo,
+      idTipoUsuario: raw.id_tipo_usuario,
+      idInstitucion: raw.id_institucion,
+      idEntidadFederativa: raw.id_entidad_federativa,
+      verificado: raw.verificado ?? false,
+      fechaRegistro: raw.fecha_registro ?? new Date(),
+    });
+  }
+
+  static toPersistence(usuario: Usuario) {
+    return {
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      correo: usuario.correo.toString(),
+      telefono: usuario.telefono?.numero ?? null,
+      lada: usuario.telefono?.lada ?? null,
+      extension: usuario.telefono?.extension ?? null,
+      genero: usuario.genero,
+      carrera: usuario.carrera,
+      dependencia: usuario.dependencia,
+      folio_recibo: usuario.folioRecibo?.toString() ?? null,
+      codigo_barras: usuario.codigoBarras?.toString() ?? null,
+      id_cargo: usuario.idCargo,
+      id_tipo_usuario: usuario.idTipoUsuario,
+      id_institucion: usuario.idInstitucion,
+      id_entidad_federativa: usuario.idEntidadFederativa,
+      verificado: usuario.verificado,
+    };
+  }
+}
+```
+
+### 14.4 Ejemplo Conceptual de un Repositorio con Prisma + Mapper
+
+```typescript
+// infrastructure/repositories/PrismaUsuarioRepository.ts
+
+import { PrismaClient } from "@prisma/client";
+import type { IUsuarioRepository } from "@/application/ports/IUsuarioRepository";
+import type { Usuario } from "@/core/entities/Usuario";
+import type { Email } from "@/core/value-objects/Email";
+import { UsuarioMapper } from "@/infrastructure/mappers/UsuarioMapper";
+
+export class PrismaUsuarioRepository implements IUsuarioRepository {
+  constructor(private readonly prisma: PrismaClient) {}
+
+  async crear(usuario: Usuario): Promise<Usuario> {
+    const data = UsuarioMapper.toPersistence(usuario);
+    const created = await this.prisma.usuarios.create({ data });
+    return UsuarioMapper.toDomain(created);
+  }
+
+  async buscarPorCorreo(correo: Email): Promise<Usuario | null> {
+    const found = await this.prisma.usuarios.findUnique({
+      where: { correo: correo.toString() },
+    });
+    return found ? UsuarioMapper.toDomain(found) : null;
+  }
+
+  async buscarPorId(id: number): Promise<Usuario | null> {
+    const found = await this.prisma.usuarios.findUnique({
+      where: { id_usuario: id },
+    });
+    return found ? UsuarioMapper.toDomain(found) : null;
+  }
+
+  async crearMuchos(usuarios: Usuario[]): Promise<Usuario[]> {
+    const data = usuarios.map(UsuarioMapper.toPersistence);
+    // Prisma createMany no retorna registros, usamos transaction
+    const created = await this.prisma.$transaction(
+      data.map((d) => this.prisma.usuarios.create({ data: d }))
+    );
+    return created.map(UsuarioMapper.toDomain);
+  }
+
+  async verificar(id: number): Promise<void> {
+    await this.prisma.usuarios.update({
+      where: { id_usuario: id },
+      data: { verificado: true },
+    });
+  }
+}
+```
+
+### 14.5 Resumen Visual
+
+```mermaid
+graph LR
+    subgraph Domain["🧠 Dominio (Puro)"]
+        E["Usuario<br/>ComprobantePago<br/>Facturacion"]
+        VO["Email · Monto<br/>FolioRecibo · Telefono"]
+    end
+
+    subgraph Mapper["🔄 Data Mappers"]
+        M["UsuarioMapper<br/>ComprobantePagoMapper<br/>FacturacionMapper"]
+    end
+
+    subgraph Infra["🔌 Infraestructura"]
+        R["PrismaUsuarioRepo<br/>PrismaComprobanteRepo"]
+        P["PrismaClient"]
+        DB[("PostgreSQL")]
+    end
+
+    R -->|"toPersistence()"| M
+    M -->|"datos primitivos"| P
+    P -->|"SQL"| DB
+    DB -->|"rows"| P
+    P -->|"PrismaTypes"| M
+    M -->|"toDomain()"| R
+    R -->|"Entidades Dominio"| E
+
+    style Domain fill:#1a1a2e,stroke:#e94560,color:#fff
+    style Mapper fill:#16213e,stroke:#0f3460,color:#fff
+    style Infra fill:#0f3460,stroke:#533483,color:#fff
+```
+
+---
+
+## 15. Decisiones de Diseño (ADRs)
 
 ### ADR-01: Server Actions como Controllers
 
@@ -980,12 +1313,16 @@ function getStorageService(): IStorageService {
 - **Razón:** Elimina la necesidad de fetch manual, tipado end-to-end, colocalización de form handling con la UI, y reduce boilerplate.
 - **Consecuencia:** Los Server Actions **solo** validan input y orquestan la creación del Use Case; **nunca** contienen lógica de negocio.
 
-### ADR-02: No usar ORM
+### ADR-02: ORM + Data Mapper Pattern
 
-- **Contexto:** ORMs como Prisma o Drizzle acoplan la capa de persistencia al esquema.
-- **Decisión:** Usar un query builder ligero (e.g., `pg` directo con queries parametrizadas, o Kysely para type safety) dentro de los adapters del repositorio.
-- **Razón:** Mantener los repositories como adapters puros que podrían intercambiarse por cualquier fuente de datos.
-- **Consecuencia:** Los adapters de repositorio mapean filas SQL a entidades de dominio manualmente (hidratación).
+- **Contexto:** Se necesita acceso a la base de datos con type-safety, migraciones automáticas y productividad, sin acoplar el dominio al ORM.
+- **Decisión:** Usar **Prisma** como ORM dentro de la capa de infraestructura, combinado con un **Data Mapper** por entidad que convierte los objetos generados por Prisma (`PrismaUsuario`, `PrismaDeposito`, etc.) a las entidades puras del dominio (`Usuario`, `Deposito`, etc.) y viceversa.
+- **Razón:** Prisma ofrece type-safety, migraciones, introspección del esquema y un excelente Developer Experience. El Data Mapper actúa como barrera de aislamiento: el dominio **nunca** importa ni conoce Prisma. Los repositorios usan Prisma internamente y exponen exclusivamente entidades de dominio.
+- **Consecuencia:**
+  - Cada repositorio tiene un mapper asociado (e.g., `UsuarioMapper`) con métodos `toDomain()` y `toPersistence()`.
+  - La capa de dominio permanece pura (cero dependencias externas), cumpliendo Clean Architecture.
+  - Si en el futuro se cambia de Prisma a Drizzle, Kysely, o queries raw, solo se reescriben los repositorios y mappers — los Use Cases y el dominio no se tocan.
+  - El esquema de Prisma (`schema.prisma`) vive en `infrastructure/database/` y es la fuente de verdad del esquema de BD.
 
 ### ADR-03: Feature Flag para Registro Grupal
 
@@ -1008,27 +1345,65 @@ function getStorageService(): IStorageService {
 - **Razón:** Control total sobre el template, no depende del navegador del usuario, se puede adjuntar al correo directamente.
 - **Consecuencia:** El buffer del PDF se genera en memoria, se sube al storage y se adjunta al correo en un solo flujo.
 
+### ADR-06: Comprobante de Pago como Archivo Adjunto
+
+- **Contexto:** El sistema legacy (`depositos`) requiere que el usuario capture manualmente datos bancarios (banco, sucursal, ciudad, referencia, monto). Esto es propenso a errores y no aporta valor real al flujo de registro.
+- **Decisión:** Reemplazar la captura de datos de depósito por la **carga de un archivo** (imagen o PDF) del comprobante de pago directamente en el formulario de registro. El archivo se sube a `IStorageService` y se registra en la tabla `comprobantes_pago`.
+- **Razón:** Simplifica el formulario, reduce errores de captura, y proporciona evidencia visual del pago para verificación posterior.
+- **Reglas:**
+  - **Registro individual:** El asistente sube **un comprobante** junto con sus datos.
+  - **Registro grupal:** El responsable sube **un único comprobante** que cubre a todo el grupo. La UI muestra feedback del costo total (precio × N+1 integrantes) para que el responsable sepa cuánto debe cubrir el comprobante.
+  - **Verificación del pago:** Es un proceso **manual externo** fuera del alcance de este sistema de registro. El campo `verificado` en `usuarios` se gestiona por otro flujo administrativo.
+- **Consecuencia:**
+  - Se elimina la entidad `Deposito` del dominio y se reemplaza por `ComprobantePago`.
+  - Se crea el Value Object `ArchivoComprobante` que valida tipo MIME (image/png, image/jpeg, application/pdf) y tamaño máximo.
+  - El `IStorageService` se involucra en el flujo de registro (no solo para constancias).
+  - La tabla `depositos` se reemplaza por `comprobantes_pago` en el esquema moderno.
+
+### ADR-07: tipo_usuario No Se Hereda en Registro Grupal
+
+- **Contexto:** En el diseño original, al registrar un grupo, el `tipo_usuario` del responsable se heredaba automáticamente a todos los miembros (asumiendo que todos son del mismo tipo, e.g., "todos son estudiantes").
+- **Decisión:** Cada miembro del grupo debe especificar su propio `tipo_usuario` de forma independiente. No se hereda del responsable.
+- **Razón:** Un profesor puede inscribir a sus estudiantes, y estos no deben quedar registrados como "Académico". El tipo de usuario es un atributo individual que depende del rol real de cada persona, no del rol de quien los registra.
+- **Consecuencia:**
+  - El `MiembroInput` incluye el campo `idTipoUsuario`.
+  - La entidad `GrupoRegistro` ya no tiene `idTipoUsuarioCompartido`.
+  - El formulario grupal muestra un selector de `tipo_usuario` por cada miembro.
+  - Solo se heredan `id_institucion` e `id_entidad_federativa`.
+
+### ADR-08: Usuario Ya Registrado Puede Ser Responsable de Grupo
+
+- **Contexto:** Un usuario que ya se registró individualmente no puede volver a registrarse (correo duplicado). Sin embargo, puede necesitar inscribir a otras personas (e.g., un profesor inscribe a sus alumnos).
+- **Decisión:** Permitir que un usuario ya registrado actúe como responsable de un registro grupal sin crear un duplicado. En este caso, solo se registran los miembros nuevos del grupo.
+- **Razón:** Es un caso de uso frecuente en instituciones educativas: un profesor o responsable institucional se registra primero individualmente y luego registra a su grupo de estudiantes/colegas.
+- **Consecuencia:**
+  - El Use Case `RegistrarGrupo` primero verifica si el correo del responsable ya existe en BD.
+  - Si existe, se reutiliza la entidad `Usuario` existente como responsable del `GrupoRegistro` (con flag `responsableYaRegistrado = true`).
+  - Solo los miembros nuevos se crean en BD (`obtenerNuevosRegistros()` excluye al responsable existente).
+  - El comprobante grupal se asocia al ID del usuario existente.
+  - Los correos de miembros se siguen validando como únicos (no pueden estar previamente registrados).
+
 ---
 
 ## Apéndice A: Mapeo Dominio ↔ Base de Datos
 
-| Entidad de Dominio | Tabla PostgreSQL       | Notas                                        |
-|---------------------|------------------------|----------------------------------------------|
-| `Usuario`           | `usuarios`             | Entidad principal                            |
-| `Deposito`          | `depositos`            | Comprobante de pago                          |
-| `Facturacion`       | `facturaciones`        | Datos fiscales                               |
-| `GrupoRegistro`     | — (no tiene tabla)     | Concepto de aplicación, no de BD             |
-| `Cargo` (catálogo)  | `cargos`               | Lectura solamente                            |
-| `Estado` (catálogo) | `estados`              | Lectura solamente                            |
-| `Institucion` (cat) | `instituciones`        | Lectura solamente                            |
-| `TipoUsuario` (cat) | `tipo_usuario`         | Lectura solamente                            |
+| Entidad de Dominio   | Tabla PostgreSQL       | Notas                                        |
+|-----------------------|------------------------|----------------------------------------------|
+| `Usuario`             | `usuarios`             | Entidad principal                            |
+| `ComprobantePago`     | `comprobantes_pago`    | Archivo de comprobante (reemplaza depositos) |
+| `Facturacion`         | `facturaciones`        | Datos fiscales                               |
+| `GrupoRegistro`       | — (no tiene tabla)     | Concepto de aplicación, no de BD             |
+| `Cargo` (catálogo)    | `cargos`               | Lectura solamente                            |
+| `Estado` (catálogo)   | `estados`              | Lectura solamente                            |
+| `Institucion` (cat)   | `instituciones`        | Lectura solamente                            |
+| `TipoUsuario` (cat)   | `tipo_usuario`         | Lectura solamente                            |
+| — (legacy)            | `depositos`            | **Tabla legacy**, no usada en sistema nuevo  |
 
 ## Apéndice B: Variables de Entorno Esperadas
 
 ```env
 # ── Base de Datos ──
 DATABASE_URL=postgresql://user:pass@host:5432/aniei2026
-DB_PROVIDER=postgres-direct          # postgres-direct | supabase-client
 
 # ── Email ──
 EMAIL_PROVIDER=resend                # resend | sendgrid | nodemailer
