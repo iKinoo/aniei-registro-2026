@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "aniei2026",
+      "Group": "Docker",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "aniei2026",
+      "Username": "aniei",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass"
+    }
+  }
+}
