@@ -82,7 +82,33 @@ services:
       postgres:
         condition: service_healthy
 
+  # ───────────────────────────────────────────────────────────────────────────
+  # Next.js 15 — aplicación web (Node.js 22 LTS + pnpm)
+  # ───────────────────────────────────────────────────────────────────────────
+  web:
+    image: node:24-alpine
+    container_name: aniei2026_web
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      PNPM_HOME: /pnpm
+      PATH: /pnpm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    volumes:
+      - ./app:/app
+      - pnpm_store:/pnpm/store
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "corepack enable pnpm &&
+             pnpm install &&
+             pnpm dev"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   mysql_data:
   postgres_data:
   pgadmin_data:
+  pnpm_store:
