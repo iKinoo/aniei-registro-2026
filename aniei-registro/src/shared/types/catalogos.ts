@@ -1,0 +1,25 @@
+export interface Cargo {
+  idCargo: number;
+  descripcion: string;
+}
+
+export interface Estado {
+  idEntidadFederativa: number;
+  nombre: string;
+}
+
+export interface Institucion {
+  idInstitucion: number;
+  nombre: string;
+  abreviatura: string | null;
+}
+
+export interface TipoUsuario {
+  idTipoUsuario: number;
+  descripcion: string;
+}
+
+export interface Titulo {
+  idTitulo: number;
+  descripcion: string;
+}
