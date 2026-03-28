@@ -8,5 +8,6 @@ export interface IUsuarioRepository {
   buscarPorCorreo(correo: Email): Promise<Usuario | null>;
   buscarPorId(id: number): Promise<Usuario | null>;
   buscarPorFolio(folio: FolioRecibo): Promise<Usuario | null>;
+  actualizarFolio(id: number, folio: FolioRecibo): Promise<void>;
   verificar(id: number): Promise<void>;
 }

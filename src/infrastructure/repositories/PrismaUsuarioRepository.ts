@@ -44,6 +44,13 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     return found ? UsuarioMapper.toDomain(found) : null;
   }
 
+  async actualizarFolio(id: number, folio: FolioRecibo): Promise<void> {
+    await this.prisma.usuarios.update({
+      where: { id_usuario: id },
+      data: { folio_recibo: folio.toString() },
+    });
+  }
+
   async verificar(id: number): Promise<void> {
     await this.prisma.usuarios.update({
       where: { id_usuario: id },

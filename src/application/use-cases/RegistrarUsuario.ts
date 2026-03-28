@@ -67,6 +67,7 @@ export class RegistrarUsuario {
     const folio = `ANIEI-2026-${String(idUsuario).padStart(4, '0')}`;
     const folioVO = FolioRecibo.create(folio);
     usuarioPersistido.asignarFolio(folioVO);
+    await this.usuarioRepo.actualizarFolio(idUsuario, folioVO);
 
     // 7. Crear registro de depósito con comprobante de archivo
     const deposito = Deposito.create({
