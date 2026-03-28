@@ -1,5 +1,5 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
-import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
+import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -7,7 +7,8 @@ import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 import { RegistroUsuarioDTO } from '@/application/dtos/RegistroUsuarioDTO';
 import { ResultadoRegistro } from '@/application/dtos/ResultadoRegistro';
 import { Usuario } from '@/core/entities/Usuario';
-import { ComprobantePago } from '@/core/entities/ComprobantePago';
+import { Deposito } from '@/core/entities/Deposito';
+import { Monto } from '@/core/value-objects/Monto';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
 import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
@@ -17,7 +18,7 @@ import { RegistroError } from '@/core/errors/RegistroError';
 export class RegistrarUsuario {
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
-    private readonly comprobanteRepo: IComprobantePagoRepository,
+    private readonly depositoRepo: IDepositoRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
@@ -64,15 +65,20 @@ export class RegistrarUsuario {
     const folioVO = FolioRecibo.create(folio);
     usuarioPersistido.asignarFolio(folioVO);
 
-    // 7. Crear comprobante de pago
-    const comprobante = ComprobantePago.create({
+    // 7. Crear registro de depósito con comprobante de archivo
+    const deposito = Deposito.create({
       idUsuario,
+      bancoSucursal: dto.deposito.bancoSucursal ?? null,
+      ciudad: dto.deposito.ciudad ?? null,
+      referencia: dto.deposito.referencia,
+      monto: Monto.create(dto.deposito.monto),
+      fechaDeposito: dto.deposito.fechaDeposito,
       archivoUrl: urlComprobante,
       archivoNombre: dto.archivo.nombre,
       archivoMime: dto.archivo.mime,
       archivoTamanio: dto.archivo.tamanio,
     });
-    await this.comprobanteRepo.crear(comprobante);
+    await this.depositoRepo.crear(deposito);
 
     // 8. Obtener datos de catálogos para el PDF y correo
     const [instituciones, tiposUsuario] = await Promise.all([

@@ -16,7 +16,16 @@ export const registroSchema = z.object({
   idEntidadFederativa: z.coerce.number().int().positive('Seleccione un estado'),
 });
 
+export const depositoSchema = z.object({
+  bancoSucursal: z.string().max(100).optional().or(z.literal('')),
+  ciudad: z.string().max(100).optional().or(z.literal('')),
+  referencia: z.string().min(1, 'La referencia es requerida').max(50),
+  monto: z.coerce.number().positive('El monto debe ser mayor a 0'),
+  fechaDeposito: z.coerce.date({ error: 'Ingrese una fecha de depósito válida' }),
+});
+
 export type RegistroFormData = z.infer<typeof registroSchema>;
+export type DepositoFormData = z.infer<typeof depositoSchema>;
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];

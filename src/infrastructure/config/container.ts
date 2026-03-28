@@ -1,6 +1,7 @@
 import { prisma } from '@/infrastructure/database/client';
 import { PrismaUsuarioRepository } from '@/infrastructure/repositories/PrismaUsuarioRepository';
 import { PrismaComprobantePagoRepository } from '@/infrastructure/repositories/PrismaComprobantePagoRepository';
+import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDepositoRepository';
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
 import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCatalogoRepository';
 import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
@@ -8,6 +9,7 @@ import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
+import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 import { IEmailService } from '@/application/ports/IEmailService';
@@ -20,6 +22,10 @@ export function getUsuarioRepository(): IUsuarioRepository {
 
 export function getComprobantePagoRepository(): IComprobantePagoRepository {
   return new PrismaComprobantePagoRepository(prisma);
+}
+
+export function getDepositoRepository(): IDepositoRepository {
+  return new PrismaDepositoRepository(prisma);
 }
 
 export function getFacturacionRepository(): IFacturacionRepository {

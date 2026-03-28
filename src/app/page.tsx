@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="flex min-h-screen items-center justify-center">
       <main className="w-full max-w-lg px-4 py-16 text-center">
         <h1 className="mb-4 text-4xl font-bold text-gray-900">
           Congreso ANIEI 2026

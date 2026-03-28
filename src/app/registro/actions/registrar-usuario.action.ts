@@ -1,11 +1,11 @@
 'use server';
 
-import { registroSchema, validarArchivo } from '@/shared/validation/registro.schema';
+import { registroSchema, depositoSchema, validarArchivo } from '@/shared/validation/registro.schema';
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { Genero } from '@/core/enums/Genero';
 import {
   getUsuarioRepository,
-  getComprobantePagoRepository,
+  getDepositoRepository,
   getStorageService,
   getEmailService,
   getPdfService,
@@ -41,11 +41,32 @@ export async function registrarUsuarioAction(
       idEntidadFederativa: formData.get('idEntidadFederativa') as string,
     };
 
-    // Validar campos con Zod
+    const rawDeposito = {
+      bancoSucursal: formData.get('bancoSucursal') as string,
+      ciudad: formData.get('ciudad') as string,
+      referencia: formData.get('referencia') as string,
+      monto: formData.get('monto') as string,
+      fechaDeposito: formData.get('fechaDeposito') as string,
+    };
+
+    // Validar campos personales/institucionales con Zod
     const parsed = registroSchema.safeParse(rawData);
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
+        const key = issue.path.join('.');
+        if (!fieldErrors[key]) {
+          fieldErrors[key] = issue.message;
+        }
+      }
+      return { success: false, errors: fieldErrors };
+    }
+
+    // Validar datos del depósito con Zod
+    const parsedDeposito = depositoSchema.safeParse(rawDeposito);
+    if (!parsedDeposito.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsedDeposito.error.issues) {
         const key = issue.path.join('.');
         if (!fieldErrors[key]) {
           fieldErrors[key] = issue.message;
@@ -68,7 +89,7 @@ export async function registrarUsuarioAction(
     // Ejecutar caso de uso
     const useCase = new RegistrarUsuario(
       getUsuarioRepository(),
-      getComprobantePagoRepository(),
+      getDepositoRepository(),
       getStorageService(),
       getEmailService(),
       getPdfService(),
@@ -83,6 +104,13 @@ export async function registrarUsuarioAction(
       genero: parsed.data.genero as Genero,
       carrera: parsed.data.carrera || null,
       dependencia: parsed.data.dependencia || null,
+      deposito: {
+        bancoSucursal: parsedDeposito.data.bancoSucursal || null,
+        ciudad: parsedDeposito.data.ciudad || null,
+        referencia: parsedDeposito.data.referencia,
+        monto: parsedDeposito.data.monto,
+        fechaDeposito: parsedDeposito.data.fechaDeposito,
+      },
       archivo: {
         nombre: file.name,
         mime: file.type,

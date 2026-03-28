@@ -1,7 +1,7 @@
 # PLAN & DESIGN — Sistema de Registro ANIEI 2026
 
-> **Estado:** Fase de Planificación y Diseño  
-> **Stack:** Next.js 15 (App Router) · PostgreSQL 17 · TypeScript  
+> **Estado:** Implementado (MVP funcional)  
+> **Stack:** Next.js 16 (App Router) · React 19 · PostgreSQL (Supabase) · Prisma 7 · TypeScript · Zod 4 · Tailwind CSS 4  
 > **Principio rector:** Clean Architecture (Arquitectura por capas / Hexagonal) adaptada a Next.js
 
 ---
@@ -131,16 +131,28 @@ En Clean Architecture tradicional (Express, Nest), un **Controller** recibe el r
 ## 5. Estructura de Directorios
 
 ```
+prisma/
+└── schema.prisma                  # Esquema Prisma (fuente de verdad BD)
+
+prisma.config.ts                   # Configuración Prisma (usa DIRECT_URL)
+
 src/
 ├── app/                          # ── PRESENTATION LAYER (Next.js) ──
 │   ├── layout.tsx
-│   ├── page.tsx
+│   ├── page.tsx                  # Landing page
+│   ├── globals.css
+│   ├── api/
+│   │   └── constancia/
+│   │       └── [folio]/
+│   │           └── route.ts      # API Route: descarga PDF por folio
 │   ├── registro/
-│   │   ├── page.tsx              # Página de registro individual
+│   │   ├── page.tsx              # Server Component: carga catálogos
 │   │   ├── components/           # Componentes UI del registro
-│   │   │   ├── RegistroForm.tsx
-│   │   │   ├── GrupoForm.tsx     # UI modular de registro grupal
-│   │   │   └── ...
+│   │   │   ├── RegistroForm.tsx  # Client Component: form individual
+│   │   │   ├── GrupoForm.tsx     # Client Component: form grupal
+│   │   │   ├── MiembroRow.tsx    # Client Component: fila de miembro
+│   │   │   ├── SelectCatalogo.tsx # Client Component: select reutilizable
+│   │   │   └── CampoArchivo.tsx  # Client Component: upload con preview
 │   │   └── actions/
 │   │       ├── registrar-usuario.action.ts    # Server Action
 │   │       └── registrar-grupo.action.ts      # Server Action (modular)
@@ -148,15 +160,13 @@ src/
 │   │   └── page.tsx
 │   └── constancia/
 │       └── [folio]/
-│           └── page.tsx
+│           └── page.tsx              # Vista de constancia con link a descarga
 │
 ├── core/                         # ── DOMAIN LAYER (puro TypeScript) ──
 │   ├── entities/
 │   │   ├── Usuario.ts
 │   │   ├── ComprobantePago.ts    # Reemplaza Deposito legacy (archivo subido)
 │   │   ├── Facturacion.ts
-│   │   ├── Actividad.ts
-│   │   ├── AsistenciaActividad.ts
 │   │   └── GrupoRegistro.ts     # Entidad para registro grupal
 │   ├── value-objects/
 │   │   ├── Email.ts
@@ -177,6 +187,7 @@ src/
 │   │   ├── IUsuarioRepository.ts
 │   │   ├── IComprobantePagoRepository.ts
 │   │   ├── IFacturacionRepository.ts
+│   │   ├── ICatalogoRepository.ts    # Lectura de catálogos
 │   │   ├── IEmailService.ts
 │   │   ├── IPdfService.ts
 │   │   └── IStorageService.ts
@@ -187,16 +198,22 @@ src/
 │   │   ├── GenerarConstancia.ts
 │   │   └── SolicitarFacturacion.ts
 │   └── dtos/
-│       ├── RegistroUsuarioDTO.ts       # Incluye archivo comprobante
+│       ├── RegistroUsuarioDTO.ts       # Incluye ArchivoDTO
 │       ├── RegistroGrupoDTO.ts         # Un comprobante para todo el grupo
-│       └── FacturacionDTO.ts
+│       ├── FacturacionDTO.ts
+│       ├── ResultadoRegistro.ts        # Respuesta de registro individual
+│       └── ResultadoRegistroGrupo.ts   # Respuesta de registro grupal
+│
+├── generated/                    # ── CÓDIGO GENERADO ──
+│   └── prisma/                   # Cliente Prisma generado (output custom)
+│       ├── client.ts
+│       ├── models.ts
+│       ├── models/                  # Tipos por tabla (usuarios.ts, etc.)
+│       └── ...
 │
 ├── infrastructure/               # ── INFRASTRUCTURE LAYER ──
 │   ├── database/
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma             # Esquema Prisma (fuente de verdad BD)
-│   │   │   └── migrations/               # Migraciones auto-generadas
-│   │   └── client.ts                     # Singleton PrismaClient
+│   │   └── client.ts                     # Singleton PrismaClient (PrismaPg adapter)
 │   ├── mappers/                          # ── DATA MAPPERS (Prisma ↔ Domain) ──
 │   │   ├── UsuarioMapper.ts              # PrismaUsuario ↔ Usuario (entidad)
 │   │   ├── ComprobantePagoMapper.ts      # PrismaComprobante ↔ ComprobantePago
@@ -208,22 +225,23 @@ src/
 │   │   └── PrismaCatalogoRepository.ts
 │   ├── services/
 │   │   ├── email/
-│   │   │   ├── ResendEmailService.ts       # Adaptador Resend
-│   │   │   ├── NodemailerEmailService.ts   # Adaptador SMTP genérico
-│   │   │   └── SendGridEmailService.ts     # Adaptador SendGrid
+│   │   │   ├── ResendEmailService.ts       # Adaptador Resend (implementado)
+│   │   │   └── templates/
+│   │   │       ├── confirmacion.ts         # HTML template confirmación
+│   │   │       └── constancia.ts           # HTML template constancia
 │   │   ├── pdf/
-│   │   │   ├── ReactPdfService.ts          # Adaptador @react-pdf/renderer
-│   │   │   └── PuppeteerPdfService.ts      # Adaptador alternativo
+│   │   │   ├── ReactPdfService.ts          # Adaptador @react-pdf/renderer (implementado)
+│   │   │   └── templates/
+│   │   │       └── ConstanciaTemplate.tsx  # Componente React PDF
 │   │   └── storage/
-│   │       ├── SupabaseStorageService.ts   # Adaptador Supabase Storage
-│   │       ├── S3StorageService.ts         # Adaptador AWS S3
-│   │       └── LocalStorageService.ts      # Adaptador filesystem local
+│   │       └── SupabaseStorageService.ts   # Adaptador Supabase Storage (implementado)
 │   └── config/
-│       └── container.ts                    # Dependency Injection / Factory
+│       └── container.ts                    # Dependency Injection (hardcoded)
 │
 └── shared/                       # ── UTILIDADES COMPARTIDAS ──
-    ├── types/                    # Tipos TypeScript compartidos
-    ├── validation/               # Schemas Zod (validación de input)
+    ├── types/
+    │   └── catalogos.ts              # Cargo, Estado, Institucion, TipoUsuario, Titulo
+    ├── validation/               # Schemas Zod v4 (validación de input)
     │   ├── registro.schema.ts
     │   └── grupo.schema.ts
     └── constants/
@@ -245,7 +263,7 @@ graph TB
     subgraph Application["⚙️ Application Layer"]
         UC["Use Cases<br/>RegistrarUsuario<br/>RegistrarGrupo<br/>EnviarConfirmacion<br/>GenerarConstancia"]
         DTO["DTOs"]
-        Ports["Ports (Interfaces)<br/>IUsuarioRepository<br/>IEmailService<br/>IPdfService<br/>IStorageService"]
+        Ports["Ports (Interfaces)<br/>IUsuarioRepository<br/>ICatalogoRepository<br/>IEmailService<br/>IPdfService<br/>IStorageService"]
     end
 
     subgraph Domain["🧠 Domain Layer (Pure TypeScript)"]
@@ -256,7 +274,7 @@ graph TB
 
     subgraph Infrastructure["🔌 Infrastructure Layer (Adapters)"]
         Repos["Repositories<br/>PrismaUsuarioRepo<br/>PrismaComprobanteRepo"]
-        Mappers["Data Mappers<br/>UsuarioMapper<br/>DepositoMapper<br/>FacturacionMapper"]
+        Mappers["Data Mappers<br/>UsuarioMapper<br/>ComprobantePagoMapper<br/>FacturacionMapper"]
         ORM["Prisma ORM<br/>(PrismaClient)"]
         EmailSvc["Email Adapters<br/>Resend · Nodemailer · SendGrid"]
         PdfSvc["PDF Adapters<br/>ReactPdf · Puppeteer"]
@@ -387,8 +405,11 @@ classDiagram
         -mime: string
         -tamanio: number
         +static create(nombre: string, mime: string, tamanio: number): ArchivoComprobante
-        +esImagenValida(): boolean
-        +esPdfValido(): boolean
+        +esImagen(): boolean
+        +esPdf(): boolean
+        +getNombre(): string
+        +getMime(): string
+        +getTamanio(): number
     }
 
     class Telefono {
@@ -398,6 +419,9 @@ classDiagram
         -extension: string | null
         +static create(num, lada?, ext?): Telefono
         +completo(): string
+        +getNumero(): string
+        +getLada(): string | null
+        +getExtension(): string | null
     }
 
     class Genero {
@@ -422,11 +446,12 @@ classDiagram
 Los catálogos (`cargos`, `estados`, `instituciones`, `tipo_usuario`) se tratan como **datos de referencia** que se consultan por ID. No son entidades ricas del dominio; se modelan como tipos simples o interfaces de solo lectura:
 
 ```typescript
-// No son clases con lógica, solo tipos para catálogos
+// No son clases con lógica, solo tipos para catálogos (src/shared/types/catalogos.ts)
 interface Cargo { idCargo: number; descripcion: string }
 interface Estado { idEntidadFederativa: number; nombre: string }
 interface Institucion { idInstitucion: number; nombre: string; abreviatura: string | null }
 interface TipoUsuario { idTipoUsuario: number; descripcion: string }
+interface Titulo { idTitulo: number; descripcion: string }
 ```
 
 ---
@@ -469,8 +494,8 @@ classDiagram
 
     class IEmailService {
         <<port>>
-        +enviarConfirmacionRegistro(destinatario: Email, datos: ConfirmacionData): Promise~void~
-        +enviarConstancia(destinatario: Email, pdfBuffer: Buffer): Promise~void~
+        +enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise~void~
+        +enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise~void~
     }
 
     class IPdfService {
@@ -527,26 +552,29 @@ classDiagram
 
 ### 8.2 Dependency Injection Container
 
-El container es una **simple factory** que decide qué adaptador concreto instanciar según variables de entorno. No se necesita un framework DI complejo:
+El container es una **simple factory** que instancia adaptadores concretos. Actualmente los adaptadores están hardcoded (un solo proveedor por servicio). No se necesita un framework DI complejo:
 
 ```
 container.ts
-├── getUsuarioRepository()   → PrismaUsuarioRepository(prismaClient)
-├── getComprobantePagoRepository() → PrismaComprobantePagoRepository(prismaClient)
-├── getEmailService()        → ResendEmailService | NodemailerEmailService | ...
-├── getPdfService()          → ReactPdfService | PuppeteerPdfService
-└── getStorageService()      → SupabaseStorageService | S3StorageService | LocalStorageService
+├── getUsuarioRepository()          → PrismaUsuarioRepository(prisma)
+├── getComprobantePagoRepository()  → PrismaComprobantePagoRepository(prisma)
+├── getFacturacionRepository()      → PrismaFacturacionRepository(prisma)
+├── getCatalogoRepository()         → PrismaCatalogoRepository(prisma)
+├── getEmailService()               → ResendEmailService(RESEND_API_KEY, EMAIL_FROM)
+├── getPdfService()                 → ReactPdfService()
+└── getStorageService()             → SupabaseStorageService(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 ```
 
-**Selección por variable de entorno:**
+**Variables de entorno requeridas por el container:**
 
 ```
-EMAIL_PROVIDER=resend | sendgrid | nodemailer
-STORAGE_PROVIDER=supabase | s3 | local
-PDF_PROVIDER=react-pdf | puppeteer
+RESEND_API_KEY          # API key de Resend
+EMAIL_FROM              # Remitente (e.g. "ANIEI 2026 <registro@dominio.com>")
+NEXT_PUBLIC_SUPABASE_URL # URL del proyecto Supabase
+SUPABASE_SERVICE_ROLE_KEY # Service role key de Supabase
 ```
 
-> **Nota:** Los repositorios siempre usan Prisma internamente. Si se desea migrar de ORM, se crean nuevas implementaciones de los repositorios con el nuevo ORM y sus mappers correspondientes.
+> **Nota:** Para agregar switching por variable de entorno (e.g. `EMAIL_PROVIDER=resend|sendgrid`), se modificaría únicamente este archivo.
 
 ---
 
@@ -562,6 +590,7 @@ classDiagram
         -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
+        -catalogoRepo: ICatalogoRepository
         +execute(dto: RegistroUsuarioDTO): Promise~ResultadoRegistro~
     }
 
@@ -571,6 +600,7 @@ classDiagram
         -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
+        -catalogoRepo: ICatalogoRepository
         +execute(dto: RegistroGrupoDTO): Promise~ResultadoRegistroGrupo~
     }
 
@@ -578,12 +608,14 @@ classDiagram
         -pdfService: IPdfService
         -storageService: IStorageService
         -usuarioRepo: IUsuarioRepository
+        -catalogoRepo: ICatalogoRepository
         +execute(idUsuario: number): Promise~string~
     }
 
     class EnviarConfirmacion {
         -emailService: IEmailService
         -usuarioRepo: IUsuarioRepository
+        -catalogoRepo: ICatalogoRepository
         +execute(idUsuario: number): Promise~void~
     }
 
@@ -963,6 +995,7 @@ Cuando se registra un grupo, los siguientes campos del **responsable** se **here
 |----------------------|--------------------------------------------------|
 | `id_institucion`     | Todos provienen de la misma institución           |
 | `id_entidad_federativa` | Se asume misma ubicación institucional        |
+| `id_cargo`           | Se asume mismo cargo institucional                |
 
 > **Nota:** `id_tipo_usuario` **NO se hereda**. Cada miembro del grupo especifica su propio tipo de usuario. Un profesor puede inscribir estudiantes, y estos deben registrarse con su tipo correspondiente (e.g., "Alumno"), no con el tipo del responsable.
 
@@ -1054,33 +1087,47 @@ graph LR
 
 ### 13.2 Ejemplo Conceptual del Container
 
-```
-// infrastructure/config/container.ts (pseudocódigo)
+```typescript
+// infrastructure/config/container.ts
 
 import { prisma } from "@/infrastructure/database/client";
 
-function getUsuarioRepository(): IUsuarioRepository {
+export function getUsuarioRepository(): IUsuarioRepository {
     return new PrismaUsuarioRepository(prisma);
 }
 
-function getComprobantePagoRepository(): IComprobantePagoRepository {
+export function getComprobantePagoRepository(): IComprobantePagoRepository {
     return new PrismaComprobantePagoRepository(prisma);
 }
 
-function getEmailService(): IEmailService {
-    switch (env.EMAIL_PROVIDER) {
-        case "resend":    return new ResendEmailService(env.RESEND_API_KEY)
-        case "sendgrid":  return new SendGridEmailService(env.SENDGRID_API_KEY)
-        case "nodemailer": return new NodemailerEmailService(env.SMTP_CONFIG)
-    }
+export function getFacturacionRepository(): IFacturacionRepository {
+    return new PrismaFacturacionRepository(prisma);
 }
 
-function getStorageService(): IStorageService {
-    switch (env.STORAGE_PROVIDER) {
-        case "supabase": return new SupabaseStorageService(env.SUPABASE_URL, env.SUPABASE_KEY)
-        case "s3":       return new S3StorageService(env.AWS_CONFIG)
-        case "local":    return new LocalStorageService(env.LOCAL_STORAGE_PATH)
+export function getCatalogoRepository(): ICatalogoRepository {
+    return new PrismaCatalogoRepository(prisma);
+}
+
+export function getEmailService(): IEmailService {
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.EMAIL_FROM;
+    if (!apiKey || !from) {
+        throw new Error('RESEND_API_KEY y EMAIL_FROM deben estar configuradas');
     }
+    return new ResendEmailService(apiKey, from);
+}
+
+export function getPdfService(): IPdfService {
+    return new ReactPdfService();
+}
+
+export function getStorageService(): IStorageService {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+        throw new Error('Supabase URL y Service Role Key deben estar configuradas');
+    }
+    return new SupabaseStorageService(url, key);
 }
 ```
 
@@ -1160,7 +1207,7 @@ sequenceDiagram
 ```typescript
 // infrastructure/mappers/UsuarioMapper.ts
 
-import type { usuarios as PrismaUsuario } from "@prisma/client";
+import type { usuarios as PrismaUsuario } from "@/generated/prisma/client";
 import { Usuario } from "@/core/entities/Usuario";
 import { Email } from "@/core/value-objects/Email";
 import { Telefono } from "@/core/value-objects/Telefono";
@@ -1200,9 +1247,9 @@ export class UsuarioMapper {
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       correo: usuario.correo.toString(),
-      telefono: usuario.telefono?.numero ?? null,
-      lada: usuario.telefono?.lada ?? null,
-      extension: usuario.telefono?.extension ?? null,
+      telefono: usuario.telefono?.getNumero() ?? null,
+      lada: usuario.telefono?.getLada() ?? null,
+      extension: usuario.telefono?.getExtension() ?? null,
       genero: usuario.genero,
       carrera: usuario.carrera,
       dependencia: usuario.dependencia,
@@ -1223,7 +1270,7 @@ export class UsuarioMapper {
 ```typescript
 // infrastructure/repositories/PrismaUsuarioRepository.ts
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@/generated/prisma/client";
 import type { IUsuarioRepository } from "@/application/ports/IUsuarioRepository";
 import type { Usuario } from "@/core/entities/Usuario";
 import type { Email } from "@/core/value-objects/Email";
@@ -1253,12 +1300,12 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
   }
 
   async crearMuchos(usuarios: Usuario[]): Promise<Usuario[]> {
-    const data = usuarios.map(UsuarioMapper.toPersistence);
-    // Prisma createMany no retorna registros, usamos transaction
-    const created = await this.prisma.$transaction(
-      data.map((d) => this.prisma.usuarios.create({ data: d }))
-    );
-    return created.map(UsuarioMapper.toDomain);
+    const results: Usuario[] = [];
+    for (const usuario of usuarios) {
+      const created = await this.crear(usuario);
+      results.push(created);
+    }
+    return results;
   }
 
   async verificar(id: number): Promise<void> {
@@ -1402,28 +1449,23 @@ graph LR
 ## Apéndice B: Variables de Entorno Esperadas
 
 ```env
-# ── Base de Datos ──
-DATABASE_URL=postgresql://user:pass@host:5432/aniei2026
+# ── Base de Datos (Supabase / PostgreSQL) ──
+DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
+DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
 
-# ── Email ──
-EMAIL_PROVIDER=resend                # resend | sendgrid | nodemailer
-RESEND_API_KEY=re_...
-# SENDGRID_API_KEY=SG...
-# SMTP_HOST=... SMTP_PORT=... SMTP_USER=... SMTP_PASS=...
+# ── Supabase: Storage ──
+NEXT_PUBLIC_SUPABASE_URL="https://[REF].supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 
-# ── Storage ──
-STORAGE_PROVIDER=supabase            # supabase | s3 | local
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...
-# AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... S3_BUCKET=...
-# LOCAL_STORAGE_PATH=./uploads
-
-# ── PDF ──
-PDF_PROVIDER=react-pdf               # react-pdf | puppeteer
+# ── Resend: Email ──
+RESEND_API_KEY="re_..."
+EMAIL_FROM="ANIEI 2026 <registro@dominio.com>"
 
 # ── Feature Flags ──
-ENABLE_GROUP_REGISTRATION=true       # true | false
+ENABLE_GROUP_REGISTRATION="true"     # "true" | "false"
 
-# ── General ──
-NEXT_PUBLIC_APP_URL=https://registro.aniei.org.mx
+# ── App ──
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
+
+> **Nota:** El `DIRECT_URL` es usado por `@prisma/adapter-pg` (PrismaPg) en `infrastructure/database/client.ts` para la conexión directa sin pooler. El `DATABASE_URL` es la URL del pooler para uso general de Prisma CLI.

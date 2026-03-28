@@ -7,6 +7,14 @@ export interface ArchivoDTO {
   buffer: Buffer;
 }
 
+export interface DepositoDTO {
+  bancoSucursal?: string | null;
+  ciudad?: string | null;
+  referencia: string;
+  monto: number;
+  fechaDeposito: Date;
+}
+
 export interface RegistroUsuarioDTO {
   nombre: string;
   apellido: string;
@@ -21,5 +29,6 @@ export interface RegistroUsuarioDTO {
   idTipoUsuario: number;
   idInstitucion: number;
   idEntidadFederativa: number;
+  deposito: DepositoDTO;
   archivo: ArchivoDTO;
 }

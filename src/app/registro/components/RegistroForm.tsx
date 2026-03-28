@@ -176,9 +176,74 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
         />
       </fieldset>
 
-      {/* Comprobante de pago */}
+      {/* Datos del depósito */}
       <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-600">Comprobante de Pago</legend>
+        <legend className="px-2 text-sm font-semibold text-gray-600">Datos del Depósito</legend>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="bancoSucursal" className="text-sm font-medium text-gray-700">
+              Banco / Sucursal
+            </label>
+            <input
+              id="bancoSucursal" name="bancoSucursal" type="text" maxLength={100}
+              placeholder="Ej. BBVA Sucursal Centro"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            {state.errors?.bancoSucursal && <p className="text-xs text-red-500">{state.errors.bancoSucursal}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="ciudad" className="text-sm font-medium text-gray-700">
+              Ciudad
+            </label>
+            <input
+              id="ciudad" name="ciudad" type="text" maxLength={100}
+              placeholder="Ej. Guadalajara"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            {state.errors?.ciudad && <p className="text-xs text-red-500">{state.errors.ciudad}</p>}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="referencia" className="text-sm font-medium text-gray-700">
+            Referencia / Folio del depósito <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="referencia" name="referencia" type="text" maxLength={50} required
+            placeholder="Número de referencia o folio del comprobante"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+          {state.errors?.referencia && <p className="text-xs text-red-500">{state.errors.referencia}</p>}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="monto" className="text-sm font-medium text-gray-700">
+              Monto ($) <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="monto" name="monto" type="number" step="0.01" min="0.01" required
+              placeholder="0.00"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            {state.errors?.monto && <p className="text-xs text-red-500">{state.errors.monto}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="fechaDeposito" className="text-sm font-medium text-gray-700">
+              Fecha del depósito <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="fechaDeposito" name="fechaDeposito" type="date" required
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            {state.errors?.fechaDeposito && <p className="text-xs text-red-500">{state.errors.fechaDeposito}</p>}
+          </div>
+        </div>
+
+        {/* Comprobante de pago (archivo) */}
         <CampoArchivo name="comprobante" error={state.errors?.comprobante} />
       </fieldset>
 
