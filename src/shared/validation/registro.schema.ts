@@ -24,6 +24,22 @@ export const depositoSchema = z.object({
   fechaDeposito: z.coerce.date({ error: 'Ingrese una fecha de depósito válida' }),
 });
 
+export const facturacionSchema = z.object({
+  razonSocial: z.string().min(1, 'La razón social es requerida').max(150),
+  rfc: z
+    .string()
+    .min(1, 'El RFC es requerido')
+    .max(20)
+    .regex(/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i, 'Formato de RFC inválido (Ej. XAXX010101000)'),
+  calle: z.string().max(100).optional().or(z.literal('')),
+  numExterior: z.string().max(20).optional().or(z.literal('')),
+  numInterior: z.string().max(20).optional().or(z.literal('')),
+  colonia: z.string().max(100).optional().or(z.literal('')),
+  municipio: z.string().max(100).optional().or(z.literal('')),
+  codigoPostal: z.string().max(10).optional().or(z.literal('')),
+  idEntidadFederativaRfc: z.coerce.number().int().positive('Seleccione un estado').optional(),
+});
+
 export type RegistroFormData = z.infer<typeof registroSchema>;
 export type DepositoFormData = z.infer<typeof depositoSchema>;
 

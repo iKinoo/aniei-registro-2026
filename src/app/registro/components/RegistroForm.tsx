@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
 import { SelectCatalogo, cargosToOptions, estadosToOptions, institucionesToOptions, tiposUsuarioToOptions } from './SelectCatalogo';
 import { CampoArchivo } from './CampoArchivo';
+import { SeccionFacturacion } from './SeccionFacturacion';
 import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
 
 interface RegistroFormProps {
@@ -246,6 +247,12 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
         {/* Comprobante de pago (archivo) */}
         <CampoArchivo name="comprobante" error={state.errors?.comprobante} />
       </fieldset>
+
+      {/* Facturación */}
+      <SeccionFacturacion
+        estados={catalogos.estados}
+        errors={state.errors}
+      />
 
       <button
         type="submit"

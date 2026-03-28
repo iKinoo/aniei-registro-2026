@@ -1,5 +1,6 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
+import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -8,6 +9,7 @@ import { RegistroUsuarioDTO } from '@/application/dtos/RegistroUsuarioDTO';
 import { ResultadoRegistro } from '@/application/dtos/ResultadoRegistro';
 import { Usuario } from '@/core/entities/Usuario';
 import { Deposito } from '@/core/entities/Deposito';
+import { Facturacion } from '@/core/entities/Facturacion';
 import { Monto } from '@/core/value-objects/Monto';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
@@ -19,6 +21,7 @@ export class RegistrarUsuario {
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
     private readonly depositoRepo: IDepositoRepository,
+    private readonly facturacionRepo: IFacturacionRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
@@ -80,7 +83,24 @@ export class RegistrarUsuario {
     });
     await this.depositoRepo.crear(deposito);
 
-    // 8. Obtener datos de catálogos para el PDF y correo
+    // 8. Guardar facturación si se proporcionó
+    if (dto.facturacion) {
+      const facturacion = Facturacion.create({
+        idUsuario,
+        razonSocial: dto.facturacion.razonSocial,
+        rfc: dto.facturacion.rfc,
+        calle: dto.facturacion.calle ?? null,
+        numExterior: dto.facturacion.numExterior ?? null,
+        numInterior: dto.facturacion.numInterior ?? null,
+        colonia: dto.facturacion.colonia ?? null,
+        municipio: dto.facturacion.municipio ?? null,
+        codigoPostal: dto.facturacion.codigoPostal ?? null,
+        idEntidadFederativaRfc: dto.facturacion.idEntidadFederativaRfc ?? null,
+      });
+      await this.facturacionRepo.crear(facturacion);
+    }
+
+    // 9. Obtener datos de catálogos para el PDF y correo
     const [instituciones, tiposUsuario] = await Promise.all([
       this.catalogoRepo.obtenerInstituciones(),
       this.catalogoRepo.obtenerTiposUsuario(),

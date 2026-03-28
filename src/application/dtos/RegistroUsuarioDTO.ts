@@ -15,6 +15,18 @@ export interface DepositoDTO {
   fechaDeposito: Date;
 }
 
+export interface FacturacionDTO {
+  razonSocial: string;
+  rfc: string;
+  calle?: string | null;
+  numExterior?: string | null;
+  numInterior?: string | null;
+  colonia?: string | null;
+  municipio?: string | null;
+  codigoPostal?: string | null;
+  idEntidadFederativaRfc?: number | null;
+}
+
 export interface RegistroUsuarioDTO {
   nombre: string;
   apellido: string;
@@ -31,4 +43,5 @@ export interface RegistroUsuarioDTO {
   idEntidadFederativa: number;
   deposito: DepositoDTO;
   archivo: ArchivoDTO;
+  facturacion?: FacturacionDTO | null;
 }

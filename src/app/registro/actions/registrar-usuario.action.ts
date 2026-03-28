@@ -1,11 +1,12 @@
 'use server';
 
-import { registroSchema, depositoSchema, validarArchivo } from '@/shared/validation/registro.schema';
+import { registroSchema, depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { Genero } from '@/core/enums/Genero';
 import {
   getUsuarioRepository,
   getDepositoRepository,
+  getFacturacionRepository,
   getStorageService,
   getEmailService,
   getPdfService,
@@ -49,30 +50,53 @@ export async function registrarUsuarioAction(
       fechaDeposito: formData.get('fechaDeposito') as string,
     };
 
+    const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
+
     // Validar campos personales/institucionales con Zod
     const parsed = registroSchema.safeParse(rawData);
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
         const key = issue.path.join('.');
-        if (!fieldErrors[key]) {
-          fieldErrors[key] = issue.message;
-        }
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
       return { success: false, errors: fieldErrors };
     }
 
-    // Validar datos del depósito con Zod
+    // Validar datos del depósito
     const parsedDeposito = depositoSchema.safeParse(rawDeposito);
     if (!parsedDeposito.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsedDeposito.error.issues) {
         const key = issue.path.join('.');
-        if (!fieldErrors[key]) {
-          fieldErrors[key] = issue.message;
-        }
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
       return { success: false, errors: fieldErrors };
+    }
+
+    // Validar datos de facturación (solo si el usuario la activó)
+    let parsedFacturacion: ReturnType<typeof facturacionSchema.safeParse> | null = null;
+    if (requiereFacturacion) {
+      const rawFacturacion = {
+        razonSocial: formData.get('razonSocial') as string,
+        rfc: formData.get('rfc') as string,
+        calle: formData.get('calle') as string,
+        numExterior: formData.get('numExterior') as string,
+        numInterior: formData.get('numInterior') as string,
+        colonia: formData.get('colonia') as string,
+        municipio: formData.get('municipio') as string,
+        codigoPostal: formData.get('codigoPostal') as string,
+        idEntidadFederativaRfc: formData.get('idEntidadFederativaRfc') as string,
+      };
+      parsedFacturacion = facturacionSchema.safeParse(rawFacturacion);
+      if (!parsedFacturacion.success) {
+        const fieldErrors: Record<string, string> = {};
+        for (const issue of parsedFacturacion.error.issues) {
+          const key = `facturacion.${issue.path.join('.')}`;
+          if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+        }
+        return { success: false, errors: fieldErrors };
+      }
     }
 
     // Validar archivo
@@ -90,6 +114,7 @@ export async function registrarUsuarioAction(
     const useCase = new RegistrarUsuario(
       getUsuarioRepository(),
       getDepositoRepository(),
+      getFacturacionRepository(),
       getStorageService(),
       getEmailService(),
       getPdfService(),
@@ -117,6 +142,20 @@ export async function registrarUsuarioAction(
         tamanio: file.size,
         buffer,
       },
+      facturacion:
+        requiereFacturacion && parsedFacturacion?.success
+          ? {
+              razonSocial: parsedFacturacion.data.razonSocial,
+              rfc: parsedFacturacion.data.rfc,
+              calle: parsedFacturacion.data.calle || null,
+              numExterior: parsedFacturacion.data.numExterior || null,
+              numInterior: parsedFacturacion.data.numInterior || null,
+              colonia: parsedFacturacion.data.colonia || null,
+              municipio: parsedFacturacion.data.municipio || null,
+              codigoPostal: parsedFacturacion.data.codigoPostal || null,
+              idEntidadFederativaRfc: parsedFacturacion.data.idEntidadFederativaRfc ?? null,
+            }
+          : null,
     });
 
     return {
@@ -130,6 +169,10 @@ export async function registrarUsuarioAction(
       if (domainError.code === 'CORREO_DUPLICADO') {
         return { success: false, errors: { correo: domainError.message } };
       }
+    }
+    // Error de validación RFC u otros errores de dominio
+    if (error instanceof Error && error.message.includes('RFC')) {
+      return { success: false, errors: { 'facturacion.rfc': error.message } };
     }
     console.error('Error en registro:', error);
     return { success: false, errors: { _form: 'Ocurrió un error inesperado. Intente de nuevo.' } };
