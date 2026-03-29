@@ -60,6 +60,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             </label>
             <input
               id="nombre" name="nombre" type="text" required
+              defaultValue={state.fields?.nombre ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.nombre && <p className="text-xs text-red-500">{state.errors.nombre}</p>}
@@ -71,6 +72,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             </label>
             <input
               id="apellido" name="apellido" type="text" required
+              defaultValue={state.fields?.apellido ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.apellido && <p className="text-xs text-red-500">{state.errors.apellido}</p>}
@@ -83,6 +85,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           </label>
           <input
             id="correo" name="correo" type="email" required
+            defaultValue={state.fields?.correo ?? ''}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
           {state.errors?.correo && <p className="text-xs text-red-500">{state.errors.correo}</p>}
@@ -93,6 +96,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <label htmlFor="lada" className="text-sm font-medium text-gray-700">Lada</label>
             <input
               id="lada" name="lada" type="text" maxLength={10}
+              defaultValue={state.fields?.lada ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -100,6 +104,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <label htmlFor="telefono" className="text-sm font-medium text-gray-700">Teléfono</label>
             <input
               id="telefono" name="telefono" type="text" maxLength={20}
+              defaultValue={state.fields?.telefono ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -107,6 +112,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <label htmlFor="extension" className="text-sm font-medium text-gray-700">Extensión</label>
             <input
               id="extension" name="extension" type="text" maxLength={10}
+              defaultValue={state.fields?.extension ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -118,7 +124,8 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
               Género <span className="text-red-500">*</span>
             </label>
             <select
-              id="genero" name="genero" required defaultValue=""
+              key={state.fields?.genero ?? ''}
+              id="genero" name="genero" required defaultValue={state.fields?.genero ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
               <option value="" disabled>Seleccione...</option>
@@ -133,6 +140,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <label htmlFor="carrera" className="text-sm font-medium text-gray-700">Carrera</label>
             <input
               id="carrera" name="carrera" type="text" maxLength={128}
+              defaultValue={state.fields?.carrera ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -142,6 +150,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           <label htmlFor="dependencia" className="text-sm font-medium text-gray-700">Dependencia</label>
           <input
             id="dependencia" name="dependencia" type="text" maxLength={128}
+            defaultValue={state.fields?.dependencia ?? ''}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -156,11 +165,13 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             name="idCargo" label="Cargo" required
             options={cargosToOptions(catalogos.cargos)}
             error={state.errors?.idCargo}
+            defaultValue={state.fields?.idCargo}
           />
           <SelectCatalogo
             name="idTipoUsuario" label="Tipo de participante" required
             options={tiposUsuarioToOptions(catalogos.tiposUsuario)}
             error={state.errors?.idTipoUsuario}
+            defaultValue={state.fields?.idTipoUsuario}
           />
         </div>
 
@@ -168,12 +179,14 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           name="idInstitucion" label="Institución" required
           options={institucionesToOptions(catalogos.instituciones)}
           error={state.errors?.idInstitucion}
+          defaultValue={state.fields?.idInstitucion}
         />
 
         <SelectCatalogo
           name="idEntidadFederativa" label="Estado" required
           options={estadosToOptions(catalogos.estados)}
           error={state.errors?.idEntidadFederativa}
+          defaultValue={state.fields?.idEntidadFederativa}
         />
       </fieldset>
 
@@ -189,6 +202,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <input
               id="bancoSucursal" name="bancoSucursal" type="text" maxLength={100}
               placeholder="Ej. BBVA Sucursal Centro"
+              defaultValue={state.fields?.bancoSucursal ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.bancoSucursal && <p className="text-xs text-red-500">{state.errors.bancoSucursal}</p>}
@@ -201,6 +215,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <input
               id="ciudad" name="ciudad" type="text" maxLength={100}
               placeholder="Ej. Guadalajara"
+              defaultValue={state.fields?.ciudad ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.ciudad && <p className="text-xs text-red-500">{state.errors.ciudad}</p>}
@@ -214,6 +229,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           <input
             id="referencia" name="referencia" type="text" maxLength={50} required
             placeholder="Número de referencia o folio del comprobante"
+            defaultValue={state.fields?.referencia ?? ''}
             className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
           {state.errors?.referencia && <p className="text-xs text-red-500">{state.errors.referencia}</p>}
@@ -227,6 +243,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <input
               id="monto" name="monto" type="number" step="0.01" min="0.01" required
               placeholder="0.00"
+              defaultValue={state.fields?.monto ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.monto && <p className="text-xs text-red-500">{state.errors.monto}</p>}
@@ -238,6 +255,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             </label>
             <input
               id="fechaDeposito" name="fechaDeposito" type="date" required
+              defaultValue={state.fields?.fechaDeposito ?? ''}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {state.errors?.fechaDeposito && <p className="text-xs text-red-500">{state.errors.fechaDeposito}</p>}
@@ -252,6 +270,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
       <SeccionFacturacion
         estados={catalogos.estados}
         errors={state.errors}
+        fields={state.fields}
       />
 
       <button

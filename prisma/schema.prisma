@@ -77,7 +77,7 @@ model depositos {
   id_usuario      Int?
   banco_sucursal  String?   @db.VarChar(100)
   ciudad          String?   @db.VarChar(100)
-  referencia      String    @unique @db.VarChar(50)
+  referencia      String    @db.VarChar(50)
   monto           Decimal   @db.Decimal(10, 2)
   fecha_deposito  DateTime  @db.Timestamp(6)
   archivo_url     String    @db.VarChar(500)

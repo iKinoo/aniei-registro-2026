@@ -8,20 +8,22 @@ interface SelectCatalogoProps {
   options: { value: number; label: string }[];
   error?: string;
   required?: boolean;
+  defaultValue?: string | number;
 }
 
-export function SelectCatalogo({ name, label, options, error, required }: SelectCatalogoProps) {
+export function SelectCatalogo({ name, label, options, error, required, defaultValue }: SelectCatalogoProps) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={name} className="text-sm font-medium text-gray-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
+        key={String(defaultValue ?? '')}
         id={name}
         name={name}
         required={required}
         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-        defaultValue=""
+        defaultValue={defaultValue ?? ""}
       >
         <option value="" disabled>Seleccione...</option>
         {options.map((opt) => (
