@@ -10,8 +10,9 @@ datasource db {
 model accesos {
   id_acceso     Int       @id @default(autoincrement())
   id_usuario    Int?
-  username      String    @unique @db.VarChar(50)
-  password_hash String    @db.VarChar(255)
+  nombre        String?   @db.VarChar(150)
+  email         String    @unique @db.VarChar(100)
+  auth_id       String?   @unique @db.Uuid
   rol           String?   @default("USER") @db.VarChar(20)
   usuarios      usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 }

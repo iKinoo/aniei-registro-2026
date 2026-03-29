@@ -7,7 +7,9 @@ import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCa
 import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
+import { SupabaseAuthService } from '@/infrastructure/services/auth/SupabaseAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { IAuthService } from '@/application/ports/IAuthService';
 import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
@@ -66,4 +68,8 @@ export function getStorageService(): IStorageService {
 
 export function getAdminQueryService(): IAdminQueryService {
   return new PrismaAdminQueryService(prisma);
+}
+
+export function getAuthService(): IAuthService {
+  return new SupabaseAuthService();
 }

@@ -74,7 +74,7 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8 font-sans">
+    <div className="p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
