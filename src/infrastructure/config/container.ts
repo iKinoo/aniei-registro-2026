@@ -12,14 +12,20 @@ import { IComprobantePagoRepository } from '@/application/ports/IComprobantePago
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
+import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
+import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { IStorageService } from '@/application/ports/IStorageService';
+import { deprecate } from 'node:util';
 
 export function getUsuarioRepository(): IUsuarioRepository {
   return new PrismaUsuarioRepository(prisma);
 }
 
+/**
+ * @deprecated Usar getDepositoRepository() en su lugar
+ */
 export function getComprobantePagoRepository(): IComprobantePagoRepository {
   return new PrismaComprobantePagoRepository(prisma);
 }
@@ -56,4 +62,8 @@ export function getStorageService(): IStorageService {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY deben estar configuradas');
   }
   return new SupabaseStorageService(url, key);
+}
+
+export function getAdminQueryService(): IAdminQueryService {
+  return new PrismaAdminQueryService(prisma);
 }
