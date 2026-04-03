@@ -3,6 +3,10 @@ import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { FacturacionDTO } from '@/application/dtos/FacturacionDTO';
 import { Facturacion } from '@/core/entities/Facturacion';
 
+
+/**
+ * TODO: no se está usando, revisar o remover
+ */
 export class SolicitarFacturacion {
   constructor(
     private readonly facturacionRepo: IFacturacionRepository,
