@@ -1,26 +1,26 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
-import { UsuarioAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
 
 export class PrismaAdminQueryService implements IAdminQueryService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
-  async obtenerUsuariosAdmin(
+  async obtenerUsuariosForAdmin(
     page: number,
     limit: number,
     search?: string
-  ): Promise<PaginatedResult<UsuarioAdminDTO>> {
+  ): Promise<PaginatedResult<UsuarioForAdminDTO>> {
     const skip = (page - 1) * limit;
 
     const whereClause: any = search
       ? {
-          OR: [
-            { nombre: { contains: search, mode: 'insensitive' } },
-            { apellido: { contains: search, mode: 'insensitive' } },
-            { correo: { contains: search, mode: 'insensitive' } },
-          ],
-        }
+        OR: [
+          { nombre: { contains: search, mode: 'insensitive' } },
+          { apellido: { contains: search, mode: 'insensitive' } },
+          { correo: { contains: search, mode: 'insensitive' } },
+        ],
+      }
       : {};
 
     const [total, usuarios] = await Promise.all([
@@ -41,7 +41,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       }),
     ]);
 
-    const data: UsuarioAdminDTO[] = usuarios.map((user) => {
+    const data: UsuarioForAdminDTO[] = usuarios.map((user) => {
       const dep = user.depositos.length > 0 ? user.depositos[0] : null;
 
       return {
@@ -54,11 +54,11 @@ export class PrismaAdminQueryService implements IAdminQueryService {
         fechaRegistro: user.fecha_registro || new Date(),
         deposito: dep
           ? {
-              monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number
-              fecha: dep.fecha_deposito,
-              referencia: dep.referencia,
-              archivoUrl: dep.archivo_url,
-            }
+            monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number
+            fecha: dep.fecha_deposito,
+            referencia: dep.referencia,
+            archivoUrl: dep.archivo_url,
+          }
           : null,
       };
     });

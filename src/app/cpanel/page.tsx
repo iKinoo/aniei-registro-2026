@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getUsuariosAdminAction, reenviarConstanciaAction } from './actions';
-import { UsuarioAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
 
 // Icon components
 const SearchIcon = () => (
@@ -24,7 +24,7 @@ const SendIcon = () => (
 );
 
 export default function AdminPanel() {
-  const [usuarios, setUsuarios] = useState<UsuarioAdminDTO[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioForAdminDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -63,7 +63,7 @@ export default function AdminPanel() {
   // Handler for resending confirmation
   const handleResend = async (idUsuario: number) => {
     if (!confirm('¿Estás seguro de que deseas reenviar la constancia de registro a este usuario?')) return;
-    
+
     // Optimistic UI could go here, but since it's an email, better to wait
     const result = await reenviarConstanciaAction(idUsuario);
     if (result.success) {

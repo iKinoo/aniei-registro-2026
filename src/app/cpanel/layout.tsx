@@ -11,8 +11,8 @@ export default async function CpanelLayout({ children }: { children: React.React
         <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex-shrink-0 flex items-center space-x-4">
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <div className="shrink-0 flex items-center space-x-4">
+                <span className="text-xl font-bold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   CPanel
                 </span>
                 <span className="text-slate-300">|</span>

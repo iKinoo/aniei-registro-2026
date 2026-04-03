@@ -1,10 +1,10 @@
-import { UsuarioAdminDTO } from '../dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '../dtos/UsuarioAdminDTO';
 import { PaginatedResult } from '../dtos/PaginatedResult';
 
 export interface IAdminQueryService {
-  obtenerUsuariosAdmin(
+  obtenerUsuariosForAdmin(
     page: number,
     limit: number,
     search?: string
-  ): Promise<PaginatedResult<UsuarioAdminDTO>>;
+  ): Promise<PaginatedResult<UsuarioForAdminDTO>>;
 }

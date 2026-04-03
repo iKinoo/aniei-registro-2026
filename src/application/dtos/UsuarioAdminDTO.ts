@@ -1,4 +1,4 @@
-export interface UsuarioAdminDTO {
+export interface UsuarioForAdminDTO {
   idUsuario: number;
   nombreCompleto: string;
   correo: string;

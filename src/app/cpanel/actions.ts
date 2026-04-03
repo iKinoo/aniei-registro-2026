@@ -2,13 +2,13 @@
 
 import { getAdminQueryService, getUsuarioRepository, getCatalogoRepository, getEmailService } from '@/infrastructure/config/container';
 import { EnviarConfirmacion } from '@/application/use-cases/EnviarConfirmacion';
-import { ObtenerUsuariosAdmin } from '@/application/use-cases/ObtenerUsuariosAdmin';
+import { ObtenerUsuariosForAdmin } from '@/application/use-cases/ObtenerUsuariosForAdmin';
 
 export async function getUsuariosAdminAction(page: number, limit: number, search?: string) {
   try {
     const adminService = getAdminQueryService();
-    const obtenerUsuariosAdmin = new ObtenerUsuariosAdmin(adminService);
-    
+    const obtenerUsuariosAdmin = new ObtenerUsuariosForAdmin(adminService);
+
     const result = await obtenerUsuariosAdmin.execute(page, limit, search);
     return { success: true, data: result };
   } catch (error) {
