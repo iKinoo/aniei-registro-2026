@@ -23,6 +23,13 @@ const SendIcon = () => (
   </svg>
 );
 
+const SpinnerIcon = () => (
+  <svg className="animate-spin mr-1 h-4 w-4 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
+
 export default function AdminPanel() {
   const [usuarios, setUsuarios] = useState<UsuarioForAdminDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +39,8 @@ export default function AdminPanel() {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [fileErrors, setFileErrors] = useState<Record<number, string>>({});
+  const [loadingFiles, setLoadingFiles] = useState<Record<number, boolean>>({});
 
   // Debounce search
   useEffect(() => {
@@ -73,18 +82,27 @@ export default function AdminPanel() {
     }
   };
 
-  const handleVerArchivo = async (ruta: string) => {
+  const handleVerArchivo = async (idUsuario: number, ruta: string) => {
+    setLoadingFiles(prev => ({ ...prev, [idUsuario]: true }));
+    setFileErrors(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+
     const result = await obtenerUrlArchivoAction(ruta);
+    
+    setLoadingFiles(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+
     if (result.success) {
       window.open(result.url, '_blank');
     } else {
-      alert('Error: ' + result.error);
+      setFileErrors(prev => ({ ...prev, [idUsuario]: result.error }));
+      setTimeout(() => {
+        setFileErrors(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+      }, 4000);
     }
   };
 
   return (
     <div className="p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="relative  max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
@@ -109,9 +127,9 @@ export default function AdminPanel() {
         </div>
 
         {/* Data Table */}
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="  w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Usuario</th>
@@ -139,7 +157,7 @@ export default function AdminPanel() {
                   </tr>
                 ) : (
                   usuarios.map((user) => (
-                    <tr key={user.idUsuario} className="hover:bg-slate-50/80 transition-colors duration-150">
+                    <tr key={user.idUsuario} className=" hover:bg-slate-50/80 transition-colors duration-150">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-medium text-slate-900">{user.nombreCompleto}</span>
@@ -170,14 +188,24 @@ export default function AdminPanel() {
                       <td className="px-6 py-4">
                         <span className="text-slate-600">{user.tipoUsuario}</span>
                       </td>
-                      <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                      <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap overflow-visible">
                         {user.deposito?.archivo?.ruta && (
-                          <button
-                            onClick={() => handleVerArchivo(user.deposito!.archivo.ruta)}
-                            className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                          >
-                            <FileIcon /> Ver Archivo
-                          </button>
+                          <div className="inline-flex flex-col items-center">
+                            <button
+                              onClick={() => handleVerArchivo(user.idUsuario, user.deposito!.archivo.ruta)}
+                              disabled={loadingFiles[user.idUsuario]}
+                              className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingFiles[user.idUsuario] ? <SpinnerIcon /> : <FileIcon />} Ver Archivo
+                            </button>
+                            {fileErrors[user.idUsuario] && (
+                              <div 
+                                className="absolute  z-50 w-48 bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg shadow-sm border border-red-200 whitespace-normal text-left transition-all duration-300"
+                              >
+                                {fileErrors[user.idUsuario]}
+                              </div>
+                            )}
+                          </div>
                         )}
                         <button
                           onClick={() => handleResend(user.idUsuario)}

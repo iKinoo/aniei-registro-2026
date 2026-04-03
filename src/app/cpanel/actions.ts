@@ -42,6 +42,6 @@ export async function obtenerUrlArchivoAction(ruta: string): Promise<{ success: 
     return { success: true, url: signedUrl };
   } catch (error) {
     console.error(`Error in obtenerUrlArchivoAction for file ${ruta}:`, error);
-    return { success: false, error: 'Ocurrió un error al obtener acceso al archivo' };
+    return { success: false, error: `${error}` };
   }
 }
