@@ -1,5 +1,5 @@
 import { IPdfService } from '@/application/ports/IPdfService';
-import { IStorageService } from '@/application/ports/IStorageService';
+import { IStorageService, parseFileReference } from '@/application/ports/IStorageService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 
@@ -42,6 +42,7 @@ export class GenerarConstancia {
     const ruta = `constancias/${folio}.pdf`;
     await this.storageService.subir(ruta, pdfBuffer, 'application/pdf');
 
-    return await this.storageService.obtenerUrl(ruta);
+    const fileRef = parseFileReference(ruta);
+    return await this.storageService.getAccess(fileRef);
   }
 }

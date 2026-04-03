@@ -10,6 +10,8 @@ export interface UsuarioForAdminDTO {
     monto: number;
     fecha: Date;
     referencia: string;
-    archivoUrl: string;
+    archivo: {
+      ruta: string;
+    };
   } | null;
 }

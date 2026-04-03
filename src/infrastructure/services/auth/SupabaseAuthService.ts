@@ -1,7 +1,7 @@
 import { IAuthService, SignInCredentials } from '@/application/ports/IAuthService';
 import { AuthSessionDTO } from '@/application/dtos/AuthSessionDTO';
 import { createClient } from '@/infrastructure/config/supabase/server';
-import { prisma } from '@/infrastructure/database/client';
+
 
 export class SupabaseAuthService implements IAuthService {
   async signIn(credentials: SignInCredentials): Promise<{ success: boolean; error?: string }> {
@@ -30,21 +30,9 @@ export class SupabaseAuthService implements IAuthService {
       return null;
     }
 
-    // Buscamos al usuario en la tabla de accesos de Prisma
-    const acceso = await prisma.accesos.findUnique({
-      where: { email: user.email },
-    });
-
-    if (!acceso) {
-      return null;
-    }
-
     return {
-      idAcceso: acceso.id_acceso,
-      nombre: acceso.nombre,
-      email: acceso.email,
-      authId: acceso.auth_id,
-      rol: acceso.rol || 'USER',
+      email: user.email,
+      authId: user.id,
     };
   }
 }

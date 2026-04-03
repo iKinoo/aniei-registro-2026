@@ -28,17 +28,16 @@ export class SupabaseStorageService implements IStorageService {
     return `${bucket}/${filePath}`;
   }
 
-  async obtenerUrl(ruta: string): Promise<string> {
-    const bucket = ruta.startsWith('constancias/') ? 'constancias' : 'comprobantes';
-    const filePath = ruta.startsWith('constancias/') || ruta.startsWith('comprobantes/')
-      ? ruta.substring(ruta.indexOf('/') + 1)
-      : ruta;
+  async getAccess(file: { bucket: string; path: string; }): Promise<string> {
+    const { data, error } = await this.client.storage
+      .from(file.bucket)
+      .createSignedUrl(file.path, 60 * 5); // 5 minutos
 
-    const { data } = this.client.storage
-      .from(bucket)
-      .getPublicUrl(filePath);
+    if (error) {
+      throw new Error(`Error al obtener url firmada de storage: ${error.message}`);
+    }
 
-    return data.publicUrl;
+    return data.signedUrl;
   }
 
   async eliminar(ruta: string): Promise<void> {

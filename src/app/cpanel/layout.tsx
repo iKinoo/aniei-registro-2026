@@ -1,13 +1,19 @@
-import { getAuthService } from '@/infrastructure/config/container';
+import { getAuthService, getAccesoRepository } from '@/infrastructure/config/container';
 import LogoutForm from './LogoutForm';
 
 export default async function CpanelLayout({ children }: { children: React.ReactNode }) {
   const authService = getAuthService();
   const session = await authService.getCurrentSession();
+  
+  let acceso = null;
+  if (session) {
+    const accesoRepo = getAccesoRepository();
+    acceso = await accesoRepo.buscarPorEmail(session.email);
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {session && (
+      {session && acceso && (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
@@ -17,8 +23,8 @@ export default async function CpanelLayout({ children }: { children: React.React
                 </span>
                 <span className="text-slate-300">|</span>
                 <div className="flex flex-col justify-center">
-                  <span className="text-sm font-semibold text-slate-900">Hola, {session.nombre || session.email}</span>
-                  <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">{session.rol}</span>
+                  <span className="text-sm font-semibold text-slate-900">Hola, {acceso.nombre || acceso.email}</span>
+                  <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">{acceso.rol}</span>
                 </div>
               </div>
               <div>

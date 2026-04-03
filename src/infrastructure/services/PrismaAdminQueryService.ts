@@ -57,7 +57,9 @@ export class PrismaAdminQueryService implements IAdminQueryService {
             monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number
             fecha: dep.fecha_deposito,
             referencia: dep.referencia,
-            archivoUrl: dep.archivo_url,
+            archivo: {
+              ruta: dep.archivo_url,
+            },
           }
           : null,
       };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUsuariosAdminAction, reenviarConstanciaAction } from './actions';
+import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction } from './actions';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 
 // Icon components
@@ -68,6 +68,15 @@ export default function AdminPanel() {
     const result = await reenviarConstanciaAction(idUsuario);
     if (result.success) {
       alert('Constancia reenviada exitosamente 🎉');
+    } else {
+      alert('Error: ' + result.error);
+    }
+  };
+
+  const handleVerArchivo = async (ruta: string) => {
+    const result = await obtenerUrlArchivoAction(ruta);
+    if (result.success) {
+      window.open(result.url, '_blank');
     } else {
       alert('Error: ' + result.error);
     }
@@ -162,15 +171,13 @@ export default function AdminPanel() {
                         <span className="text-slate-600">{user.tipoUsuario}</span>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                        {user.deposito?.archivoUrl && (
-                          <a
-                            href={user.deposito.archivoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {user.deposito?.archivo?.ruta && (
+                          <button
+                            onClick={() => handleVerArchivo(user.deposito!.archivo.ruta)}
                             className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                           >
                             <FileIcon /> Ver Archivo
-                          </a>
+                          </button>
                         )}
                         <button
                           onClick={() => handleResend(user.idUsuario)}
