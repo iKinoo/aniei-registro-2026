@@ -2,12 +2,14 @@
 
 import { getAdminQueryService, getUsuarioRepository, getCatalogoRepository, getEmailService } from '@/infrastructure/config/container';
 import { EnviarConfirmacion } from '@/application/use-cases/EnviarConfirmacion';
+import { ObtenerUsuariosAdmin } from '@/application/use-cases/ObtenerUsuariosAdmin';
 
 export async function getUsuariosAdminAction(page: number, limit: number, search?: string) {
   try {
     const adminService = getAdminQueryService();
-    // In next.js server actions, you normally can just return serializable objects.
-    const result = await adminService.obtenerUsuariosAdmin(page, limit, search);
+    const obtenerUsuariosAdmin = new ObtenerUsuariosAdmin(adminService);
+    
+    const result = await obtenerUsuariosAdmin.execute(page, limit, search);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error in getUsuariosAdminAction:', error);
