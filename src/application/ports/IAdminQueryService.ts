@@ -1,4 +1,4 @@
-import { UsuarioForAdminDTO } from '../dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '../dtos/UsuarioForAdminDTO';
 import { PaginatedResult } from '../dtos/PaginatedResult';
 
 export interface IAdminQueryService {

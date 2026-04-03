@@ -1,6 +1,6 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
-import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
 
 export class PrismaAdminQueryService implements IAdminQueryService {

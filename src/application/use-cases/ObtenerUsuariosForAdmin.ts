@@ -1,5 +1,5 @@
 import { IAdminQueryService } from '../ports/IAdminQueryService';
-import { UsuarioForAdminDTO } from '../dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '../dtos/UsuarioForAdminDTO';
 import { PaginatedResult } from '../dtos/PaginatedResult';
 
 export class ObtenerUsuariosForAdmin {

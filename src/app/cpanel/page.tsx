@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getUsuariosAdminAction, reenviarConstanciaAction } from './actions';
-import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioAdminDTO';
+import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 
 // Icon components
 const SearchIcon = () => (
