@@ -8,7 +8,7 @@ import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAcce
 import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
-import { SupabaseAuthService } from '@/infrastructure/services/auth/SupabaseAuthService';
+import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IAuthService } from '@/application/ports/IAuthService';
 import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
@@ -77,5 +77,5 @@ export function getAdminQueryService(): IAdminQueryService {
 }
 
 export function getAuthService(): IAuthService {
-  return new SupabaseAuthService();
+  return new AuthJsAuthService();
 }
