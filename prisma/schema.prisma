@@ -61,19 +61,6 @@ model cargos {
   usuarios    usuarios[]
 }
 
-model comprobantes_pago {
-  id_comprobante  Int       @id @default(autoincrement())
-  id_usuario      Int?
-  archivo_url     String    @db.VarChar(500)
-  archivo_nombre  String    @db.VarChar(255)
-  archivo_mime    String    @db.VarChar(100)
-  archivo_tamanio Int
-  monto           Decimal?  @db.Decimal(10, 2)
-  es_grupal       Boolean?  @default(false)
-  fecha_registro  DateTime? @default(now()) @db.Timestamp(6)
-  usuarios        usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
-}
-
 model depositos {
   id_deposito     Int       @id @default(autoincrement())
   id_usuario      Int?
@@ -213,7 +200,6 @@ model usuarios {
   accesos                 accesos[]
   actividad_ponentes      actividad_ponentes[]
   asistencia_actividades  asistencia_actividades[]
-  comprobantes_pago       comprobantes_pago[]
   depositos               depositos[]
   facturaciones           facturaciones[]
   inscripcion_actividades inscripcion_actividades[]

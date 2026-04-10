@@ -1,5 +1,4 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
-import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -7,7 +6,6 @@ import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 import { RegistroGrupoDTO } from '@/application/dtos/RegistroGrupoDTO';
 import { ResultadoRegistroGrupo } from '@/application/dtos/ResultadoRegistroGrupo';
 import { Usuario } from '@/core/entities/Usuario';
-import { ComprobantePago } from '@/core/entities/ComprobantePago';
 import { GrupoRegistro, MiembroInput } from '@/core/entities/GrupoRegistro';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
@@ -19,7 +17,6 @@ import { Genero } from '@/core/enums/Genero';
 export class RegistrarGrupo {
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
-    private readonly comprobanteRepo: IComprobantePagoRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
@@ -92,18 +89,6 @@ export class RegistrarGrupo {
       u.asignarFolio(FolioRecibo.create(folio));
       folios.push(folio);
     }
-
-    // 9. Registrar comprobante grupal
-    const idResponsable = responsableExistente?.idUsuario ?? persistidos[0].idUsuario!;
-    const comprobante = ComprobantePago.create({
-      idUsuario: idResponsable,
-      archivoUrl: urlComprobante,
-      archivoNombre: dto.archivo.nombre,
-      archivoMime: dto.archivo.mime,
-      archivoTamanio: dto.archivo.tamanio,
-      esGrupal: true,
-    });
-    await this.comprobanteRepo.crear(comprobante);
 
     // 10. Obtener catálogos para PDFs y correos
     const [instituciones, tiposUsuario] = await Promise.all([

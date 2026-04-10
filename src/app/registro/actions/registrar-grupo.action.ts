@@ -6,7 +6,6 @@ import { RegistrarGrupo } from '@/application/use-cases/RegistrarGrupo';
 import { Genero } from '@/core/enums/Genero';
 import {
   getUsuarioRepository,
-  getComprobantePagoRepository,
   getStorageService,
   getEmailService,
   getPdfService,
@@ -81,7 +80,6 @@ export async function registrarGrupoAction(
 
     const useCase = new RegistrarGrupo(
       getUsuarioRepository(),
-      getComprobantePagoRepository(),
       getStorageService(),
       getEmailService(),
       getPdfService(),

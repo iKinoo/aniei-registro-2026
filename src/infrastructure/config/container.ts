@@ -1,6 +1,5 @@
 import { prisma } from '@/infrastructure/database/client';
 import { PrismaUsuarioRepository } from '@/infrastructure/repositories/PrismaUsuarioRepository';
-import { PrismaComprobantePagoRepository } from '@/infrastructure/repositories/PrismaComprobantePagoRepository';
 import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDepositoRepository';
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
 import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCatalogoRepository';
@@ -11,7 +10,6 @@ import { SupabaseStorageService } from '@/infrastructure/services/storage/Supaba
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IAuthService } from '@/application/ports/IAuthService';
-import { IComprobantePagoRepository } from '@/application/ports/IComprobantePagoRepository';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
@@ -25,13 +23,6 @@ import { deprecate } from 'node:util';
 
 export function getUsuarioRepository(): IUsuarioRepository {
   return new PrismaUsuarioRepository(prisma);
-}
-
-/**
- * @deprecated Usar getDepositoRepository() en su lugar
- */
-export function getComprobantePagoRepository(): IComprobantePagoRepository {
-  return new PrismaComprobantePagoRepository(prisma);
 }
 
 export function getDepositoRepository(): IDepositoRepository {
