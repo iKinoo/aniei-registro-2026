@@ -15,4 +15,5 @@ export interface IStorageService {
   subir(ruta: string, buffer: Buffer, mime: string): Promise<string>;
   getAccess(file: FileReference): Promise<string>;
   eliminar(ruta: string): Promise<void>;
+  descargar(ruta: string): Promise<Buffer>;
 }

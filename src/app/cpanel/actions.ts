@@ -23,7 +23,8 @@ export async function reenviarConstanciaAction(idUsuario: number) {
     const enviarConfirmacion = new EnviarConfirmacion(
       getEmailService(),
       getUsuarioRepository(),
-      getCatalogoRepository()
+      getCatalogoRepository(),
+      getStorageService()
     );
 
     await enviarConfirmacion.execute(idUsuario);

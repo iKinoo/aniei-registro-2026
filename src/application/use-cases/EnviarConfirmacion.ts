@@ -1,12 +1,14 @@
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
+import { IStorageService } from '@/application/ports/IStorageService';
 
 export class EnviarConfirmacion {
   constructor(
     private readonly emailService: IEmailService,
     private readonly usuarioRepo: IUsuarioRepository,
     private readonly catalogoRepo: ICatalogoRepository,
+    private readonly storageService: IStorageService,
   ) {}
 
   async execute(idUsuario: number): Promise<void> {
@@ -18,16 +20,15 @@ export class EnviarConfirmacion {
     const instituciones = await this.catalogoRepo.obtenerInstituciones();
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
 
-    const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
+    const folio = usuario.folioRecibo?.toString();
+    if (!folio) {
+      throw new Error(`El usuario con id ${idUsuario} no tiene folio asignado`);
+    }
 
-    await this.emailService.enviarConfirmacionRegistro(usuario.correo.toString(), {
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      folio: usuario.folioRecibo?.toString() ?? 'N/A',
-      institucion: institucion?.nombre ?? 'N/A',
-      fecha: fechaStr,
-    });
+    // Descargar el pdf de la constancia desde el storage
+    const pdfBuffer = await this.storageService.descargar(`constancias/${folio}.pdf`);
+
+    // Enviar constancia por correo
+    await this.emailService.enviarConstancia(usuario.correo.toString(), pdfBuffer, folio);
   }
 }

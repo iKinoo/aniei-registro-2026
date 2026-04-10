@@ -135,8 +135,8 @@ export class RegistrarUsuario {
       fecha: fechaStr,
     });
 
-    // 12. Enviar constancia por correo
-    await this.emailService.enviarConstancia(dto.correo, pdfBuffer, folio);
+    // Nota: El envío de constancia ha sido delegado al administrador (CPanel) 
+    // a través del caso de uso EnviarConfirmacion.
 
     return {
       success: true,

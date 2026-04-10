@@ -54,4 +54,22 @@ export class SupabaseStorageService implements IStorageService {
       throw new Error(`Error al eliminar archivo de storage: ${error.message}`);
     }
   }
+
+  async descargar(ruta: string): Promise<Buffer> {
+    const bucket = ruta.startsWith('constancias/') ? 'constancias' : 'comprobantes';
+    const filePath = ruta.startsWith('constancias/') || ruta.startsWith('comprobantes/')
+      ? ruta.substring(ruta.indexOf('/') + 1)
+      : ruta;
+
+    const { data, error } = await this.client.storage
+      .from(bucket)
+      .download(filePath);
+
+    if (error || !data) {
+      throw new Error(`Error al descargar archivo de storage: ${error?.message || 'Data is null'}`);
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
 }
