@@ -1,3 +1,11 @@
+export interface PonenteDTO {
+  idUsuario: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  rol: string | null;
+}
+
 export interface ActividadDTO {
   idActividad: number;
   nombre: string;
@@ -16,6 +24,7 @@ export interface ActividadDTO {
   // Optional details
   tallerDetalle: { horarioTexto: string | null; diasSemana: string | null } | null;
   costo: { folioRecibo: string | null; monto: number | null } | null;
+  ponentes: PonenteDTO[];
 }
 
 export interface CrearActividadDTO {

@@ -55,6 +55,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         monto: r.actividad_costo.monto ? Number(r.actividad_costo.monto) : null,
       } : null,
       cupoOcupado: 0, // No necesario en el checkout (ya se validó en selección)
+      ponentes: [],   // No necesario en el checkout
     }));
     return { success: true as const, data };
   } catch {

@@ -9,6 +9,10 @@ const include = {
   actividad_taller_detalle: true,
   actividad_costo: true,
   _count: { select: { inscripcion_actividades: true } },
+  actividad_ponentes: {
+    include: { usuarios: { select: { id_usuario: true, nombre: true, apellido: true, correo: true } } },
+    orderBy: { rol: 'asc' as const },
+  },
 } as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,6 +55,13 @@ function mapToDTO(row: any): ActividadDTO {
         }
       : null,
     cupoOcupado: row._count?.inscripcion_actividades ?? 0,
+    ponentes: (row.actividad_ponentes ?? []).map((p: { id_usuario_ponente: number; rol: string | null; usuarios: { id_usuario: number; nombre: string; apellido: string; correo: string } }) => ({
+      idUsuario: p.id_usuario_ponente,
+      nombre: p.usuarios.nombre,
+      apellido: p.usuarios.apellido,
+      correo: p.usuarios.correo,
+      rol: p.rol ?? null,
+    })),
   };
 }
 

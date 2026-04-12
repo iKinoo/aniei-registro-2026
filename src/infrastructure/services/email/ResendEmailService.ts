@@ -1,8 +1,9 @@
 import { Resend } from 'resend';
-import { IEmailService, ConfirmacionData, ConfirmacionActividadesData } from '@/application/ports/IEmailService';
+import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
 import { renderConfirmacionActividadesHTML } from './templates/confirmacion-actividades';
+import { renderNotificacionPonenteHTML } from './templates/notificacion-ponente';
 
 export class ResendEmailService implements IEmailService {
   private readonly resend: Resend;
@@ -64,6 +65,21 @@ export class ResendEmailService implements IEmailService {
 
     if (error) {
       throw new Error(`Error al enviar correo de actividades: ${error.message}`);
+    }
+  }
+
+  async enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void> {
+    const html = renderNotificacionPonenteHTML(datos);
+
+    const { error } = await this.resend.emails.send({
+      from: this.from,
+      to: destinatario,
+      subject: `Has sido registrado como Ponente — ANIEI 2026`,
+      html,
+    });
+
+    if (error) {
+      throw new Error(`Error al enviar notificación a ponente: ${error.message}`);
     }
   }
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useTransition, useCallback } from 'react';
-import { ActividadDTO, CrearActividadDTO } from '@/application/dtos/ActividadDTO';
+import { ActividadDTO, CrearActividadDTO, PonenteDTO } from '@/application/dtos/ActividadDTO';
 import { TipoActividad, Institucion } from '@/shared/types/catalogos';
 import { crearActividadAction, actualizarActividadAction, getActividadesAction } from './actions';
+import { SeccionPonentes } from './SeccionPonentes';
 
 // ---------- helpers ----------
 function toDatetimeLocal(iso: string) {
@@ -169,6 +170,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [ponentesEdicion, setPonenteEdicion] = useState<PonenteDTO[]>([]);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
@@ -184,6 +186,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   function openNew() {
     setEditingId(null);
     setForm(emptyForm());
+    setPonenteEdicion([]);
     setError('');
     setIsOpen(true);
   }
@@ -191,6 +194,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   function openEdit(a: ActividadDTO) {
     setEditingId(a.idActividad);
     setForm(actividadToForm(a));
+    setPonenteEdicion(a.ponentes ?? []);
     setError('');
     setIsOpen(true);
   }
@@ -576,6 +580,16 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                     </FormField>
                   </div>
                 )}
+              </div>
+
+              {/* Ponentes */}
+              <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/30 p-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ponentes</h3>
+                <SeccionPonentes
+                  idActividad={editingId}
+                  ponentesIniciales={ponentesEdicion}
+                  onChange={setPonenteEdicion}
+                />
               </div>
 
               {error && (

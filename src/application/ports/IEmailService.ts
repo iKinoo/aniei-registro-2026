@@ -16,8 +16,18 @@ export interface ConfirmacionActividadesData {
   fecha: string;
 }
 
+export interface NotificacionPonenteData {
+  nombre: string;
+  apellido: string;
+  correo: string;
+  password: string;
+  nombreActividad: string;
+  rol: string;
+}
+
 export interface IEmailService {
   enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise<void>;
   enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise<void>;
   enviarConfirmacionActividades(destinatario: string, datos: ConfirmacionActividadesData): Promise<void>;
+  enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void>;
 }

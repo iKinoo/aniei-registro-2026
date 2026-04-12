@@ -6,6 +6,7 @@ import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCa
 import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAccesoRepository';
 import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
+import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
 import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
@@ -19,11 +20,11 @@ import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
+import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
 import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { IStorageService } from '@/application/ports/IStorageService';
-import { deprecate } from 'node:util';
 
 export function getUsuarioRepository(): IUsuarioRepository {
   return new PrismaUsuarioRepository(prisma);
@@ -51,6 +52,10 @@ export function getActividadRepository(): IActividadRepository {
 
 export function getInscripcionActividadRepository(): IInscripcionActividadRepository {
   return new PrismaInscripcionActividadRepository(prisma);
+}
+
+export function getPonentesRepository(): IPonentesRepository {
+  return new PrismaPonentesRepository(prisma);
 }
 
 export function getEmailService(): IEmailService {
