@@ -1,0 +1,13 @@
+import { ArchivoDTO } from './RegistroUsuarioDTO';
+
+export interface MiembroRapidoInputDTO {
+  nombre: string;
+  apellido: string;
+  idTipoUsuario: number;
+}
+
+export interface RegistrarGrupoRapidoDTO {
+  responsableId: number; // ID of the logged in user creating the group
+  miembros: MiembroRapidoInputDTO[];
+  archivo: ArchivoDTO; // The single deposit slip
+}

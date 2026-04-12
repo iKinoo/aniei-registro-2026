@@ -25,10 +25,18 @@ export interface NotificacionPonenteData {
   rol: string;
 }
 
+export interface ConfirmacionGrupoRapidoData {
+  nombreResponsable: string;
+  apellidoResponsable: string;
+  token: string;
+  totalMiembros: number;
+}
+
 export interface IEmailService {
   enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise<void>;
   enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise<void>;
   enviarConfirmacionActividades(destinatario: string, datos: ConfirmacionActividadesData): Promise<void>;
   enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void>;
   enviarConstanciaPonente(destinatario: string, pdfBuffer: Buffer, nombrePonente: string, nombreActividad: string): Promise<void>;
+  enviarConfirmacionGrupoRapido(destinatario: string, datos: ConfirmacionGrupoRapidoData, pdfBuffer: Buffer): Promise<void>;
 }

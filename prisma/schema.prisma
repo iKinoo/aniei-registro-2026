@@ -222,6 +222,7 @@ model titulos {
 
 model usuarios {
   id_usuario              Int                       @id @default(autoincrement())
+  id_grupo_registro       Int?
   folio_recibo            String?                   @unique @db.VarChar(15)
   codigo_barras           String?                   @unique @db.VarChar(50)
   nombre                  String                    @db.VarChar(125)
@@ -251,4 +252,17 @@ model usuarios {
   estados                 estados?                  @relation(fields: [id_entidad_federativa], references: [id_entidad_federativa], onUpdate: NoAction)
   instituciones           instituciones?            @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
   tipo_usuario            tipo_usuario?             @relation(fields: [id_tipo_usuario], references: [id_tipo_usuario], onUpdate: NoAction)
+  
+  grupos_liderados        grupos_registro[]         @relation("GrupoResponsable")
+  grupo_registro          grupos_registro?          @relation("GrupoMiembros", fields: [id_grupo_registro], references: [id], onDelete: SetNull, onUpdate: Cascade)
+}
+
+model grupos_registro {
+  id             Int       @id @default(autoincrement())
+  token          String    @unique @db.VarChar(100)
+  id_responsable Int
+  fecha_registro DateTime  @default(now()) @db.Timestamp(6)
+  
+  responsable    usuarios  @relation("GrupoResponsable", fields: [id_responsable], references: [id_usuario], onDelete: Cascade, onUpdate: Cascade)
+  miembros       usuarios[] @relation("GrupoMiembros")
 }

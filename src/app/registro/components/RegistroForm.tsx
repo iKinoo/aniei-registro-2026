@@ -43,10 +43,10 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
         </p>
         <a
           id="btn-continuar-actividades"
-          href="/actividades"
+          href="/perfil"
           className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all hover:shadow-lg active:scale-95"
         >
-          Seleccionar actividades
+          Ir al mi perfil
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>

@@ -15,7 +15,14 @@ export interface ConstanciaPonenteData {
   fecha: string;
 }
 
+export interface HojaRegistroGrupoData {
+  token: string;
+  nombres: string[];
+  responsableNombre: string;
+}
+
 export interface IPdfService {
   generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer>;
   generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer>;
+  generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer>;
 }

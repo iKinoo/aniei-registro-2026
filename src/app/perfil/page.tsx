@@ -163,11 +163,12 @@ export default async function PerfilPage() {
 
           {/* Acciones */}
           <div className={styles.actions}>
-            {inscripciones.length > 0 && (
-              <a href="/actividades" className={styles.btnSecondary}>
-                Ver más actividades
-              </a>
-            )}
+            <a href="/actividades" className={styles.btnSecondary}>
+              Inscribirse a actividades
+            </a>
+            <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
+              Registro Grupal Rápido
+            </a>
             <a href="/api/auth/signout" className={styles.logoutButton}>
               Cerrar Sesión
             </a>
