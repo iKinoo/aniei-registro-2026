@@ -1,10 +1,11 @@
+import Link from 'next/link';
 import { getAuthService, getAccesoRepository } from '@/infrastructure/config/container';
 import LogoutForm from './LogoutForm';
 
 export default async function CpanelLayout({ children }: { children: React.ReactNode }) {
   const authService = getAuthService();
   const session = await authService.getCurrentSession();
-  
+
   let acceso = null;
   if (session) {
     const accesoRepo = getAccesoRepository();
@@ -27,6 +28,23 @@ export default async function CpanelLayout({ children }: { children: React.React
                   <span className="text-xs text-slate-500 font-medium tracking-wide uppercase">{acceso.rol}</span>
                 </div>
               </div>
+
+              {/* Nav links */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Link
+                  href="/cpanel"
+                  className="px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  Usuarios
+                </Link>
+                <Link
+                  href="/cpanel/actividades"
+                  className="px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  Actividades
+                </Link>
+              </nav>
+
               <div>
                 <LogoutForm />
               </div>

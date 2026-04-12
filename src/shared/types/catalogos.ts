@@ -23,3 +23,11 @@ export interface Titulo {
   idTitulo: number;
   descripcion: string;
 }
+
+export interface TipoActividad {
+  idTipoActividad: number;
+  clave: string | null;
+  descripcion: string;
+  manejaEquipos: boolean;
+}
+

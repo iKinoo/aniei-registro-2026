@@ -4,6 +4,7 @@ import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDe
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
 import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCatalogoRepository';
 import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAccesoRepository';
+import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
@@ -15,6 +16,7 @@ import { IFacturacionRepository } from '@/application/ports/IFacturacionReposito
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
+import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -39,6 +41,10 @@ export function getCatalogoRepository(): ICatalogoRepository {
 
 export function getAccesoRepository(): IAccesoRepository {
   return new PrismaAccesoRepository(prisma);
+}
+
+export function getActividadRepository(): IActividadRepository {
+  return new PrismaActividadRepository(prisma);
 }
 
 export function getEmailService(): IEmailService {
