@@ -1,7 +1,8 @@
 import { Resend } from 'resend';
-import { IEmailService, ConfirmacionData } from '@/application/ports/IEmailService';
+import { IEmailService, ConfirmacionData, ConfirmacionActividadesData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
+import { renderConfirmacionActividadesHTML } from './templates/confirmacion-actividades';
 
 export class ResendEmailService implements IEmailService {
   private readonly resend: Resend;
@@ -49,6 +50,20 @@ export class ResendEmailService implements IEmailService {
 
     if (error) {
       throw new Error(`Error al enviar constancia: ${error.message}`);
+    }
+  }
+  async enviarConfirmacionActividades(destinatario: string, datos: ConfirmacionActividadesData): Promise<void> {
+    const html = renderConfirmacionActividadesHTML(datos);
+
+    const { error } = await this.resend.emails.send({
+      from: this.from,
+      to: destinatario,
+      subject: `Inscripción a Actividades Confirmada — ANIEI 2026 (Folio: ${datos.folio})`,
+      html,
+    });
+
+    if (error) {
+      throw new Error(`Error al enviar correo de actividades: ${error.message}`);
     }
   }
 }

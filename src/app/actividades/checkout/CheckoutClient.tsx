@@ -3,10 +3,9 @@
 import { useState, useTransition } from 'react';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { Estado } from '@/shared/types/catalogos';
-import { SeccionFacturacion } from '@/app/registro/components/SeccionFacturacion';
+import { SeccionFacturacion, FacturacionDefaults } from '@/app/registro/components/SeccionFacturacion';
 import { CampoArchivo } from '@/app/registro/components/CampoArchivo';
-import { SelectCatalogo, estadosToOptions } from '@/app/registro/components/SelectCatalogo';
-import { confirmarInscripcionesAction } from './actions';
+import { confirmarInscripcionesAction, ConfirmacionInscripcionResult } from './actions';
 
 // ---- helpers ----
 function formatFecha(iso: string) {
@@ -19,7 +18,77 @@ function formatFecha(iso: string) {
 const inputCls =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition';
 
-// ---- Resumen de actividad ----
+// ---- Pantalla de confirmación exitosa ----
+function PantallaConfirmacion({ datos }: { datos: ConfirmacionInscripcionResult }) {
+  return (
+    <div className="min-h-screen bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
+        {/* Header */}
+        <div className="bg-linear-to-r from-indigo-600 to-violet-600 px-8 py-8 text-center text-white">
+          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight">¡Registro Confirmado!</h1>
+          <p className="text-indigo-200 mt-1 text-sm">Congreso ANIEI 2026</p>
+        </div>
+
+        {/* Body */}
+        <div className="px-8 py-6 space-y-5">
+          <div>
+            <p className="text-slate-700 text-base">
+              Hola <strong>{datos.nombre}</strong>, tu inscripción a las actividades ha sido procesada. Recibirás un correo de confirmación en <strong>{datos.correo}</strong>.
+            </p>
+          </div>
+
+          {/* Folio */}
+          <div className="bg-indigo-50 rounded-xl px-4 py-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-indigo-700">Folio de registro</span>
+            <span className="font-mono font-bold text-indigo-900">{datos.folio || '—'}</span>
+          </div>
+
+          {/* Lista de actividades */}
+          <div>
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Actividades inscritas</h2>
+            <div className="rounded-xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
+              {datos.actividades.map((a, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 leading-snug">{a.nombre}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{a.fecha}</p>
+                  </div>
+                  <span className={`text-sm font-semibold shrink-0 ml-4 ${a.costo ? 'text-slate-800' : 'text-emerald-600'}`}>
+                    {a.costo ?? 'Gratis'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Total */}
+          {datos.totalCosto && (
+            <div className="flex justify-between items-center border-t border-slate-100 pt-3">
+              <span className="text-sm font-semibold text-slate-600">Total pagado</span>
+              <span className="text-xl font-extrabold text-slate-900">{datos.totalCosto} MXN</span>
+            </div>
+          )}
+
+          {/* CTA */}
+          <a
+            id="btn-ver-perfil"
+            href="/perfil"
+            className="block w-full text-center py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-200 hover:shadow-indigo-300 active:scale-[0.99]"
+          >
+            Ver mi perfil
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Resumen de actividad en el checkout ----
 function ResumenActividad({ a }: { a: ActividadDTO }) {
   return (
     <div className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
@@ -44,15 +113,22 @@ function ResumenActividad({ a }: { a: ActividadDTO }) {
 interface Props {
   actividades: ActividadDTO[];
   estados: Estado[];
+  facturacionDefaults?: FacturacionDefaults;
 }
 
-export default function CheckoutClient({ actividades, estados }: Props) {
+export default function CheckoutClient({ actividades, estados, facturacionDefaults }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirmacion, setConfirmacion] = useState<ConfirmacionInscripcionResult | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const total = actividades.reduce((s, a) => s + (a.costo?.monto ?? 0), 0);
   const tieneCosto = total > 0;
   const idsActividades = actividades.map((a) => a.idActividad);
+
+  // Mostrar pantalla de éxito si ya se confirmó
+  if (confirmacion) {
+    return <PantallaConfirmacion datos={confirmacion} />;
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,10 +137,11 @@ export default function CheckoutClient({ actividades, estados }: Props) {
 
     startTransition(async () => {
       const result = await confirmarInscripcionesAction(formData, idsActividades, tieneCosto);
-      if (result && !result.success && result.errors) {
+      if (!result.success) {
         setErrors(result.errors);
+        return;
       }
-      // Si success → redirect() en server action
+      setConfirmacion(result);
     });
   }
 
@@ -105,7 +182,7 @@ export default function CheckoutClient({ actividades, estados }: Props) {
               <span className="text-xl font-extrabold text-slate-900">
                 {tieneCosto
                   ? `$${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`
-                  : <span className="text-emerald-600 text-base">Sin costo</span>}
+                  : <span className="text-emerald-600 text-base font-semibold">Sin costo</span>}
               </span>
             </div>
           </section>
@@ -176,6 +253,7 @@ export default function CheckoutClient({ actividades, estados }: Props) {
               <SeccionFacturacion
                 estados={estados}
                 errors={errors}
+                defaults={facturacionDefaults}
               />
             </div>
           </section>

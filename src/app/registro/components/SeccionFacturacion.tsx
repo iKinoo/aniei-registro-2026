@@ -5,14 +5,35 @@ import { SelectCatalogo, estadosToOptions } from './SelectCatalogo';
 import { Estado } from '@/shared/types/catalogos';
 import { RegistroFormFields } from '../actions/registrar-usuario.action';
 
+/** Datos preexistentes de facturación para pre-llenar el formulario */
+export interface FacturacionDefaults {
+  razonSocial?: string;
+  rfc?: string;
+  calle?: string;
+  numExterior?: string;
+  numInterior?: string;
+  colonia?: string;
+  municipio?: string;
+  codigoPostal?: string;
+  idEntidadFederativaRfc?: string;
+}
+
 interface SeccionFacturacionProps {
   estados: Estado[];
   errors?: Record<string, string>;
+  /** Valores del form (en caso de error de validación) — tiene prioridad sobre defaults */
   fields?: RegistroFormFields;
+  /** Valores pre-cargados desde BD (datos del registro general u otra fuente) */
+  defaults?: FacturacionDefaults;
 }
 
-export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturacionProps) {
+export function SeccionFacturacion({ estados, errors, fields, defaults }: SeccionFacturacionProps) {
   const [activa, setActiva] = useState(() => fields?.requiereFacturacion ?? false);
+
+  // fields tiene prioridad (valores tras error de validación), luego defaults (BD)
+  function val(key: keyof FacturacionDefaults): string {
+    return (fields as Record<string, string> | undefined)?.[key] ?? defaults?.[key] ?? '';
+  }
 
   return (
     <fieldset className="rounded-lg border border-gray-200 overflow-hidden">
@@ -50,6 +71,15 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
       {/* Formulario de facturación (visible solo si está activo) */}
       {activa && (
         <div className="space-y-4 p-4">
+          {/* Banner informativo si hay datos prellenados */}
+          {defaults?.rfc && !fields?.rfc && (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Datos de facturación prellenados desde tu registro anterior. Puedes modificarlos si necesitas facturar a otra razón social.
+            </div>
+          )}
           {/* Razón social y RFC */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
@@ -62,7 +92,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={150}
                 placeholder="Nombre o razón social"
-                defaultValue={fields?.razonSocial ?? ''}
+                defaultValue={val('razonSocial')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
               {errors?.['facturacion.razonSocial'] && (
@@ -80,7 +110,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={20}
                 placeholder="XAXX010101000"
-                defaultValue={fields?.rfc ?? ''}
+                defaultValue={val('rfc')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 style={{ textTransform: 'uppercase' }}
               />
@@ -100,7 +130,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={100}
                 placeholder="Nombre de la calle"
-                defaultValue={fields?.calle ?? ''}
+                defaultValue={val('calle')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -113,7 +143,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={20}
                 placeholder="123"
-                defaultValue={fields?.numExterior ?? ''}
+                defaultValue={val('numExterior')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -128,7 +158,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={20}
                 placeholder="Depto. / Piso"
-                defaultValue={fields?.numInterior ?? ''}
+                defaultValue={val('numInterior')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -141,7 +171,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={100}
                 placeholder="Colonia"
-                defaultValue={fields?.colonia ?? ''}
+                defaultValue={val('colonia')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -154,7 +184,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={10}
                 placeholder="00000"
-                defaultValue={fields?.codigoPostal ?? ''}
+                defaultValue={val('codigoPostal')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -169,7 +199,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
                 type="text"
                 maxLength={100}
                 placeholder="Municipio o alcaldía"
-                defaultValue={fields?.municipio ?? ''}
+                defaultValue={val('municipio')}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -179,7 +209,7 @@ export function SeccionFacturacion({ estados, errors, fields }: SeccionFacturaci
               label="Estado (domicilio fiscal)"
               options={estadosToOptions(estados)}
               error={errors?.['facturacion.idEntidadFederativaRfc']}
-              defaultValue={fields?.idEntidadFederativaRfc}
+              defaultValue={val('idEntidadFederativaRfc')}
             />
           </div>
         </div>

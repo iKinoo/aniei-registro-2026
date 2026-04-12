@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
 import { SelectCatalogo, cargosToOptions, estadosToOptions, institucionesToOptions, tiposUsuarioToOptions } from './SelectCatalogo';
 import { CampoArchivo } from './CampoArchivo';
@@ -20,18 +19,7 @@ interface RegistroFormProps {
 const initialState: RegistroActionState = { success: false };
 
 export function RegistroForm({ catalogos }: RegistroFormProps) {
-  const router = useRouter();
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
-
-  // Redirigir a la selección de actividades después del registro exitoso y auto-login
-  useEffect(() => {
-    if (state.success) {
-      const timer = setTimeout(() => {
-        router.push('/actividades');
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [state.success, router]);
 
   if (state.success) {
     return (
@@ -53,13 +41,16 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
         <p className="text-sm text-green-600 bg-green-100 rounded-lg px-4 py-3">
           📬 Revisa tu correo <strong>{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
         </p>
-        <div className="flex items-center justify-center gap-2 text-sm text-green-700">
-          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        <a
+          id="btn-continuar-actividades"
+          href="/actividades"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all hover:shadow-lg active:scale-95"
+        >
+          Seleccionar actividades
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
-          Redirigiendo a la selección de actividades...
-        </div>
+        </a>
       </div>
     );
   }

@@ -9,6 +9,7 @@ import {
   getFacturacionRepository,
   getStorageService,
   getCatalogoRepository,
+  getEmailService,
 } from '@/infrastructure/config/container';
 import { depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
 import { Deposito } from '@/core/entities/Deposito';
@@ -70,17 +71,28 @@ export async function getEstadosCheckoutAction() {
   }
 }
 
+export interface ConfirmacionInscripcionResult {
+  success: true;
+  nombre: string;
+  folio: string;
+  correo: string;
+  actividades: Array<{ nombre: string; fecha: string; costo: string | null }>;
+  totalCosto: string | null;
+}
+
 export async function confirmarInscripcionesAction(
   formData: FormData,
   idsActividades: number[],
   tieneCosto: boolean,
-) {
+): Promise<{ success: false; errors: Record<string, string> } | ConfirmacionInscripcionResult> {
   const session = await auth();
   if (!session?.user?.email) redirect('/login');
 
+  const correo = session.user.email;
+
   const acceso = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
-    select: { id_usuario: true },
+    where: { email: correo },
+    select: { id_usuario: true, nombre: true, usuarios: { select: { folio_recibo: true, nombre: true, apellido: true } } },
   });
   if (!acceso?.id_usuario) redirect('/login');
 
@@ -101,12 +113,12 @@ export async function confirmarInscripcionesAction(
       for (const issue of parsedDeposito.error.issues) {
         errors[issue.path.join('.')] = issue.message;
       }
-      return { success: false as const, errors };
+      return { success: false, errors };
     }
 
     const file = formData.get('comprobante') as File;
     const archivoError = validarArchivo(file);
-    if (archivoError) return { success: false as const, errors: { comprobante: archivoError } };
+    if (archivoError) return { success: false, errors: { comprobante: archivoError } };
 
     ArchivoComprobante.create(file.name, file.type, file.size);
     const ext = file.name.split('.').pop() || 'bin';
@@ -149,7 +161,7 @@ export async function confirmarInscripcionesAction(
       for (const issue of parsedFact.error.issues) {
         errors[`facturacion.${issue.path.join('.')}`] = issue.message;
       }
-      return { success: false as const, errors };
+      return { success: false, errors };
     }
     const facturacion = Facturacion.create({
       idUsuario,
@@ -169,5 +181,56 @@ export async function confirmarInscripcionesAction(
   // 3. Crear inscripciones
   await getInscripcionActividadRepository().crearMuchas(idUsuario, idsActividades);
 
-  redirect('/perfil');
+  // 4. Preparar datos para correo y pantalla de confirmación
+  const actividadesRows = await prisma.actividades.findMany({
+    where: { id_actividad: { in: idsActividades } },
+    include: { actividad_costo: true },
+    orderBy: { fecha_inicio: 'asc' },
+  });
+
+  const fechaStr = new Date().toLocaleDateString('es-MX', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  const actividadesParaCorreo = actividadesRows.map((a) => ({
+    nombre: a.nombre,
+    fecha: a.fecha_inicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
+    costo: a.actividad_costo?.monto
+      ? `$${Number(a.actividad_costo.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+      : null,
+  }));
+
+  const total = actividadesRows.reduce((s, a) => s + (a.actividad_costo?.monto ? Number(a.actividad_costo.monto) : 0), 0);
+  const totalStr = total > 0
+    ? `$${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+    : null;
+
+  const usuario = acceso.usuarios;
+  const nombreCompleto = usuario ? `${usuario.nombre} ${usuario.apellido}` : (acceso.nombre ?? correo);
+  const folio = usuario?.folio_recibo ?? '';
+  const [primerNombre, ...resto] = nombreCompleto.split(' ');
+  const apellido = resto.join(' ');
+
+  // 5. Enviar correo de confirmación (best-effort, no bloquea la respuesta)
+  try {
+    await getEmailService().enviarConfirmacionActividades(correo, {
+      nombre: primerNombre,
+      apellido,
+      folio,
+      actividades: actividadesParaCorreo,
+      totalCosto: totalStr,
+      fecha: fechaStr,
+    });
+  } catch (e) {
+    console.error('Error al enviar correo de actividades:', e);
+  }
+
+  return {
+    success: true,
+    nombre: primerNombre,
+    folio,
+    correo,
+    actividades: actividadesParaCorreo,
+    totalCosto: totalStr,
+  };
 }
