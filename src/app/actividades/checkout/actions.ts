@@ -54,6 +54,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         folioRecibo: r.actividad_costo.folio_recibo ?? null,
         monto: r.actividad_costo.monto ? Number(r.actividad_costo.monto) : null,
       } : null,
+      cupoOcupado: 0, // No necesario en el checkout (ya se validó en selección)
     }));
     return { success: true as const, data };
   } catch {
@@ -178,8 +179,31 @@ export async function confirmarInscripcionesAction(
     await getFacturacionRepository().crear(facturacion);
   }
 
-  // 3. Crear inscripciones
-  await getInscripcionActividadRepository().crearMuchas(idUsuario, idsActividades);
+  // 3. Crear inscripciones con validación atómica de cupo
+  const { ok, sinCupo } = await getInscripcionActividadRepository().crearMuchasConValidacion(idUsuario, idsActividades);
+
+  // Si alguna actividad no pudo inscribirse por cupo lleno, informar al usuario
+  if (sinCupo.length > 0) {
+    const actividadesRechazadas = await prisma.actividades.findMany({
+      where: { id_actividad: { in: sinCupo } },
+      select: { nombre: true },
+    });
+    const nombres = actividadesRechazadas.map((a) => a.nombre).join(', ');
+    return {
+      success: false,
+      errors: {
+        _form: `Sin cupo disponible en: ${nombres}. Por favor regresa y ajusta tu selección.`,
+      },
+    };
+  }
+
+  // Si ninguna actividad fue aceptada (todas rechazadas), retornar error
+  if (ok.length === 0) {
+    return {
+      success: false,
+      errors: { _form: 'No se pudo inscribir en ninguna actividad. Es posible que el cupo ya se haya agotado.' },
+    };
+  }
 
   // 4. Preparar datos para correo y pantalla de confirmación
   const actividadesRows = await prisma.actividades.findMany({

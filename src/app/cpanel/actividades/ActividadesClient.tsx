@@ -321,9 +321,26 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-bold text-sm">
-                          {a.cupoMaximo === 0 ? '∞' : a.cupoMaximo}
-                        </span>
+                        {a.cupoMaximo === 0 ? (
+                          <span className="text-xs text-slate-400 font-medium">Sin límite</span>
+                        ) : (() => {
+                          const pct = Math.min(100, Math.round((a.cupoOcupado / a.cupoMaximo) * 100));
+                          const lleno = a.cupoOcupado >= a.cupoMaximo;
+                          const barColor = lleno ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500';
+                          return (
+                            <div className="flex flex-col items-center gap-1 min-w-[72px]">
+                              <span className={`text-xs font-bold ${lleno ? 'text-rose-600' : pct >= 80 ? 'text-amber-600' : 'text-slate-700'}`}>
+                                {a.cupoOcupado} / {a.cupoMaximo}
+                              </span>
+                              <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              {lleno && (
+                                <span className="text-[10px] text-rose-500 font-semibold">Lleno</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {a.costo?.monto != null ? (

@@ -3,6 +3,8 @@ export interface ActividadDTO {
   nombre: string;
   descripcion: string | null;
   cupoMaximo: number;
+  /** Cantidad de inscripciones actuales. 0 si no se incluyó en el query. */
+  cupoOcupado: number;
   fechaInicio: string; // ISO string
   fechaFin: string;    // ISO string
   idTipoActividad: number | null;

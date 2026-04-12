@@ -8,6 +8,7 @@ const include = {
   instituciones: true,
   actividad_taller_detalle: true,
   actividad_costo: true,
+  _count: { select: { inscripcion_actividades: true } },
 } as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +50,7 @@ function mapToDTO(row: any): ActividadDTO {
           monto: row.actividad_costo.monto ? Number(row.actividad_costo.monto) : null,
         }
       : null,
+    cupoOcupado: row._count?.inscripcion_actividades ?? 0,
   };
 }
 

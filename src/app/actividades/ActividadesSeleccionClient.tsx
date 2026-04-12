@@ -8,17 +8,45 @@ import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 function formatFechaCorta(iso: string) {
   return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
 function formatHora(iso: string) {
   return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 }
 
+/** true si la actividad tiene cupo definido y está completamente llena */
+function esCupoLleno(a: ActividadDTO) {
+  return a.cupoMaximo > 0 && a.cupoOcupado >= a.cupoMaximo;
+}
+
+// ---- Indicador de cupo ----
+function IndicadorCupo({ a }: { a: ActividadDTO }) {
+  if (!a.cupoMaximo) return null; // sin restricción
+  const lleno = esCupoLleno(a);
+  const pct = Math.min(100, Math.round((a.cupoOcupado / a.cupoMaximo) * 100));
+  const barColor = lleno ? 'bg-rose-500' : pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500';
+
+  return (
+    <div className="mb-3">
+      <div className="flex justify-between items-center mb-1">
+        <span className={`text-xs font-semibold ${lleno ? 'text-rose-600' : pct >= 80 ? 'text-amber-600' : 'text-slate-500'}`}>
+          {lleno ? '🔴 Cupo lleno' : `${a.cupoOcupado} / ${a.cupoMaximo} lugares`}
+        </span>
+        {!lleno && (
+          <span className="text-xs text-slate-400">{a.cupoMaximo - a.cupoOcupado} disponibles</span>
+        )}
+      </div>
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 // ---- Type badge colors ----
 const TIPO_COLORS: Record<string, { bg: string; text: string }> = {
-  conferencia:  { bg: 'bg-blue-100',   text: 'text-blue-700' },
-  taller:       { bg: 'bg-amber-100',  text: 'text-amber-700' },
-  seminario:    { bg: 'bg-violet-100', text: 'text-violet-700' },
-  curso:        { bg: 'bg-teal-100',   text: 'text-teal-700' },
+  conferencia: { bg: 'bg-blue-100',   text: 'text-blue-700' },
+  taller:      { bg: 'bg-amber-100',  text: 'text-amber-700' },
+  seminario:   { bg: 'bg-violet-100', text: 'text-violet-700' },
+  curso:       { bg: 'bg-teal-100',   text: 'text-teal-700' },
 };
 
 function TipoBadge({ tipo }: { tipo: ActividadDTO['tipoActividad'] }) {
@@ -46,7 +74,6 @@ function CartSidebar({ selected, onRemove, onCheckout }: CartProps) {
   return (
     <aside className="sticky top-24 w-full lg:w-80 shrink-0">
       <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-        {/* Header */}
         <div className="bg-linear-to-r from-indigo-600 to-violet-600 px-5 py-4">
           <h2 className="text-white font-bold text-lg">Mi selección</h2>
           <p className="text-indigo-200 text-sm">{selected.length} actividad{selected.length !== 1 ? 'es' : ''}</p>
@@ -82,7 +109,6 @@ function CartSidebar({ selected, onRemove, onCheckout }: CartProps) {
           )}
         </div>
 
-        {/* Total */}
         <div className="border-t border-slate-100 px-5 py-4 space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-slate-500">Total a pagar</span>
@@ -118,22 +144,31 @@ interface CardProps {
 
 function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardProps) {
   const tieneCosto = a.costo?.monto != null;
+  const lleno = esCupoLleno(a);
+  // Una actividad no es elegible si ya está inscrito o si no hay cupo
+  const noElegible = isInscrita || lleno;
 
   return (
     <div
       className={`relative bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden
-        ${isInscrita ? 'border-emerald-200 opacity-70' :
+        ${lleno ? 'border-rose-100 opacity-80' :
+          isInscrita ? 'border-emerald-200 opacity-70' :
           isSelected ? 'border-indigo-400 shadow-lg shadow-indigo-100' :
           'border-slate-100 hover:border-slate-300 shadow-sm hover:shadow-md'}`}
     >
-      {/* Top stripe por tipo */}
-      <div className={`h-1 w-full ${isInscrita ? 'bg-emerald-400' : isSelected ? 'bg-indigo-500' : 'bg-slate-200'}`} />
+      {/* Top stripe */}
+      <div className={`h-1 w-full ${lleno ? 'bg-rose-400' : isInscrita ? 'bg-emerald-400' : isSelected ? 'bg-indigo-500' : 'bg-slate-200'}`} />
 
       <div className="p-5">
-        {/* Badges row */}
+        {/* Badges */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-wrap gap-1.5">
             <TipoBadge tipo={a.tipoActividad} />
+            {lleno && !isInscrita && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                🔴 Cupo lleno
+              </span>
+            )}
             {isInscrita && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                 ✓ Ya inscrito
@@ -157,6 +192,9 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
           <p className="text-sm text-slate-500 line-clamp-2 mb-3">{a.descripcion}</p>
         )}
 
+        {/* Capacity indicator */}
+        <IndicadorCupo a={a} />
+
         {/* Meta info */}
         <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-4">
           <span className="flex items-center gap-1">
@@ -174,14 +212,6 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
               {a.idSala != null && ` · Sala ${a.idSala}`}
             </span>
           )}
-          {a.cupoMaximo > 0 && (
-            <span className="flex items-center gap-1">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
-              </svg>
-              Cupo: {a.cupoMaximo}
-            </span>
-          )}
           {a.tallerDetalle && (
             <span className="flex items-center gap-1 text-amber-600">
               🕐 {a.tallerDetalle.horarioTexto} {a.tallerDetalle.diasSemana && `· ${a.tallerDetalle.diasSemana}`}
@@ -190,7 +220,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
         </div>
 
         {/* Action button */}
-        {!isInscrita && (
+        {!noElegible && (
           <button
             id={`btn-actividad-${a.idActividad}`}
             onClick={() => onToggle(a)}
@@ -201,6 +231,13 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
           >
             {isSelected ? '✓ Seleccionado — Quitar' : '+ Agregar al carrito'}
           </button>
+        )}
+
+        {/* Estado deshabilitado por cupo */}
+        {lleno && !isInscrita && (
+          <div className="w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-slate-100 text-slate-400 cursor-not-allowed select-none">
+            Sin lugares disponibles
+          </div>
         )}
       </div>
     </div>
@@ -219,6 +256,7 @@ export default function ActividadesSeleccionClient({ actividades, inscritasIds }
   const inscritasSet = new Set(inscritasIds);
 
   const toggleActividad = (a: ActividadDTO) => {
+    if (esCupoLleno(a)) return; // guardia extra
     setSelected((prev) =>
       prev.find((s) => s.idActividad === a.idActividad)
         ? prev.filter((s) => s.idActividad !== a.idActividad)
