@@ -20,4 +20,24 @@ export class PrismaAccesoRepository implements IAccesoRepository {
       authId: rawAcceso.auth_id,
     });
   }
+
+  async crear(email: string, passwordHash: string, rol: string, idUsuario?: number, nombre?: string): Promise<Acceso> {
+    const rawAcceso = await this.prisma.accesos.create({
+      data: {
+        email,
+        password: passwordHash,
+        rol,
+        id_usuario: idUsuario ?? null,
+        nombre: nombre ?? null,
+      },
+    });
+
+    return Acceso.create({
+      idAcceso: rawAcceso.id_acceso,
+      email: rawAcceso.email,
+      rol: rawAcceso.rol || 'USER',
+      nombre: rawAcceso.nombre,
+      authId: rawAcceso.auth_id,
+    });
+  }
 }

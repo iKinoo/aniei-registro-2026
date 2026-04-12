@@ -7,23 +7,44 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
+  const role = (req.auth?.user as any)?.role as string | undefined;
 
-  // Proteger la ruta /cpanel (excepto /cpanel/login)
-  if (
-    !isLoggedIn &&
-    !pathname.startsWith('/cpanel/login') &&
-    pathname.startsWith('/cpanel')
-  ) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/cpanel/login';
-    return NextResponse.redirect(url);
+  const isAuthRoute = pathname.startsWith('/login');
+  const isCpanelRoute = pathname.startsWith('/cpanel');
+  const isPerfilRoute = pathname.startsWith('/perfil');
+  const isRegistroRoute = pathname.startsWith('/registro');
+
+  if (isAuthRoute) {
+    if (isLoggedIn) {
+      if (role === 'ADMIN') {
+        return NextResponse.redirect(new URL('/cpanel', req.nextUrl));
+      }
+      return NextResponse.redirect(new URL('/perfil', req.nextUrl));
+    }
+    return NextResponse.next();
   }
 
-  // Si el usuario ya está logueado pero intenta ir a /cpanel/login, lo redirigimos a /cpanel
-  if (isLoggedIn && pathname === '/cpanel/login') {
-    const url = req.nextUrl.clone();
-    url.pathname = '/cpanel';
-    return NextResponse.redirect(url);
+  // Si está logueado, no puede volver a registrarse manualmente
+  if (isRegistroRoute && isLoggedIn) {
+    if (role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/cpanel', req.nextUrl));
+    }
+    return NextResponse.redirect(new URL('/perfil', req.nextUrl));
+  }
+
+  // Rutas de cpanel solo para administradores
+  if (isCpanelRoute) {
+    if (!isLoggedIn) {
+      return NextResponse.redirect(new URL('/login', req.nextUrl));
+    }
+    if (role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/perfil', req.nextUrl));
+    }
+  }
+
+  // Rutas de perfil para registrados (USER o ADMIN)
+  if (isPerfilRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
   return NextResponse.next();

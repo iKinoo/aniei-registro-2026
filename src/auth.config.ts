@@ -6,7 +6,7 @@ export const authConfig = {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/cpanel/login",
+    signIn: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {

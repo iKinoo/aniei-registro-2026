@@ -21,6 +21,16 @@ export async function loginAction(prevState: any, formData: FormData) {
     return { error: result.error, success: false };
   }
 
-  // Redirect to cpanel on success
-  redirect('/cpanel');
+  // En Server Actions, `auth()` no tiene las cookies actualizadas inmediatamente tras el signIn.
+  // Por lo tanto, buscamos el rol directamente desde la base de datos para la redirección inicial.
+  const { getAccesoRepository } = await import('@/infrastructure/config/container');
+  const accesoRepo = getAccesoRepository();
+  const acceso = await accesoRepo.buscarPorEmail(email);
+  const role = acceso?.rol || 'USER';
+
+  if (role === 'ADMIN') {
+    redirect('/cpanel');
+  } else {
+    redirect('/perfil');
+  }
 }

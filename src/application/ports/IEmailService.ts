@@ -4,6 +4,7 @@ export interface ConfirmacionData {
   folio: string;
   institucion: string;
   fecha: string;
+  password?: string;
 }
 
 export interface IEmailService {

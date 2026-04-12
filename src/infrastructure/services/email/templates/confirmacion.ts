@@ -4,6 +4,7 @@ export interface ConfirmacionTemplateData {
   folio: string;
   institucion: string;
   fecha: string;
+  password?: string;
 }
 
 export function renderConfirmacionHTML(datos: ConfirmacionTemplateData): string {
@@ -40,11 +41,31 @@ export function renderConfirmacionHTML(datos: ConfirmacionTemplateData): string 
             <td style="font-weight:bold;color:#555;">Institución:</td>
             <td style="color:#333;">${datos.institucion}</td>
           </tr>
-          <tr>
+          <tr style="${datos.password ? 'border-bottom:1px solid #eee;' : ''}">
             <td style="font-weight:bold;color:#555;">Fecha de registro:</td>
             <td style="color:#333;">${datos.fecha}</td>
           </tr>
+          ${datos.password ? `
+          <tr style="background:#f9f9f9;border-bottom:1px solid #eee;">
+            <td style="font-weight:bold;color:#1a1a2e;" colspan="2">Credenciales de Acceso</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="font-weight:bold;color:#555;">Usuario/Email:</td>
+            <td style="color:#333;">(Tu correo registrado)</td>
+          </tr>
+          <tr>
+            <td style="font-weight:bold;color:#555;">Contraseña:</td>
+            <td style="color:#1a1a2e;font-weight:bold;font-size:16px;">${datos.password}</td>
+          </tr>
+          ` : ''}
         </table>
+        
+        ${datos.password ? `
+        <p style="margin:0 0 20px;font-size:15px;color:#333;text-align:center;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://aniei.space'}/login" style="background:#1a1a2e;color:#fff;text-decoration:none;padding:10px 20px;border-radius:4px;display:inline-block;">Iniciar sesión para ver mi perfil</a>
+        </p>
+        ` : ''}
+
         <p style="margin:0;font-size:13px;color:#888;">
           Conserve este correo como comprobante de su inscripción.
         </p>

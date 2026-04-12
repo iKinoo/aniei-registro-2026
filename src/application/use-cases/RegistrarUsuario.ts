@@ -1,4 +1,6 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
+import bcrypt from 'bcryptjs';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
@@ -26,6 +28,7 @@ export class RegistrarUsuario {
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
     private readonly catalogoRepo: ICatalogoRepository,
+    private readonly accesoRepo: IAccesoRepository,
   ) {}
 
   async execute(dto: RegistroUsuarioDTO): Promise<ResultadoRegistro> {
@@ -62,6 +65,17 @@ export class RegistrarUsuario {
     // 5. Persistir usuario
     const usuarioPersistido = await this.usuarioRepo.crear(usuario);
     const idUsuario = usuarioPersistido.idUsuario!;
+
+    // 5.5 Generar contraseña y crear perfil de acceso
+    const generatedPassword = Math.random().toString(36).slice(-8);
+    const passwordHash = await bcrypt.hash(generatedPassword, 10);
+    await this.accesoRepo.crear(
+      dto.correo,
+      passwordHash,
+      'USER',
+      idUsuario,
+      `${dto.nombre} ${dto.apellido}`
+    );
 
     // 6. Generar folio y asignarlo
     const folio = `ANIEI-2026-${String(idUsuario).padStart(4, '0')}`;
@@ -133,6 +147,7 @@ export class RegistrarUsuario {
       folio,
       institucion: institucion?.nombre ?? 'N/A',
       fecha: fechaStr,
+      password: generatedPassword,
     });
 
     // Nota: El envío de constancia ha sido delegado al administrador (CPanel) 

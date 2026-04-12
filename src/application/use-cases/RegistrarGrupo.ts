@@ -1,4 +1,6 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
+import bcrypt from 'bcryptjs';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -21,6 +23,7 @@ export class RegistrarGrupo {
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
     private readonly catalogoRepo: ICatalogoRepository,
+    private readonly accesoRepo: IAccesoRepository,
   ) {}
 
   async execute(dto: RegistroGrupoDTO): Promise<ResultadoRegistroGrupo> {
@@ -82,6 +85,22 @@ export class RegistrarGrupo {
     const nuevos = grupo.obtenerNuevosRegistros();
     const persistidos = await this.usuarioRepo.crearMuchos(nuevos);
 
+    // 7.5 Generar accesos y guardar contraseñas para los nuevos usuarios
+    const passwordsMapping = new Map<number, string>();
+    for (const u of persistidos) {
+      if (!u.idUsuario) continue;
+      const generatedPassword = Math.random().toString(36).slice(-8);
+      const passwordHash = await bcrypt.hash(generatedPassword, 10);
+      await this.accesoRepo.crear(
+        u.correo.toString(),
+        passwordHash,
+        'USER',
+        u.idUsuario,
+        `${u.nombre} ${u.apellido}`
+      );
+      passwordsMapping.set(u.idUsuario, generatedPassword);
+    }
+
     // 8. Generar folios
     const folios: string[] = [];
     for (const u of persistidos) {
@@ -122,12 +141,15 @@ export class RegistrarGrupo {
 
     // 12. Enviar confirmación al responsable
     const instResp = instituciones.find((i) => i.idInstitucion === responsableEntity.idInstitucion);
+    const passResponsable = responsableEntity.idUsuario ? passwordsMapping.get(responsableEntity.idUsuario) : undefined;
+    
     await this.emailService.enviarConfirmacionRegistro(resp.correo, {
       nombre: resp.nombre,
       apellido: resp.apellido,
       folio: folios[0] ?? 'GRUPO',
       institucion: instResp?.nombre ?? 'N/A',
       fecha: fechaStr,
+      password: passResponsable,
     });
 
     return {

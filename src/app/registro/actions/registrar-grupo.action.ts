@@ -10,6 +10,7 @@ import {
   getEmailService,
   getPdfService,
   getCatalogoRepository,
+  getAccesoRepository,
 } from '@/infrastructure/config/container';
 
 export interface GrupoActionState {
@@ -84,6 +85,7 @@ export async function registrarGrupoAction(
       getEmailService(),
       getPdfService(),
       getCatalogoRepository(),
+      getAccesoRepository(),
     );
 
     const resultado = await useCase.execute({
