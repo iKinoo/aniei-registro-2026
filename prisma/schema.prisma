@@ -8,19 +8,20 @@ datasource db {
 }
 
 model accesos {
-  id_acceso     Int       @id @default(autoincrement())
-  id_usuario    Int?
-  nombre        String?   @db.VarChar(150)
-  email         String    @unique @db.VarChar(100)
-  auth_id       String?   @unique @db.Uuid
-  password      String?   @db.VarChar(255)
-  rol           String?   @default("USER") @db.VarChar(20)
-  usuarios      usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_acceso  Int       @id @default(autoincrement())
+  id_usuario Int?
+  nombre     String?   @db.VarChar(150)
+  email      String    @unique @db.VarChar(100)
+  auth_id    String?   @unique @db.Uuid
+  password   String?   @db.VarChar(255)
+  rol        String?   @default("USER") @db.VarChar(20)
+  usuarios   usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model actividad_ponentes {
   id_actividad       Int
   id_usuario_ponente Int
+  rol                String?     @db.VarChar(50)
   actividades        actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios           usuarios    @relation(fields: [id_usuario_ponente], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 
@@ -28,20 +29,37 @@ model actividad_ponentes {
 }
 
 model actividades {
-  id_actividad            Int                       @id @default(autoincrement())
-  nombre                  String                    @db.VarChar(200)
-  descripcion             String?
-  cupo_maximo             Int?                      @default(0)
-  fecha_inicio            DateTime                  @db.Timestamp(6)
-  fecha_fin               DateTime                  @db.Timestamp(6)
-  id_tipo_actividad       Int?
-  id_institucion_sede     Int?
-  id_sala                 Int?                      @default(0)
-  actividad_ponentes      actividad_ponentes[]
-  instituciones           instituciones?            @relation(fields: [id_institucion_sede], references: [id_institucion], onUpdate: NoAction)
-  tipo_actividad          tipo_actividad?           @relation(fields: [id_tipo_actividad], references: [id_tipo_actividad], onDelete: Restrict, onUpdate: NoAction)
-  asistencia_actividades  asistencia_actividades[]
-  inscripcion_actividades inscripcion_actividades[]
+  id_actividad             Int                       @id @default(autoincrement())
+  nombre                   String                    @db.VarChar(200)
+  descripcion              String?
+  cupo_maximo              Int?                      @default(0)
+  fecha_inicio             DateTime                  @db.Timestamp(6)
+  fecha_fin                DateTime                  @db.Timestamp(6)
+  id_tipo_actividad        Int?
+  id_institucion_sede      Int?
+  id_sala                  Int?                      @default(0)
+  actividad_ponentes       actividad_ponentes[]
+  instituciones            instituciones?            @relation(fields: [id_institucion_sede], references: [id_institucion], onUpdate: NoAction)
+  tipo_actividad           tipo_actividad?           @relation(fields: [id_tipo_actividad], references: [id_tipo_actividad], onDelete: Restrict, onUpdate: NoAction)
+  asistencia_actividades   asistencia_actividades[]
+  inscripcion_actividades  inscripcion_actividades[]
+  actividad_taller_detalle actividad_taller_detalle?
+  actividad_costo          actividad_costo?
+  equipos                  equipos[]
+}
+
+model actividad_taller_detalle {
+  id_actividad  Int         @id
+  horario_texto String?     @db.VarChar(100)
+  dias_semana   String?     @db.VarChar(100)
+  actividades   actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model actividad_costo {
+  id_actividad Int         @id
+  folio_recibo String?     @db.VarChar(50)
+  monto        Decimal     @db.Decimal(10, 2)
+  actividades  actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model asistencia_actividades {
@@ -75,6 +93,26 @@ model depositos {
   archivo_tamanio Int
   fecha_registro  DateTime? @default(now()) @db.Timestamp(6)
   usuarios        usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model equipo_integrantes {
+  id_integrante    Int       @id @default(autoincrement())
+  id_equipo        Int
+  id_usuario       Int
+  es_representante Boolean?  @default(false)
+  equipos          equipos   @relation(fields: [id_equipo], references: [id_equipo], onDelete: Cascade, onUpdate: NoAction)
+  usuarios         usuarios? @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+}
+
+model equipos {
+  id_equipo          Int                  @id @default(autoincrement())
+  id_actividad       Int
+  id_institucion     Int?
+  nombre_equipo      String               @db.VarChar(150)
+  fecha_registro     DateTime?            @default(now()) @db.Timestamp(6)
+  actividades        actividades?         @relation(fields: [id_actividad], references: [id_actividad], onUpdate: NoAction)
+  instituciones      instituciones?       @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
+  equipo_integrantes equipo_integrantes[]
 }
 
 model estados {
@@ -148,6 +186,7 @@ model instituciones {
   hackatones     hackatones[]
   talleres       talleres[]
   usuarios       usuarios[]
+  equipos        equipos[]
 }
 
 model talleres {
@@ -163,7 +202,9 @@ model talleres {
 
 model tipo_actividad {
   id_tipo_actividad Int           @id @default(autoincrement())
+  clave             String?       @db.VarChar(50)
   descripcion       String        @db.VarChar(50)
+  maneja_equipos    Boolean?      @default(false)
   actividades       actividades[]
 }
 
@@ -204,6 +245,7 @@ model usuarios {
   facturaciones           facturaciones[]
   inscripcion_actividades inscripcion_actividades[]
   inscripcion_talleres    inscripcion_talleres[]
+  equipo_integrantes      equipo_integrantes[]
   cargos                  cargos?                   @relation(fields: [id_cargo], references: [id_cargo], onUpdate: NoAction)
   estados                 estados?                  @relation(fields: [id_entidad_federativa], references: [id_entidad_federativa], onUpdate: NoAction)
   instituciones           instituciones?            @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
