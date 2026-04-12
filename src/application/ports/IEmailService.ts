@@ -30,4 +30,5 @@ export interface IEmailService {
   enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise<void>;
   enviarConfirmacionActividades(destinatario: string, datos: ConfirmacionActividadesData): Promise<void>;
   enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void>;
+  enviarConstanciaPonente(destinatario: string, pdfBuffer: Buffer, nombrePonente: string, nombreActividad: string): Promise<void>;
 }

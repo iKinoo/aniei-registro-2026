@@ -4,6 +4,15 @@ export interface PonenteDTO {
   apellido: string;
   correo: string;
   rol: string | null;
+  urlConstancia?: string | null;
+}
+
+export interface InscritoDTO {
+  idUsuario: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  fechaInscripcion: Date | null;
 }
 
 export interface ActividadDTO {

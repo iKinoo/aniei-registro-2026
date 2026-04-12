@@ -31,6 +31,18 @@ export class PrismaPonentesRepository implements IPonentesRepository {
       apellido: r.usuarios.apellido,
       correo: r.usuarios.correo,
       rol: r.rol ?? null,
+      urlConstancia: r.url_constancia ?? null,
     }));
+  }
+
+  async actualizarUrlConstancia(idActividad: number, idUsuario: number, url: string): Promise<void> {
+    await this.prisma.actividad_ponentes.update({
+      where: {
+        id_actividad_id_usuario_ponente: { id_actividad: idActividad, id_usuario_ponente: idUsuario }
+      },
+      data: {
+        url_constancia: url
+      }
+    });
   }
 }

@@ -82,4 +82,37 @@ export class ResendEmailService implements IEmailService {
       throw new Error(`Error al enviar notificación a ponente: ${error.message}`);
     }
   }
+
+  async enviarConstanciaPonente(
+    destinatario: string,
+    pdfBuffer: Buffer,
+    nombrePonente: string,
+    nombreActividad: string
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a1a2e; border-bottom: 2px solid #eee; padding-bottom: 10px;">Constancia de Participación</h2>
+        <p>Estimado(a) <strong>${nombrePonente}</strong>,</p>
+        <p>El Comité Organizador del Congreso Nacional ANIEI 2026 le agradece enormemente su tiempo y dedicación en la impartición de la actividad <strong>"${nombreActividad}"</strong>.</p>
+        <p>Adjunto a este correo encontrará su constancia digital de participación.</p>
+        <br/>
+        <p>Atentamente,<br/><strong>El Comité Organizador ANIEI 2026</strong></p>
+      </div>
+    `;
+
+    const { error } = await this.resend.emails.send({
+      from: this.from,
+      to: destinatario,
+      subject: `Constancia de Participación - ${nombreActividad}`,
+      html,
+      attachments: [{
+        filename: `constancia-ponente-${nombrePonente.trim().replace(/\\s+/g, '-')}.pdf`,
+        content: pdfBuffer,
+      }],
+    });
+
+    if (error) {
+      throw new Error(`Error al enviar constancia de ponente: ${error.message}`);
+    }
+  }
 }

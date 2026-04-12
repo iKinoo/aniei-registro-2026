@@ -22,6 +22,7 @@ model actividad_ponentes {
   id_actividad       Int
   id_usuario_ponente Int
   rol                String?     @db.VarChar(50)
+  url_constancia     String?     @db.Text
   actividades        actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios           usuarios    @relation(fields: [id_usuario_ponente], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 

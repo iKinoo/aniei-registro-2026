@@ -1,8 +1,26 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
+import { InscritoDTO } from '@/application/dtos/ActividadDTO';
 
 export class PrismaInscripcionActividadRepository implements IInscripcionActividadRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async obtenerPorActividad(idActividad: number): Promise<InscritoDTO[]> {
+    const rows = await this.prisma.inscripcion_actividades.findMany({
+      where: { id_actividad: idActividad },
+      include: {
+        usuarios: { select: { id_usuario: true, nombre: true, apellido: true, correo: true } },
+      },
+      orderBy: { fecha_inscripcion: 'asc' },
+    });
+    return rows.map((r) => ({
+      idUsuario: r.usuarios!.id_usuario,
+      nombre: r.usuarios!.nombre,
+      apellido: r.usuarios!.apellido,
+      correo: r.usuarios!.correo,
+      fechaInscripcion: r.fecha_inscripcion,
+    }));
+  }
 
   async crearMuchas(idUsuario: number, idsActividades: number[]): Promise<void> {
     if (idsActividades.length === 0) return;
