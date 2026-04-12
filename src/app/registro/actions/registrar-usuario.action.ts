@@ -1,8 +1,10 @@
 'use server';
 
 import { registroSchema, depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
+
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { Genero } from '@/core/enums/Genero';
+import { signIn } from '@/auth';
 import {
   getUsuarioRepository,
   getDepositoRepository,
@@ -207,6 +209,18 @@ export async function registrarUsuarioAction(
             }
           : null,
     });
+
+    // Auto-login: iniciar sesión con las credenciales generadas
+    // La contraseña en texto plano se usa solo aquí y se descarta
+    try {
+      await signIn('credentials', {
+        email: resultado.correo,
+        password: resultado.passwordPlana,
+        redirect: false,
+      });
+    } catch (_) {
+      // Si el auto-login falla por NEXT_REDIRECT, ignorar — la cookie ya fue seteada
+    }
 
     return {
       success: true,

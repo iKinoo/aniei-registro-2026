@@ -158,6 +158,7 @@ export class RegistrarUsuario {
       folio,
       urlConstancia,
       correo: dto.correo,
+      passwordPlana: generatedPassword,
     };
   }
 }

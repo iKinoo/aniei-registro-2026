@@ -13,6 +13,7 @@ export default auth((req) => {
   const isCpanelRoute = pathname.startsWith('/cpanel');
   const isPerfilRoute = pathname.startsWith('/perfil');
   const isRegistroRoute = pathname.startsWith('/registro');
+  const isActividadesRoute = pathname.startsWith('/actividades');
 
   if (isAuthRoute) {
     if (isLoggedIn) {
@@ -44,6 +45,11 @@ export default auth((req) => {
 
   // Rutas de perfil para registrados (USER o ADMIN)
   if (isPerfilRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL('/login', req.nextUrl));
+  }
+
+  // Rutas de actividades para usuarios autenticados (USER o ADMIN)
+  if (isActividadesRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 

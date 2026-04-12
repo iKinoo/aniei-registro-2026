@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
 import { SelectCatalogo, cargosToOptions, estadosToOptions, institucionesToOptions, tiposUsuarioToOptions } from './SelectCatalogo';
 import { CampoArchivo } from './CampoArchivo';
@@ -19,24 +20,46 @@ interface RegistroFormProps {
 const initialState: RegistroActionState = { success: false };
 
 export function RegistroForm({ catalogos }: RegistroFormProps) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
+
+  // Redirigir a la selección de actividades después del registro exitoso y auto-login
+  useEffect(() => {
+    if (state.success) {
+      const timer = setTimeout(() => {
+        router.push('/actividades');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [state.success, router]);
 
   if (state.success) {
     return (
-      <div className="rounded-lg bg-green-50 p-8 text-center">
-        <h2 className="mb-2 text-2xl font-bold text-green-800">¡Registro exitoso!</h2>
-        <p className="text-green-700">
-          Su folio de registro es: <strong className="text-lg">{state.folio}</strong>
+      <div className="rounded-2xl bg-linear-to-br from-green-50 to-emerald-50 border border-green-200 p-8 text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-green-800">¡Registro exitoso!</h2>
+          <p className="text-green-700 mt-1">
+            Tu folio de registro es:{' '}
+            <strong className="text-lg font-mono bg-green-100 px-2 py-0.5 rounded">{state.folio}</strong>
+          </p>
+        </div>
+        <p className="text-sm text-green-600 bg-green-100 rounded-lg px-4 py-3">
+          📬 Revisa tu correo <strong>{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
         </p>
-        <p className="mt-2 text-sm text-green-600">
-          Se ha enviado un correo de confirmación a <strong>{state.correo}</strong>
-        </p>
-        <a
-          href={`/confirmacion?folio=${state.folio}`}
-          className="mt-4 inline-block rounded-lg bg-green-600 px-6 py-2 text-white transition-colors hover:bg-green-700"
-        >
-          Ver confirmación
-        </a>
+        <div className="flex items-center justify-center gap-2 text-sm text-green-700">
+          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Redirigiendo a la selección de actividades...
+        </div>
       </div>
     );
   }
