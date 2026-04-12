@@ -1,6 +1,6 @@
 'use server';
 
-import { getAuthService } from '@/infrastructure/config/container';
+import { getAuthService, getAccesoRepository } from '@/infrastructure/config/container';
 import { LoginCpanelUseCase } from '@/application/use-cases/LoginCpanelUseCase';
 import { redirect } from 'next/navigation';
 
@@ -23,7 +23,6 @@ export async function loginAction(prevState: any, formData: FormData) {
 
   // En Server Actions, `auth()` no tiene las cookies actualizadas inmediatamente tras el signIn.
   // Por lo tanto, buscamos el rol directamente desde la base de datos para la redirección inicial.
-  const { getAccesoRepository } = await import('@/infrastructure/config/container');
   const accesoRepo = getAccesoRepository();
   const acceso = await accesoRepo.buscarPorEmail(email);
   const role = acceso?.rol || 'USER';
