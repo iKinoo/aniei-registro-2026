@@ -604,7 +604,7 @@ graph TD
     UC1["1. RegistrarUsuario<br/>(flujo principal)"] 
     UC2["2. EnviarConfirmacion<br/>(se usa dentro de UC1)"]
     UC3["3. GenerarConstancia<br/>(se usa dentro de UC1)"]
-    UC4["4. RegistrarGrupo<br/>(extiende lógica de UC1)"]
+    UC4["4. RegistrarGrupoRapido<br/>(extiende lógica de UC1)"]
     UC5["5. SolicitarFacturacion<br/>(independiente)"]
 
     UC2 --> UC1
@@ -619,7 +619,7 @@ graph TD
 | 1 | `src/application/use-cases/RegistrarUsuario.ts` | `IUsuarioRepository`, `IComprobantePagoRepository`, `IStorageService`, `IEmailService`, `IPdfService` | Verificar correo → subir comprobante → crear usuario → crear comprobante → generar PDF → enviar correo |
 | 2 | `src/application/use-cases/EnviarConfirmacion.ts` | `IEmailService`, `IUsuarioRepository` | Buscar usuario → enviar correo confirmación |
 | 3 | `src/application/use-cases/GenerarConstancia.ts` | `IPdfService`, `IStorageService`, `IUsuarioRepository` | Buscar usuario → generar PDF → subir a storage → retornar URL |
-| 4 | `src/application/use-cases/RegistrarGrupo.ts` | `IUsuarioRepository`, `IComprobantePagoRepository`, `IStorageService`, `IEmailService`, `IPdfService` | Verificar responsable (existente o nuevo) → verificar correos de miembros → subir comprobante → crear GrupoRegistro → persistir nuevos → generar constancias → enviar correos |
+| 4 | `src/application/use-cases/RegistrarGrupoRapido.ts` | `IUsuarioRepository`, `IComprobantePagoRepository`, `IStorageService`, `IEmailService`, `IPdfService` | Verificar responsable (existente o nuevo) → verificar correos de miembros → subir comprobante → crear GrupoRegistro → persistir nuevos → generar constancias → enviar correos |
 | 5 | `src/application/use-cases/SolicitarFacturacion.ts` | `IFacturacionRepository`, `IUsuarioRepository` | Verificar usuario existe → crear facturación |
 
 ### Detalle: RegistrarUsuario
@@ -641,7 +641,7 @@ execute(dto: RegistroUsuarioDTO):
  12. return { success: true, folio, urlConstancia }
 ```
 
-### Detalle: RegistrarGrupo
+### Detalle: RegistrarGrupoRapido
 
 ```
 execute(dto: RegistroGrupoDTO):
@@ -740,7 +740,7 @@ Agregar la UI y el Server Action del registro grupal, condicional a la feature f
 
 ### Prerequisitos
 - Fase 8 completada (registro individual funcionando).
-- Use case `RegistrarGrupo` (Fase 7) funcional.
+- Use case `RegistrarGrupoRapido` (Fase 7) funcional.
 
 ### Archivos a crear
 
@@ -754,7 +754,7 @@ Agregar la UI y el Server Action del registro grupal, condicional a la feature f
 
 | Archivo | Notas |
 |---------|-------|
-| `src/app/registro/actions/registrar-grupo.action.ts` | `"use server"`. Recibe FormData → valida con Zod → instancia `RegistrarGrupo` con container → ejecuta → retorna resultado. |
+| `src/app/registro/actions/registrar-grupo.action.ts` | `"use server"`. Recibe FormData → valida con Zod → instancia `RegistrarGrupoRapido` con container → ejecuta → retorna resultado. |
 
 #### Componentes UI
 
@@ -885,7 +885,7 @@ graph TD
 - [ ] `src/application/use-cases/RegistrarUsuario.ts`
 - [ ] `src/application/use-cases/EnviarConfirmacion.ts`
 - [ ] `src/application/use-cases/GenerarConstancia.ts`
-- [ ] `src/application/use-cases/RegistrarGrupo.ts`
+- [ ] `src/application/use-cases/RegistrarGrupoRapido.ts`
 - [ ] `src/application/use-cases/SolicitarFacturacion.ts`
 
 ### Capa de Infraestructura (`src/infrastructure/`) — Fases 3-6

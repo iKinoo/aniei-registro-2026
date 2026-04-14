@@ -193,7 +193,7 @@ src/
 │   │   └── IStorageService.ts
 │   ├── use-cases/
 │   │   ├── RegistrarUsuario.ts         # Incluye subida de comprobante
-│   │   ├── RegistrarGrupo.ts           # Modular (un solo comprobante)
+│   │   ├── RegistrarGrupoRapido.ts           # Modular (un solo comprobante)
 │   │   ├── EnviarConfirmacion.ts
 │   │   ├── GenerarConstancia.ts
 │   │   └── SolicitarFacturacion.ts
@@ -261,7 +261,7 @@ graph TB
     end
 
     subgraph Application["⚙️ Application Layer"]
-        UC["Use Cases<br/>RegistrarUsuario<br/>RegistrarGrupo<br/>EnviarConfirmacion<br/>GenerarConstancia"]
+        UC["Use Cases<br/>RegistrarUsuario<br/>RegistrarGrupoRapido<br/>EnviarConfirmacion<br/>GenerarConstancia"]
         DTO["DTOs"]
         Ports["Ports (Interfaces)<br/>IUsuarioRepository<br/>ICatalogoRepository<br/>IEmailService<br/>IPdfService<br/>IStorageService"]
     end
@@ -594,7 +594,7 @@ classDiagram
         +execute(dto: RegistroUsuarioDTO): Promise~ResultadoRegistro~
     }
 
-    class RegistrarGrupo {
+    class RegistrarGrupoRapido {
         -usuarioRepo: IUsuarioRepository
         -comprobanteRepo: IDepositoRepository
         -storageService: IStorageService
@@ -631,11 +631,11 @@ classDiagram
     RegistrarUsuario ..> IEmailService
     RegistrarUsuario ..> IPdfService
 
-    RegistrarGrupo ..> IUsuarioRepository
-    RegistrarGrupo ..> IDepositoRepository
-    RegistrarGrupo ..> IStorageService
-    RegistrarGrupo ..> IEmailService
-    RegistrarGrupo ..> IPdfService
+    RegistrarGrupoRapido ..> IUsuarioRepository
+    RegistrarGrupoRapido ..> IDepositoRepository
+    RegistrarGrupoRapido ..> IStorageService
+    RegistrarGrupoRapido ..> IEmailService
+    RegistrarGrupoRapido ..> IPdfService
 
     GenerarConstancia ..> IPdfService
     GenerarConstancia ..> IStorageService
@@ -756,7 +756,7 @@ sequenceDiagram
     participant CC as Client Component<br/>(GrupoForm)
     participant SA as Server Action<br/>(registrar-grupo)
     participant Val as Zod Schema
-    participant UC as RegistrarGrupo<br/>(Use Case)
+    participant UC as RegistrarGrupoRapido<br/>(Use Case)
     participant Dom as GrupoRegistro<br/>(Entity)
     participant Repo as IUsuarioRepository
     participant CompRepo as IDepositoRepository
@@ -929,7 +929,7 @@ flowchart TD
     B -->|true| D{"¿Request incluye<br/>miembros[]?"}
     
     D -->|No| C
-    D -->|Sí| E[Instanciar<br/>RegistrarGrupo UseCase]
+    D -->|Sí| E[Instanciar<br/>RegistrarGrupoRapido UseCase]
     
     C --> F[Instanciar<br/>RegistrarUsuario UseCase]
     
@@ -967,7 +967,7 @@ ENABLE_GROUP_REGISTRATION=true | false
 #### Principios de Modularidad
 
 1. **Entidad dedicada** (`GrupoRegistro`): encapsula la lógica de herencia de campos compartidos.
-2. **Use Case independiente** (`RegistrarGrupo`): no modifica `RegistrarUsuario`, lo complementa.
+2. **Use Case independiente** (`RegistrarGrupoRapido`): no modifica `RegistrarUsuario`, lo complementa.
 3. **Server Action separado**: `registrar-grupo.action.ts` existe junto a `registrar-usuario.action.ts`.
 4. **UI condicional**: el componente `GrupoForm` solo se renderiza si la feature flag está activa.
 5. **Sin cambios en BD**: los miembros del grupo son `usuarios` regulares; la relación grupal se maneja a nivel de aplicación.
@@ -1420,7 +1420,7 @@ graph LR
 - **Decisión:** Permitir que un usuario ya registrado actúe como responsable de un registro grupal sin crear un duplicado. En este caso, solo se registran los miembros nuevos del grupo.
 - **Razón:** Es un caso de uso frecuente en instituciones educativas: un profesor o responsable institucional se registra primero individualmente y luego registra a su grupo de estudiantes/colegas.
 - **Consecuencia:**
-  - El Use Case `RegistrarGrupo` primero verifica si el correo del responsable ya existe en BD.
+  - El Use Case `RegistrarGrupoRapido` primero verifica si el correo del responsable ya existe en BD.
   - Si existe, se reutiliza la entidad `Usuario` existente como responsable del `GrupoRegistro` (con flag `responsableYaRegistrado = true`).
   - Solo los miembros nuevos se crean en BD (`obtenerNuevosRegistros()` excluye al responsable existente).
   - El comprobante grupal se asocia al ID del usuario existente.
@@ -1432,7 +1432,7 @@ graph LR
 - **Decisión:** Mover la responsabilidad del envío de constancias al caso de uso `EnviarConfirmacion` ejecutado explícitamente desde el Panel de Administración.
 - **Razón:** Disminuye el tiempo de respuesta del registro público, almacena la constancia tranquilamente en `IStorageService` y obliga a una revisión del pago antes de hacer llegar los documentos formales al asistente. Solo se envía confirmación de registro al asistente.
 - **Consecuencia:**
-  - `RegistrarUsuario` y `RegistrarGrupo` continúan generando el PDF para almacenamiento, pero omiten el attachment del mail.
+  - `RegistrarUsuario` y `RegistrarGrupoRapido` continúan generando el PDF para almacenamiento, pero omiten el attachment del mail.
   - El Panel de Administración proporciona una acción (`reenviarConstanciaAction`) para instruir a `EnviarConfirmacion` descargar y enviar el documento bajo demanda.
 
 ### ADR-10: Migración de Autenticación a Auth.js (NextAuth)
