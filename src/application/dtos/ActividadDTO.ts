@@ -31,7 +31,6 @@ export interface ActividadDTO {
   tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
   // Optional details
-  tallerDetalle: { horarioTexto: string | null; diasSemana: string | null } | null;
   costo: { folioRecibo: string | null; monto: number | null } | null;
   ponentes: PonenteDTO[];
 }
@@ -46,10 +45,6 @@ export interface CrearActividadDTO {
   idInstitucionSede?: number;
   idSala?: number;
   // Optional detail sections
-  tallerDetalle?: {
-    horarioTexto?: string;
-    diasSemana?: string;
-  };
   costo?: {
     folioRecibo?: string;
     monto?: number;

@@ -6,7 +6,6 @@ import { TipoActividad } from '@/shared/types/catalogos';
 const include = {
   tipo_actividad: true,
   instituciones: true,
-  actividad_taller_detalle: true,
   actividad_costo: true,
   _count: { select: { inscripcion_actividades: true } },
   actividad_ponentes: {
@@ -40,12 +39,6 @@ function mapToDTO(row: any): ActividadDTO {
           idInstitucion: row.instituciones.id_institucion,
           nombre: row.instituciones.nombre,
           abreviatura: row.instituciones.abreviatura ?? null,
-        }
-      : null,
-    tallerDetalle: row.actividad_taller_detalle
-      ? {
-          horarioTexto: row.actividad_taller_detalle.horario_texto ?? null,
-          diasSemana: row.actividad_taller_detalle.dias_semana ?? null,
         }
       : null,
     costo: row.actividad_costo
@@ -98,18 +91,6 @@ export class PrismaActividadRepository implements IActividadRepository {
           }
         : {};
 
-    const tallerCreate =
-      data.tallerDetalle
-        ? {
-            actividad_taller_detalle: {
-              create: {
-                horario_texto: data.tallerDetalle.horarioTexto ?? null,
-                dias_semana: data.tallerDetalle.diasSemana ?? null,
-              },
-            },
-          }
-        : {};
-
     const tipoConnect =
       data.idTipoActividad != null
         ? { tipo_actividad: { connect: { id_tipo_actividad: data.idTipoActividad } } }
@@ -130,7 +111,6 @@ export class PrismaActividadRepository implements IActividadRepository {
         id_sala: data.idSala ?? null,
         ...tipoConnect,
         ...institucionConnect,
-        ...tallerCreate,
         ...costoCreate,
       },
       include,
@@ -156,24 +136,6 @@ export class PrismaActividadRepository implements IActividadRepository {
               data.idInstitucionSede != null
                 ? { connect: { id_institucion: data.idInstitucionSede } }
                 : { disconnect: true },
-          }
-        : {};
-
-    const tallerUpdate =
-      data.tallerDetalle !== undefined
-        ? {
-            actividad_taller_detalle: {
-              upsert: {
-                create: {
-                  horario_texto: data.tallerDetalle?.horarioTexto ?? null,
-                  dias_semana: data.tallerDetalle?.diasSemana ?? null,
-                },
-                update: {
-                  horario_texto: data.tallerDetalle?.horarioTexto ?? null,
-                  dias_semana: data.tallerDetalle?.diasSemana ?? null,
-                },
-              },
-            },
           }
         : {};
 
@@ -207,7 +169,6 @@ export class PrismaActividadRepository implements IActividadRepository {
         ...(data.idSala !== undefined && { id_sala: data.idSala }),
         ...tipoUpdate,
         ...institucionUpdate,
-        ...tallerUpdate,
         ...costoUpdate,
       },
       include,

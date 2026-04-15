@@ -212,11 +212,6 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
               {a.idSala != null && ` · Sala ${a.idSala}`}
             </span>
           )}
-          {a.tallerDetalle && (
-            <span className="flex items-center gap-1 text-amber-600">
-              🕐 {a.tallerDetalle.horarioTexto} {a.tallerDetalle.diasSemana && `· ${a.tallerDetalle.diasSemana}`}
-            </span>
-          )}
         </div>
 
         {/* Ponentes */}

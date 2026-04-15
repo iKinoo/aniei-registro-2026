@@ -59,8 +59,6 @@ const emptyForm = (): FormState => ({
   tieneCosto: false,
   folioCosto: '',
   montoCosto: '',
-  horarioTexto: '',
-  diasSemana: '',
 });
 
 interface FormState {
@@ -75,11 +73,9 @@ interface FormState {
   tieneCosto: boolean;
   folioCosto: string;
   montoCosto: string;
-  horarioTexto: string;
-  diasSemana: string;
 }
 
-function formToDTO(f: FormState, esTaller: boolean): CrearActividadDTO {
+function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
   return {
     nombre: f.nombre,
     descripcion: f.descripcion || undefined,
@@ -89,12 +85,6 @@ function formToDTO(f: FormState, esTaller: boolean): CrearActividadDTO {
     idTipoActividad: f.idTipoActividad,
     idInstitucionSede: f.idInstitucionSede,
     idSala: f.idSala,
-    ...(esTaller && {
-      tallerDetalle: {
-        horarioTexto: f.horarioTexto || undefined,
-        diasSemana: f.diasSemana || undefined,
-      },
-    }),
     ...(f.tieneCosto && f.montoCosto && {
       costo: {
         folioRecibo: f.folioCosto || undefined,
@@ -117,8 +107,6 @@ function actividadToForm(a: ActividadDTO): FormState {
     tieneCosto: !!a.costo,
     folioCosto: a.costo?.folioRecibo ?? '',
     montoCosto: a.costo?.monto != null ? String(a.costo.monto) : '',
-    horarioTexto: a.tallerDetalle?.horarioTexto ?? '',
-    diasSemana: a.tallerDetalle?.diasSemana ?? '',
   };
 }
 
@@ -155,14 +143,6 @@ function FormField({ label, required, children }: { label: string; required?: bo
 const inputCls = "w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition";
 const textareaCls = inputCls + " resize-none";
 
-// Helper: detecta si un tipo es taller por clave o descripción
-function esTipoTaller(tipo: TipoActividad | undefined): boolean {
-  if (!tipo) return false;
-  const clave = (tipo.clave ?? '').toLowerCase();
-  const desc = tipo.descripcion.toLowerCase();
-  return clave.includes('taller') || desc.includes('taller');
-}
-
 // ============================================================
 // Main component
 // ============================================================
@@ -180,10 +160,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   const [ponentesEdicion, setPonenteEdicion] = useState<PonenteDTO[]>([]);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
-
-  // Derive esTaller from the currently selected tipo
-  const selectedTipo = tiposActividad.find((t) => t.idTipoActividad === form.idTipoActividad);
-  const esTaller = esTipoTaller(selectedTipo);
 
   const refresh = useCallback(async () => {
     const res = await getActividadesAction();
@@ -218,10 +194,8 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const selectedTipo = tiposActividad.find((t) => t.idTipoActividad === form.idTipoActividad);
-    const esTaller = esTipoTaller(selectedTipo);
     startTransition(async () => {
-      const dto = formToDTO(form, esTaller);
+      const dto = formToDTO(form, false);
       const res = editingId !== null
         ? await actualizarActividadAction(editingId, dto)
         : await crearActividadAction(dto);
@@ -306,11 +280,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                           <span className="font-semibold text-slate-900">{a.nombre}</span>
                           {a.descripcion && (
                             <span className="text-slate-400 text-xs line-clamp-1">{a.descripcion}</span>
-                          )}
-                          {a.tallerDetalle && (
-                            <span className="text-xs text-amber-600 font-medium">
-                              🕐 {a.tallerDetalle.horarioTexto ?? ''} {a.tallerDetalle.diasSemana ?? ''}
-                            </span>
                           )}
                         </div>
                       </td>
@@ -526,35 +495,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                   </FormField>
                 </div>
               </div>
-
-              {/* Taller details — shown automatically when tipo is taller */}
-              {esTaller && (
-                <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
-                  <p className="text-xs font-bold text-amber-700 uppercase tracking-widest">Detalle de Taller</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Horario">
-                      <input
-                        id="input-horario"
-                        type="text"
-                        className={inputCls}
-                        placeholder="Ej. 10:00 - 13:00"
-                        value={form.horarioTexto}
-                        onChange={(e) => setField('horarioTexto', e.target.value)}
-                      />
-                    </FormField>
-                    <FormField label="Días de la semana">
-                      <input
-                        id="input-dias"
-                        type="text"
-                        className={inputCls}
-                        placeholder="Ej. Lunes, Miércoles"
-                        value={form.diasSemana}
-                        onChange={(e) => setField('diasSemana', e.target.value)}
-                      />
-                    </FormField>
-                  </div>
-                </div>
-              )}
 
               {/* Costo (optional) */}
               <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">

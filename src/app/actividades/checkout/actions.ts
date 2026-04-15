@@ -23,7 +23,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
   try {
     const rows = await prisma.actividades.findMany({
       where: { id_actividad: { in: ids } },
-      include: { tipo_actividad: true, instituciones: true, actividad_costo: true, actividad_taller_detalle: true },
+      include: { tipo_actividad: true, instituciones: true, actividad_costo: true },
     });
     const data: ActividadDTO[] = rows.map((r) => ({
       idActividad: r.id_actividad,
@@ -45,10 +45,6 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         idInstitucion: r.instituciones.id_institucion,
         nombre: r.instituciones.nombre,
         abreviatura: r.instituciones.abreviatura ?? null,
-      } : null,
-      tallerDetalle: r.actividad_taller_detalle ? {
-        horarioTexto: r.actividad_taller_detalle.horario_texto ?? null,
-        diasSemana: r.actividad_taller_detalle.dias_semana ?? null,
       } : null,
       costo: r.actividad_costo ? {
         folioRecibo: r.actividad_costo.folio_recibo ?? null,
