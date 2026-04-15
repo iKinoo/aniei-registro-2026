@@ -28,7 +28,6 @@ export async function getActividadesPorIdsAction(ids: number[]) {
     const data: ActividadDTO[] = rows.map((r) => ({
       idActividad: r.id_actividad,
       nombre: r.nombre,
-      descripcion: r.descripcion ?? null,
       cupoMaximo: r.cupo_maximo ?? 0,
       fechaInicio: r.fecha_inicio.toISOString(),
       fechaFin: r.fecha_fin.toISOString(),

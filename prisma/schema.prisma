@@ -32,7 +32,6 @@ model actividad_ponentes {
 model actividades {
   id_actividad             Int                       @id @default(autoincrement())
   nombre                   String                    @db.VarChar(200)
-  descripcion              String?
   cupo_maximo              Int?                      @default(0)
   fecha_inicio             DateTime                  @db.Timestamp(6)
   fecha_fin                DateTime                  @db.Timestamp(6)

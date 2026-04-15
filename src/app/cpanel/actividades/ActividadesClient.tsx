@@ -49,7 +49,6 @@ const EyeIcon = () => (
 // ---------- empty form ----------
 const emptyForm = (): FormState => ({
   nombre: '',
-  descripcion: '',
   cupoMaximo: 0,
   fechaInicio: '',
   fechaFin: '',
@@ -63,7 +62,6 @@ const emptyForm = (): FormState => ({
 
 interface FormState {
   nombre: string;
-  descripcion: string;
   cupoMaximo: number;
   fechaInicio: string;
   fechaFin: string;
@@ -78,7 +76,6 @@ interface FormState {
 function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
   return {
     nombre: f.nombre,
-    descripcion: f.descripcion || undefined,
     cupoMaximo: f.cupoMaximo || 0,
     fechaInicio: f.fechaInicio,
     fechaFin: f.fechaFin,
@@ -97,7 +94,6 @@ function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
 function actividadToForm(a: ActividadDTO): FormState {
   return {
     nombre: a.nombre,
-    descripcion: a.descripcion ?? '',
     cupoMaximo: a.cupoMaximo,
     fechaInicio: toDatetimeLocal(a.fechaInicio),
     fechaFin: toDatetimeLocal(a.fechaFin),
@@ -278,9 +274,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-0.5">
                           <span className="font-semibold text-slate-900">{a.nombre}</span>
-                          {a.descripcion && (
-                            <span className="text-slate-400 text-xs line-clamp-1">{a.descripcion}</span>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4"><TipoBadge tipo={a.tipoActividad} /></td>
@@ -396,16 +389,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                     value={form.nombre}
                     onChange={(e) => setField('nombre', e.target.value)}
                     required
-                  />
-                </FormField>
-                <FormField label="Descripción">
-                  <textarea
-                    id="input-descripcion"
-                    className={textareaCls}
-                    rows={3}
-                    placeholder="Breve descripción de la actividad..."
-                    value={form.descripcion}
-                    onChange={(e) => setField('descripcion', e.target.value)}
                   />
                 </FormField>
                 <div className="grid grid-cols-2 gap-4">

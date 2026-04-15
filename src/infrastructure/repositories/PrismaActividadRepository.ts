@@ -19,7 +19,6 @@ function mapToDTO(row: any): ActividadDTO {
   return {
     idActividad: row.id_actividad,
     nombre: row.nombre,
-    descripcion: row.descripcion ?? null,
     cupoMaximo: row.cupo_maximo ?? 0,
     fechaInicio: row.fecha_inicio.toISOString(),
     fechaFin: row.fecha_fin.toISOString(),
@@ -105,7 +104,6 @@ export class PrismaActividadRepository implements IActividadRepository {
     const row = await this.prisma.actividades.create({
       data: {
         nombre: data.nombre,
-        descripcion: data.descripcion ?? null,
         cupo_maximo: data.cupoMaximo ?? 0,
         fecha_inicio: new Date(data.fechaInicio),
         fecha_fin: new Date(data.fechaFin),
@@ -163,7 +161,6 @@ export class PrismaActividadRepository implements IActividadRepository {
       where: { id_actividad: id },
       data: {
         ...(data.nombre !== undefined && { nombre: data.nombre }),
-        ...(data.descripcion !== undefined && { descripcion: data.descripcion }),
         ...(data.cupoMaximo !== undefined && { cupo_maximo: data.cupoMaximo }),
         ...(data.fechaInicio !== undefined && { fecha_inicio: new Date(data.fechaInicio) }),
         ...(data.fechaFin !== undefined && { fecha_fin: new Date(data.fechaFin) }),

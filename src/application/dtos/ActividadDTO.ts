@@ -19,7 +19,6 @@ export interface InscritoDTO {
 export interface ActividadDTO {
   idActividad: number;
   nombre: string;
-  descripcion: string | null;
   cupoMaximo: number;
   /** Cantidad de inscripciones actuales. 0 si no se incluyó en el query. */
   cupoOcupado: number;
@@ -38,7 +37,6 @@ export interface ActividadDTO {
 
 export interface CrearActividadDTO {
   nombre: string;
-  descripcion?: string;
   cupoMaximo?: number;
   fechaInicio: string;
   fechaFin: string;

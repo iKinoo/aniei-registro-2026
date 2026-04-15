@@ -188,9 +188,6 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
 
         {/* Name & description */}
         <h3 className="font-bold text-slate-900 text-base leading-snug mb-1">{a.nombre}</h3>
-        {a.descripcion && (
-          <p className="text-sm text-slate-500 line-clamp-2 mb-3">{a.descripcion}</p>
-        )}
 
         {/* Capacity indicator */}
         <IndicadorCupo a={a} />
