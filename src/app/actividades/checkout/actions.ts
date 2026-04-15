@@ -40,6 +40,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         descripcion: r.tipo_actividad.descripcion,
         clave: r.tipo_actividad.clave ?? null,
         manejaEquipos: r.tipo_actividad.maneja_equipos ?? false,
+        generaConstanciaParticipante: r.tipo_actividad.genera_constancia_participante ?? false,
       } : null,
       institucionSede: r.instituciones ? {
         idInstitucion: r.instituciones.id_institucion,

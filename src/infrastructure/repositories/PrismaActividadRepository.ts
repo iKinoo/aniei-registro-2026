@@ -32,6 +32,7 @@ function mapToDTO(row: any): ActividadDTO {
           descripcion: row.tipo_actividad.descripcion,
           clave: row.tipo_actividad.clave ?? null,
           manejaEquipos: row.tipo_actividad.maneja_equipos ?? false,
+          generaConstanciaParticipante: row.tipo_actividad.genera_constancia_participante ?? false,
         }
       : null,
     institucionSede: row.instituciones

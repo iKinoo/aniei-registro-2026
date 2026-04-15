@@ -3,4 +3,5 @@ export interface InscripcionActividadDTO {
   idUsuario: number;
   idActividad: number;
   fechaInscripcion: string;
+  urlConstancia?: string | null;
 }

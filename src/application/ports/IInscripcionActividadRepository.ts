@@ -16,4 +16,7 @@ export interface IInscripcionActividadRepository {
     idUsuario: number,
     idsActividades: number[],
   ): Promise<{ ok: number[]; sinCupo: number[] }>;
+  
+  /** Actualiza la url de la constancia generada para el usuario participante */
+  actualizarUrlConstancia(idActividad: number, idUsuario: number, url: string): Promise<void>;
 }

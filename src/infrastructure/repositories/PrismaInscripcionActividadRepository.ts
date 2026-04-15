@@ -19,6 +19,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
       apellido: r.usuarios!.apellido,
       correo: r.usuarios!.correo,
       fechaInscripcion: r.fecha_inscripcion,
+      urlConstancia: r.url_constancia,
     }));
   }
 
@@ -129,5 +130,19 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     }
 
     return { ok, sinCupo };
+  }
+
+  async actualizarUrlConstancia(idActividad: number, idUsuario: number, url: string): Promise<void> {
+    await this.prisma.inscripcion_actividades.update({
+      where: {
+        id_usuario_id_actividad: {
+          id_usuario: idUsuario,
+          id_actividad: idActividad,
+        },
+      },
+      data: {
+        url_constancia: url,
+      },
+    });
   }
 }

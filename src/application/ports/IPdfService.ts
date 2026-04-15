@@ -24,5 +24,6 @@ export interface HojaRegistroGrupoData {
 export interface IPdfService {
   generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer>;
   generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer>;
+  generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Buffer>;
   generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer>;
 }

@@ -116,6 +116,39 @@ export class ResendEmailService implements IEmailService {
     }
   }
 
+  async enviarConstanciaParticipante(
+    destinatario: string,
+    pdfBuffer: Buffer,
+    nombreParticipante: string,
+    nombreActividad: string
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a1a2e; border-bottom: 2px solid #eee; padding-bottom: 10px;">Constancia de Participación</h2>
+        <p>Estimado(a) <strong>${nombreParticipante}</strong>,</p>
+        <p>El Comité Organizador del Congreso Nacional ANIEI 2026 le agradece haber participado en la actividad <strong>"${nombreActividad}"</strong>.</p>
+        <p>Adjunto a este correo encontrará su constancia digital de participación.</p>
+        <br/>
+        <p>Atentamente,<br/><strong>El Comité Organizador ANIEI 2026</strong></p>
+      </div>
+    `;
+
+    const { error } = await this.resend.emails.send({
+      from: this.from,
+      to: destinatario,
+      subject: `Constancia de Participación - ${nombreActividad}`,
+      html,
+      attachments: [{
+        filename: `constancia-participante-${nombreParticipante.trim().replace(/\\s+/g, '-')}.pdf`,
+        content: pdfBuffer,
+      }],
+    });
+
+    if (error) {
+      throw new Error(`Error al enviar constancia de participante: ${error.message}`);
+    }
+  }
+
   async enviarConfirmacionGrupoRapido(
     destinatario: string,
     datos: ConfirmacionGrupoRapidoData,

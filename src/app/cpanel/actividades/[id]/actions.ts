@@ -11,6 +11,8 @@ import {
 } from '@/infrastructure/config/container';
 import { GenerarConstanciaPonenteUseCase } from '@/application/use-cases/GenerarConstanciaPonenteUseCase';
 import { EnviarConstanciaPonenteUseCase } from '@/application/use-cases/EnviarConstanciaPonenteUseCase';
+import { GenerarConstanciaParticipanteUseCase } from '@/application/use-cases/GenerarConstanciaParticipanteUseCase';
+import { EnviarConstanciaParticipanteUseCase } from '@/application/use-cases/EnviarConstanciaParticipanteUseCase';
 
 export async function getDetalleActividadAction(idActividadStr: string) {
   try {
@@ -82,5 +84,67 @@ export async function enviarConstanciaPonenteAction(idActividad: number, idUsuar
   } catch (error) {
     console.error('Error en enviarConstanciaPonenteAction:', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al enviar por correo' };
+  }
+}
+
+export async function generarConstanciaParticipanteAction(idActividad: number, idUsuario: number) {
+  try {
+    const useCase = new GenerarConstanciaParticipanteUseCase(
+      getPdfService(),
+      getStorageService(),
+      getActividadRepository(),
+      getInscripcionActividadRepository(),
+      getUsuarioRepository()
+    );
+
+    const url = await useCase.execute(idActividad, idUsuario);
+    return { success: true as const, url };
+  } catch (error) {
+    console.error('Error en generarConstanciaParticipanteAction:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar' };
+  }
+}
+
+export async function enviarConstanciaParticipanteAction(idActividad: number, idUsuario: number) {
+  try {
+    const useCase = new EnviarConstanciaParticipanteUseCase(
+      getPdfService(),
+      getEmailService(),
+      getActividadRepository(),
+      getUsuarioRepository()
+    );
+
+    await useCase.execute(idActividad, idUsuario);
+    return { success: true as const };
+  } catch (error) {
+    console.error('Error en enviarConstanciaParticipanteAction:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Error al enviar por correo' };
+  }
+}
+
+export async function generarConstanciaParticipanteBatchAction(idActividad: number, idUsuarios: number[]) {
+  try {
+    const useCase = new GenerarConstanciaParticipanteUseCase(
+      getPdfService(),
+      getStorageService(),
+      getActividadRepository(),
+      getInscripcionActividadRepository(),
+      getUsuarioRepository()
+    );
+
+    const resultados = [];
+    for (const id of idUsuarios) {
+      try {
+        const url = await useCase.execute(idActividad, id);
+        resultados.push({ idUsuario: id, success: true, url });
+      } catch (e) {
+         resultados.push({ idUsuario: id, success: false, error: e instanceof Error ? e.message : 'Error desconocido' });
+      }
+    }
+    
+    return { success: true as const, resultados };
+  } catch (error) {
+    console.error('Error en generarConstanciaParticipanteBatchAction:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar lote' };
   }
 }

@@ -136,6 +136,7 @@ model inscripcion_actividades {
   id_usuario        Int?
   id_actividad      Int?
   fecha_inscripcion DateTime?    @default(now()) @db.Timestamp(6)
+  url_constancia    String?      @db.VarChar(500)
   actividades       actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios          usuarios?    @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
 
@@ -163,11 +164,12 @@ model talleres {
 }
 
 model tipo_actividad {
-  id_tipo_actividad Int           @id @default(autoincrement())
-  descripcion       String        @db.VarChar(50)
-  clave             String?       @db.VarChar(50)
-  maneja_equipos    Boolean?      @default(false)
-  actividades       actividades[]
+  id_tipo_actividad                Int           @id @default(autoincrement())
+  descripcion                      String        @db.VarChar(50)
+  clave                            String?       @db.VarChar(50)
+  maneja_equipos                   Boolean?      @default(false)
+  genera_constancia_participante   Boolean?      @default(false)
+  actividades                      actividades[]
 }
 
 model tipo_usuario {

@@ -13,6 +13,7 @@ export interface InscritoDTO {
   apellido: string;
   correo: string;
   fechaInscripcion: Date | null;
+  urlConstancia?: string | null;
 }
 
 export interface ActividadDTO {
@@ -28,7 +29,7 @@ export interface ActividadDTO {
   idInstitucionSede: number | null;
   idSala: number | null;
   // Relations
-  tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean } | null;
+  tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean; generaConstanciaParticipante: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
   // Optional details
   costo: { folioRecibo: string | null; monto: number | null } | null;

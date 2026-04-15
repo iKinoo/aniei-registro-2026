@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData } from '@/application/ports/IPdfService';
 import { ConstanciaTemplate } from './templates/ConstanciaTemplate';
 import { ConstanciaPonenteTemplate } from './templates/ConstanciaPonenteTemplate';
+import { ConstanciaParticipanteTemplate } from './templates/ConstanciaParticipanteTemplate';
 import { HojaRegistroGrupoTemplate } from './templates/HojaRegistroGrupoTemplate';
 
 export class ReactPdfService implements IPdfService {
@@ -16,6 +17,13 @@ export class ReactPdfService implements IPdfService {
 
   async generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer> {
     const element = React.createElement(ConstanciaPonenteTemplate, datos);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
+    return Buffer.from(buffer);
+  }
+
+  async generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Buffer> {
+    const element = React.createElement(ConstanciaParticipanteTemplate, datos);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
     return Buffer.from(buffer);
