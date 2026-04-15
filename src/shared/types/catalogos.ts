@@ -29,5 +29,6 @@ export interface TipoActividad {
   clave: string | null;
   descripcion: string;
   manejaEquipos: boolean;
+  generaConstanciaParticipante: boolean;
 }
 

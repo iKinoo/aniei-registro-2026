@@ -181,6 +181,7 @@ export class PrismaActividadRepository implements IActividadRepository {
       clave: r.clave ?? null,
       descripcion: r.descripcion,
       manejaEquipos: r.maneja_equipos ?? false,
+      generaConstanciaParticipante: r.genera_constancia_participante ?? false,
     }));
   }
 }
