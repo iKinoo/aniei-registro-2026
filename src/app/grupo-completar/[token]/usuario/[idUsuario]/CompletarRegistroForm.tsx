@@ -13,11 +13,20 @@ interface Props {
     estados: Estado[];
     instituciones: Institucion[];
   };
+  usuario: {
+    nombre: string;
+    apellido: string;
+    dependencia: string | null;
+    id_institucion: number | null;
+    id_entidad_federativa: number | null;
+    id_cargo: number | null;
+    id_tipo_usuario: number | null;
+  };
 }
 
 const initialState: CompletarActionState = { success: false };
 
-export function CompletarRegistroForm({ token, idUsuario, catalogos }: Props) {
+export function CompletarRegistroForm({ token, idUsuario, catalogos, usuario }: Props) {
   const bindedAction = completarRegistroAction.bind(null, token, idUsuario);
   const [state, formAction, isPending] = useActionState(bindedAction, initialState);
 
@@ -97,40 +106,41 @@ export function CompletarRegistroForm({ token, idUsuario, catalogos }: Props) {
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="dependencia" className="text-sm font-medium text-gray-700">Dependencia (opcional)</label>
-            <input
-              id="dependencia" name="dependencia" type="text" maxLength={128}
-              defaultValue={state.fields?.dependencia ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
         </div>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-600">Datos institucionales</legend>
+      <div className="space-y-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
+        <legend className="px-2 text-sm font-semibold text-gray-600">Datos pre-registrados (Heredados)</legend>
+        <p className="px-2 text-xs text-gray-500 mb-4">Estos datos fueron proporcionados por el responsable de tu grupo y no pueden ser modificados. Todos los miembros de tu grupo están bajo el perfil de Alumno.</p>
         
-        <SelectCatalogo
-          name="idCargo" label="Cargo" required
-          options={cargosToOptions(catalogos.cargos)}
-          error={state.errors?.idCargo}
-          defaultValue={state.fields?.idCargo}
-        />
-        
-        <SelectCatalogo
-          name="idInstitucion" label="Institución" required
-          options={institucionesToOptions(catalogos.instituciones)}
-          error={state.errors?.idInstitucion}
-          defaultValue={state.fields?.idInstitucion}
-        />
-        
-        <SelectCatalogo
-          name="idEntidadFederativa" label="Estado" required
-          options={estadosToOptions(catalogos.estados)}
-          error={state.errors?.idEntidadFederativa}
-          defaultValue={state.fields?.idEntidadFederativa}
-        />
+        <div className="grid gap-4 sm:grid-cols-2 px-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</label>
+            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">{usuario.nombre} {usuario.apellido}</div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cargo</label>
+            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
+              {catalogos.cargos.find(c => c.idCargo === usuario.id_cargo)?.descripcion || 'Alumno'}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Institución</label>
+            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
+              {catalogos.instituciones.find(i => i.idInstitucion === usuario.id_institucion)?.nombre || 'N/A'}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Dependencia</label>
+            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">{usuario.dependencia || 'N/A'}</div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Estado (Entidad Federativa)</label>
+            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
+              {catalogos.estados.find(e => e.idEntidadFederativa === usuario.id_entidad_federativa)?.nombre || 'N/A'}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="pt-4">

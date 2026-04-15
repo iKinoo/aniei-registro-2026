@@ -16,7 +16,22 @@ export default async function GrupoCompletarPage(props: { params: Promise<{ toke
   });
 
   if (!grupo) {
-    notFound();
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Registro NO ENCONTRADO</h2>
+          <p className="text-gray-600 mb-8">
+            El enlace de registro de grupo es inválido o no existe en la base de datos.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            Volver al Inicio
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const pendientes = grupo.miembros.filter(m => m.correo.includes('@temp.aniei.org'));

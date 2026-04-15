@@ -3,7 +3,6 @@ import { ArchivoDTO } from './RegistroUsuarioDTO';
 export interface MiembroRapidoInputDTO {
   nombre: string;
   apellido: string;
-  idTipoUsuario: number;
 }
 
 export interface RegistrarGrupoRapidoDTO {

@@ -7,14 +7,6 @@ export const metadata = {
 };
 
 export default async function GrupoRegistroPage() {
-  const tiposUsuario = await prisma.tipo_usuario.findMany({ orderBy: { id_tipo_usuario: 'asc' } });
-  
-  // Transform to the expected shape (idTipoUsuario instead of id_tipo_usuario)
-  const mappedTipos = tiposUsuario.map(t => ({
-    idTipoUsuario: t.id_tipo_usuario,
-    descripcion: t.descripcion
-  }));
-
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
@@ -27,7 +19,7 @@ export default async function GrupoRegistroPage() {
         </div>
 
         <div className="rounded-xl bg-white p-8 shadow-lg border border-gray-100">
-          <GrupoRapidoForm tiposUsuario={mappedTipos} />
+          <GrupoRapidoForm />
         </div>
       </div>
     </div>

@@ -10,4 +10,20 @@ export interface IUsuarioRepository {
   buscarPorFolio(folio: FolioRecibo): Promise<Usuario | null>;
   actualizarFolio(id: number, folio: FolioRecibo): Promise<void>;
   verificar(id: number): Promise<void>;
+  
+  crearGrupoTransaccional(data: {
+    token: string;
+    responsableId: number;
+    institucionId: number;
+    dependenciaId: string;
+    estadoId: number;
+    tipoUsuarioAlumnoId: number;
+    cargoAlumnoId: number;
+    miembros: Array<{
+      nombre: string;
+      apellido: string;
+      correoDummy: string;
+      passwordHash: string;
+    }>;
+  }): Promise<{ usuariosIds: number[], folios: string[] }>;
 }

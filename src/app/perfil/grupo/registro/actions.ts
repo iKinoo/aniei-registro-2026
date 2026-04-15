@@ -15,7 +15,6 @@ import { z } from 'zod';
 const miembroRapidoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(125),
   apellido: z.string().min(1, 'El apellido es requerido').max(256),
-  idTipoUsuario: z.coerce.number().int().positive('Seleccione un tipo de usuario'),
 });
 
 const grupoRapidoFormSchema = z.object({
@@ -73,12 +72,11 @@ export async function registrarGrupoRapidoAction(
       };
     }
 
-    // Extraer miembros con nueva estructura plana nombres[] apellidos[] tiposUsuario[]
+    // Extraer miembros con nueva estructura plana nombres[] apellidos[]
     const nombres = formData.getAll('nombres[]');
     const apellidos = formData.getAll('apellidos[]');
-    const tipos = formData.getAll('tiposUsuario[]');
     
-    if (!nombres.length || nombres.length !== apellidos.length || nombres.length !== tipos.length) {
+    if (!nombres.length || nombres.length !== apellidos.length) {
        return {
         success: false,
         error: 'Datos de los integrantes incompletos o mal formados.'
@@ -87,8 +85,7 @@ export async function registrarGrupoRapidoAction(
 
     const miembrosList = nombres.map((nombre, i) => ({
       nombre: nombre as string,
-      apellido: apellidos[i] as string,
-      idTipoUsuario: parseInt(tipos[i] as string, 10)
+      apellido: apellidos[i] as string
     }));
 
     // 4. Validar con Zod
@@ -122,7 +119,6 @@ export async function registrarGrupoRapidoAction(
       getStorageService(),
       getEmailService(),
       getPdfService(),
-      getAccesoRepository(),
     );
 
     const resultado = await useCase.execute({

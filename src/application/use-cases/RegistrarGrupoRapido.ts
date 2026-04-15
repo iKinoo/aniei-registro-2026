@@ -1,21 +1,22 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
-import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { RegistrarGrupoRapidoDTO } from '@/application/dtos/RegistrarGrupoRapidoDTO';
 import { ResultadoRegistroGrupo } from '@/application/dtos/ResultadoRegistroGrupo';
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
-import { prisma } from '@/infrastructure/database/client';
 import bcrypt from 'bcryptjs';
 
 export class RegistrarGrupoRapido {
+  // Configuración: El ID que corresponde al tipo "Alumno"
+  private readonly ID_TIPO_USUARIO_ALUMNO = 1;
+  private readonly ID_CARGO_ALUMNO = 1;
+
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
-    private readonly accesoRepo: IAccesoRepository,
   ) {}
 
   async execute(dto: RegistrarGrupoRapidoDTO): Promise<ResultadoRegistroGrupo> {
@@ -36,70 +37,27 @@ export class RegistrarGrupoRapido {
     const archivoRuta = `comprobantes_grupo/${token}.${ext}`;
     await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
 
-    // 5. Iniciar la transacción para crear GrupoRegistro, Usuarios y Accesos
-    const persistidos = await prisma.$transaction(async (tx) => {
-      // 5.1 Crear el registro del grupo
-      const grupo = await tx.grupos_registro.create({
-        data: {
-          token,
-          id_responsable: dto.responsableId,
-        },
-      });
+    // 5. Preparar los datos de los miembros (Mapeo)
+    const passwordGenerico = await bcrypt.hash(crypto.randomUUID(), 10);
+    const miembrosMapeados = dto.miembros.map((miembro, i) => ({
+      nombre: miembro.nombre,
+      apellido: miembro.apellido,
+      correoDummy: `grupo_${token}_${i}@temp.aniei.org`,
+      passwordHash: passwordGenerico // Se reutiliza el mismo hash genérico para todos
+    }));
 
-      const creados = [];
-
-      // 5.2 Crear miembros con email temporal e incluirlos en el grupo
-      for (let i = 0; i < dto.miembros.length; i++) {
-        const miembro = dto.miembros[i];
-        const dummyEmail = `grupo_${token}_${i}@temp.aniei.org`;
-
-        // Generar hash de password dummy, no se usará pero para pasar las validaciones
-        const passwordHash = await bcrypt.hash(crypto.randomUUID(), 10);
-
-        const newAcceso = await tx.accesos.create({
-          data: {
-            email: dummyEmail,
-            nombre: `${miembro.nombre} ${miembro.apellido}`,
-            password: passwordHash,
-            rol: 'USER',
-          },
-        });
-
-        const newUsuario = await tx.usuarios.create({
-          data: {
-            nombre: miembro.nombre,
-            apellido: miembro.apellido,
-            correo: dummyEmail,
-            id_tipo_usuario: miembro.idTipoUsuario,
-            id_grupo_registro: grupo.id,
-          },
-        });
-
-        // Relacionamos acceso con usuario
-        await tx.accesos.update({
-          where: { id_acceso: newAcceso.id_acceso },
-          data: { id_usuario: newUsuario.id_usuario },
-        });
-
-        creados.push({ ...newUsuario, token });
-      }
-
-      return creados;
+    // 6. Delegar la persistencia transaccional al Repositorio
+    // Aquí es donde las herencias (Institución, Dependencia, Estado) se pasan para insertarse
+    const { folios, usuariosIds } = await this.usuarioRepo.crearGrupoTransaccional({
+      token,
+      responsableId: dto.responsableId,
+      institucionId: responsable.idInstitucion,
+      dependenciaId: responsable.dependencia || '',
+      estadoId: responsable.idEntidadFederativa, 
+      tipoUsuarioAlumnoId: this.ID_TIPO_USUARIO_ALUMNO,
+      cargoAlumnoId: this.ID_CARGO_ALUMNO,
+      miembros: miembrosMapeados
     });
-
-    // 6. Asignar folios temporales o reales?
-    // Generalmente el folio se asigna, lo saltaremos hasta que completen su registro, 
-    // pero esperaría `RegistrarUsuario` que genere folios. 
-    // Vamos a asignarlo!
-    const folios: string[] = [];
-    for (const u of persistidos) {
-      const folio = `ANIEI-GRP-${String(u.id_usuario).padStart(4, '0')}`;
-      await prisma.usuarios.update({
-        where: { id_usuario: u.id_usuario },
-        data: { folio_recibo: folio }
-      });
-      folios.push(folio);
-    }
 
     // 7. Generar el PDF
     const nombres = dto.miembros.map(m => `${m.nombre} ${m.apellido}`);
@@ -123,7 +81,7 @@ export class RegistrarGrupoRapido {
 
     return {
       success: true,
-      totalRegistrados: persistidos.length,
+      totalRegistrados: usuariosIds.length,
       folios,
     };
   }

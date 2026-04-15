@@ -16,10 +16,6 @@ const completarRegistroSchema = z.object({
   extension: z.string().max(10).optional().or(z.literal('')),
   genero: z.enum(['M', 'F', 'O'], { message: 'Seleccione un género' }),
   carrera: z.string().max(128).optional().or(z.literal('')),
-  dependencia: z.string().max(128).optional().or(z.literal('')),
-  idCargo: z.coerce.number().int().positive('Seleccione un cargo'),
-  idInstitucion: z.coerce.number().int().positive('Seleccione una institución'),
-  idEntidadFederativa: z.coerce.number().int().positive('Seleccione un estado'),
 });
 
 export interface CompletarActionState {
@@ -78,34 +74,32 @@ export async function completarRegistroAction(
     const passwordHash = await bcrypt.hash(rawPassword, 10);
 
     const emailService = getEmailService();
-    const [institucion] = await Promise.all([
-      prisma.instituciones.findUnique({ where: { id_institucion: validatedData.idInstitucion } }),
-      prisma.$transaction(async (tx) => {
-        await tx.usuarios.update({
-          where: { id_usuario: idUsuario },
-          data: {
-            correo: validatedData.correo,
-            telefono: validatedData.telefono || null,
-            lada: validatedData.lada || null,
-            extension: validatedData.extension || null,
-            genero: validatedData.genero,
-            carrera: validatedData.carrera || null,
-            dependencia: validatedData.dependencia || null,
-            id_cargo: validatedData.idCargo,
-            id_institucion: validatedData.idInstitucion,
-            id_entidad_federativa: validatedData.idEntidadFederativa,
-          },
-        });
+    // Get institucion to mention in email
+    const institucion = await prisma.instituciones.findUnique({
+      where: { id_institucion: usuario.id_institucion || undefined }
+    });
 
-        await tx.accesos.update({
-          where: { id_acceso: acceso.id_acceso },
-          data: {
-            email: validatedData.correo,
-            password: passwordHash,
-          },
-        });
-      })
-    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.usuarios.update({
+        where: { id_usuario: idUsuario },
+        data: {
+          correo: validatedData.correo,
+          telefono: validatedData.telefono || null,
+          lada: validatedData.lada || null,
+          extension: validatedData.extension || null,
+          genero: validatedData.genero,
+          carrera: validatedData.carrera || null,
+        },
+      });
+
+      await tx.accesos.update({
+        where: { id_acceso: acceso.id_acceso },
+        data: {
+          email: validatedData.correo,
+          password: passwordHash,
+        },
+      });
+    });
 
     // Send confirmation email with credentials
     const fechaStr = new Date().toLocaleDateString('es-MX', {

@@ -6,19 +6,13 @@ import { registrarGrupoRapidoAction } from './actions';
 interface MiembroGrupo {
   nombre: string;
   apellidos: string;
-  idTipoUsuario: number | string;
 }
 
-interface TipoUsuario {
-  idTipoUsuario: number;
-  descripcion: string;
-}
-
-export function GrupoRapidoForm({ tiposUsuario }: { tiposUsuario: TipoUsuario[] }) {
+export function GrupoRapidoForm() {
   const [state, formAction, isPending] = useActionState(registrarGrupoRapidoAction, { success: false });
-  const [miembros, setMiembros] = useState<MiembroGrupo[]>([{ nombre: '', apellidos: '', idTipoUsuario: '' }]);
+  const [miembros, setMiembros] = useState<MiembroGrupo[]>([{ nombre: '', apellidos: '' }]);
 
-  const addMiembro = () => setMiembros([...miembros, { nombre: '', apellidos: '', idTipoUsuario: '' }]);
+  const addMiembro = () => setMiembros([...miembros, { nombre: '', apellidos: '' }]);
   const removeMiembro = (index: number) => {
     if (miembros.length > 1) {
       setMiembros(miembros.filter((_, i) => i !== index));
@@ -74,10 +68,16 @@ export function GrupoRapidoForm({ tiposUsuario }: { tiposUsuario: TipoUsuario[] 
       </div>
 
       <div className="border-t border-gray-200 pt-8 mt-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Integrantes del Grupo</h3>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Integrantes del Grupo</h3>
+          <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800 border border-blue-200">
+            <p>
+              <strong>Información importante:</strong> Los siguientes miembros quedarán registrados bajo tu misma <strong>Institución</strong>, <strong>Dependencia</strong> y <strong>Estado</strong>, y todos tendrán el perfil de <strong>Alumno</strong>. Estos datos no son editables para los miembros y se heredan automáticamente de tu cuenta.
+            </p>
           </div>
+        </div>
+
+        <div className="flex justify-end mb-4">
           <button
             type="button"
             onClick={addMiembro}
@@ -113,21 +113,6 @@ export function GrupoRapidoForm({ tiposUsuario }: { tiposUsuario: TipoUsuario[] 
                   onChange={(e) => updateMiembro(index, 'apellidos', e.target.value)}
                   className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300"
                 />
-              </div>
-
-              <div className="flex-1">
-                <select
-                  name={`tiposUsuario[]`}
-                  required
-                  value={miembro.idTipoUsuario}
-                  onChange={(e) => updateMiembro(index, 'idTipoUsuario', e.target.value)}
-                  className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-white"
-                >
-                  <option value="" disabled>Selec. Tipo de Perfil</option>
-                  {tiposUsuario.map(t => (
-                    <option key={t.idTipoUsuario} value={t.idTipoUsuario}>{t.descripcion}</option>
-                  ))}
-                </select>
               </div>
 
               {miembros.length > 1 && (

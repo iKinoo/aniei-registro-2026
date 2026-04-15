@@ -1,14 +1,33 @@
-import { notFound } from 'next/navigation';
 import { prisma } from '@/infrastructure/database/client';
+import Link from 'next/link';
 import { CompletarRegistroForm } from './CompletarRegistroForm';
 
 export const metadata = { title: 'Completar Registro Alumno | ANIEI 2026' };
+
+function NotFoundUI() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full text-center">
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Registro NO ENCONTRADO</h2>
+        <p className="text-gray-600 mb-8">
+          El enlace de registro de grupo es inválido, el usuario no existe, o el enlace ha caducado.
+        </p>
+        <Link
+          href="/"
+          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          Volver al Inicio
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default async function UsuarioCompletarPage(props: { params: Promise<{ token: string; idUsuario: string }> }) {
   const { token, idUsuario } = await props.params;
   const idNum = Number(idUsuario);
 
-  if (isNaN(idNum)) return notFound();
+  if (isNaN(idNum)) return <NotFoundUI />;
 
   // Find group and verify user is in it and needs completion
   const grupo = await prisma.grupos_registro.findUnique({
@@ -22,7 +41,7 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
   });
 
   if (!grupo || grupo.miembros.length === 0) {
-    notFound();
+    return <NotFoundUI />;
   }
 
   const usuario = grupo.miembros[0];
@@ -83,7 +102,7 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
           </div>
 
           <div className="px-4 py-5 sm:p-6 pt-0">
-            <CompletarRegistroForm token={token} idUsuario={idNum} catalogos={catalogos} />
+            <CompletarRegistroForm token={token} idUsuario={idNum} catalogos={catalogos} usuario={usuario} />
           </div>
         </div>
       </div>
