@@ -37,9 +37,6 @@ export default async function GrupoCompletarPage(props: { params: Promise<{ toke
   const pendientes = grupo.miembros.filter(m => m.correo.includes('@temp.aniei.org'));
   const completados = grupo.miembros.filter(m => !m.correo.includes('@temp.aniei.org'));
 
-  console.log(grupo.miembros);
-  console.log(pendientes);
-  console.log(completados);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
