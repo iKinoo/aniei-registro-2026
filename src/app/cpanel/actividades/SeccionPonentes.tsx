@@ -113,8 +113,6 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState<UsuarioBusquedaResult[]>([]);
   const [buscando, setBuscando] = useState(false);
-  const [seleccionado, setSeleccionado] = useState<UsuarioBusquedaResult | null>(null);
-  const [rolInput, setRolInput] = useState('Ponente');
   const [showRegistro, setShowRegistro] = useState(false);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -130,7 +128,6 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
 
   function buscar(val: string) {
     setQuery(val);
-    setSeleccionado(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (val.trim().length < 2) { setResultados([]); return; }
     debounceRef.current = setTimeout(async () => {
@@ -141,26 +138,25 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
     }, 350);
   }
 
-  function handleAnadir() {
-    if (!seleccionado) return;
+  function handleAnadir(u: UsuarioBusquedaResult) {
     setError('');
     startTransition(async () => {
+      const rolInicial = 'Ponente';
       if (idActividad != null) {
-        const res = await vincularPonenteAction(idActividad, seleccionado.idUsuario, rolInput);
+        const res = await vincularPonenteAction(idActividad, u.idUsuario, rolInicial);
         if (!res.success) { setError(res.error ?? 'Error al vincular'); return; }
       }
       const nuevo: PonenteDTO = {
-        idUsuario: seleccionado.idUsuario,
-        nombre: seleccionado.nombre,
-        apellido: seleccionado.apellido,
-        correo: seleccionado.correo,
-        rol: rolInput,
+        idUsuario: u.idUsuario,
+        nombre: u.nombre,
+        apellido: u.apellido,
+        correo: u.correo,
+        rol: rolInicial,
       };
-      const actualizado = ponentes.find((p) => p.idUsuario === seleccionado.idUsuario)
+      const actualizado = ponentes.find((p) => p.idUsuario === u.idUsuario)
         ? ponentes
         : [...ponentes, nuevo];
       notifyChange(actualizado);
-      setSeleccionado(null);
       setQuery('');
       setResultados([]);
     });
@@ -183,7 +179,6 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
     notifyChange(actualizado);
     setQuery('');
     setResultados([]);
-    setSeleccionado(null);
   }
 
   return (
@@ -215,8 +210,8 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
               <button
                 key={r.idUsuario}
                 type="button"
-                onClick={() => { setSeleccionado(r); setQuery(`${r.nombre} ${r.apellido}`); setResultados([]); }}
-                className={`w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 transition-colors flex justify-between items-center ${seleccionado?.idUsuario === r.idUsuario ? 'bg-indigo-50' : ''}`}
+                onClick={() => handleAnadir(r)}
+                className={`w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 transition-colors flex justify-between items-center`}
               >
                 <span className="font-medium text-slate-800">{r.nombre} {r.apellido}</span>
                 <span className="text-slate-400 text-xs truncate max-w-[180px]">{r.correo}</span>
@@ -237,7 +232,7 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
 
         {/* Sin resultados */}
         {query.trim().length >= 2 && resultados.length === 0 && !buscando && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-10 px-4 py-3">
+          <div className=" top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-10 px-4 py-3">
             <p className="text-sm text-slate-500">No se encontraron usuarios.</p>
             <button
               type="button"
@@ -250,27 +245,6 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
         )}
       </div>
 
-      {/* Rol + botón añadir */}
-      {seleccionado && (
-        <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            value={rolInput}
-            onChange={(e) => setRolInput(e.target.value)}
-            placeholder="Rol (ej. Ponente principal)"
-            className={`${inputCls} flex-1`}
-          />
-          <button
-            type="button"
-            onClick={handleAnadir}
-            disabled={isPending}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition disabled:opacity-50 whitespace-nowrap"
-          >
-            Añadir
-          </button>
-        </div>
-      )}
-
       {error && <p className="text-xs text-rose-600">{error}</p>}
 
       {/* Lista de ponentes añadidos */}
@@ -282,9 +256,25 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
                 <div className="w-7 h-7 rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
                   {p.nombre[0]}{p.apellido[0]}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex flex-col">
                   <p className="text-sm font-semibold text-slate-800 leading-tight">{p.nombre} {p.apellido}</p>
-                  <p className="text-xs text-slate-500 truncate">{p.rol ?? 'Ponente'}</p>
+                  <input
+                    type="text"
+                    value={p.rol ?? 'Ponente'}
+                    onChange={(e) => {
+                      const actualizados = ponentes.map(x => x.idUsuario === p.idUsuario ? { ...x, rol: e.target.value } : x);
+                      notifyChange(actualizados);
+                    }}
+                    onBlur={(e) => {
+                      if (idActividad != null) {
+                        startTransition(async () => {
+                           await vincularPonenteAction(idActividad, p.idUsuario, e.target.value || 'Ponente');
+                        });
+                      }
+                    }}
+                    placeholder="Ponente"
+                    className="text-xs text-slate-500 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-indigo-500 max-w-[140px] px-0.5 py-0.5 mt-0.5"
+                  />
                 </div>
               </div>
               <button
@@ -307,7 +297,7 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
       {showRegistro && (
         <ModalRegistroPonente
           idActividad={idActividad ?? 0}
-          rol={rolInput}
+          rol={'Ponente'}
           onSuccess={handleRegistroExitoso}
           onClose={() => setShowRegistro(false)}
         />
