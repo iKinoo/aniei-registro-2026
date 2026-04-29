@@ -7,6 +7,7 @@ import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
+import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { RegistroUsuarioDTO } from '@/application/dtos/RegistroUsuarioDTO';
 import { ResultadoRegistro } from '@/application/dtos/ResultadoRegistro';
 import { Usuario } from '@/core/entities/Usuario';
@@ -15,7 +16,6 @@ import { Facturacion } from '@/core/entities/Facturacion';
 import { Monto } from '@/core/value-objects/Monto';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
-
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import { RegistroError } from '@/core/errors/RegistroError';
 
@@ -29,6 +29,7 @@ export class RegistrarUsuario {
     private readonly pdfService: IPdfService,
     private readonly catalogoRepo: ICatalogoRepository,
     private readonly accesoRepo: IAccesoRepository,
+    private readonly inscripcionRepo?: IInscripcionActividadRepository,
   ) {}
 
   async execute(dto: RegistroUsuarioDTO): Promise<ResultadoRegistro> {
@@ -110,6 +111,11 @@ export class RegistrarUsuario {
         idEntidadFederativaRfc: dto.facturacion.idEntidadFederativaRfc ?? null,
       });
       await this.facturacionRepo.crear(facturacion);
+    }
+
+    // 8.5 Inscribir a actividades seleccionadas (si las hay)
+    if (dto.actividadesIds && dto.actividadesIds.length > 0 && this.inscripcionRepo) {
+      await this.inscripcionRepo.crearMuchasConValidacion(folioRegistro, dto.actividadesIds);
     }
 
     // 9. Obtener datos de catálogos para el PDF y correo

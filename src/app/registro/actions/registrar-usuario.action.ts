@@ -3,6 +3,7 @@
 import { registroSchema, depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
 
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
+import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import { Genero } from '@/core/enums/Genero';
 import { signIn } from '@/auth';
 import {
@@ -14,6 +15,7 @@ import {
   getPdfService,
   getCatalogoRepository,
   getAccesoRepository,
+  getInscripcionActividadRepository,
 } from '@/infrastructure/config/container';
 
 export interface RegistroFormFields {
@@ -86,6 +88,23 @@ export async function registrarUsuarioAction(
     };
 
     const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
+
+    // Extraer actividades seleccionadas (IDs separados por coma)
+    const actividadesRaw = (formData.get('actividadesIds') as string) ?? '';
+    const actividadesIds = actividadesRaw
+      ? actividadesRaw.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
+      : [];
+
+    // Extraer miembros del grupo
+    const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
+    const miembros: { nombre: string; apellido: string }[] = [];
+    for (let i = 0; i < numMiembros; i++) {
+      const nombre = (formData.get(`miembro_${i}_nombre`) as string) ?? '';
+      const apellido = (formData.get(`miembro_${i}_apellido`) as string) ?? '';
+      if (nombre.trim() && apellido.trim()) {
+        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim() });
+      }
+    }
 
     // Capturar todos los campos para restaurarlos en caso de error
     const savedFields: RegistroFormFields = {
@@ -161,7 +180,7 @@ export async function registrarUsuarioAction(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Ejecutar caso de uso
+    // Ejecutar caso de uso principal
     const useCase = new RegistrarUsuario(
       getUsuarioRepository(),
       getDepositoRepository(),
@@ -171,6 +190,7 @@ export async function registrarUsuarioAction(
       getPdfService(),
       getCatalogoRepository(),
       getAccesoRepository(),
+      getInscripcionActividadRepository(),
     );
 
     const resultado = await useCase.execute({
@@ -208,10 +228,36 @@ export async function registrarUsuarioAction(
               idEntidadFederativaRfc: parsedFacturacion.data.idEntidadFederativaRfc ?? null,
             }
           : null,
+      actividadesIds: actividadesIds.length > 0 ? actividadesIds : undefined,
     });
 
+    // Registro grupal: si hay miembros, usar RegistrarGrupoRapido con el mismo comprobante
+    if (miembros.length > 0) {
+      try {
+        const grupoUseCase = new RegistrarGrupoRapido(
+          getUsuarioRepository(),
+          getStorageService(),
+          getEmailService(),
+          getPdfService(),
+        );
+        await grupoUseCase.execute({
+          responsableId: resultado.folio,
+          miembros,
+          archivo: {
+            nombre: file.name,
+            mime: file.type,
+            tamanio: file.size,
+            buffer,
+          },
+        });
+      } catch (grupoError) {
+        // El registro grupal falló pero el usuario principal ya está registrado
+        // Se loggea pero no se revierte el registro principal
+        console.error('Error en registro grupal (usuario principal registrado correctamente):', grupoError);
+      }
+    }
+
     // Auto-login: iniciar sesión con las credenciales generadas
-    // La contraseña en texto plano se usa solo aquí y se descarta
     try {
       await signIn('credentials', {
         email: resultado.correo,
@@ -264,7 +310,6 @@ export async function registrarUsuarioAction(
         return { success: false, errors: { correo: domainError.message }, fields: savedFieldsOnError };
       }
     }
-    // Error de validación RFC u otros errores de dominio
     if (error instanceof Error && error.message.includes('RFC')) {
       return { success: false, errors: { 'facturacion.rfc': error.message }, fields: savedFieldsOnError };
     }

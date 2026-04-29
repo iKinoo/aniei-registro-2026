@@ -1,11 +1,38 @@
 'use client';
 
+import { useState } from 'react';
 import { useActionState } from 'react';
+import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
-import { SelectCatalogo, cargosToOptions, estadosToOptions, institucionesToOptions, tiposUsuarioToOptions } from './SelectCatalogo';
-import { CampoArchivo } from './CampoArchivo';
-import { SeccionFacturacion } from './SeccionFacturacion';
 import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { StepDatosGenerales } from './steps/StepDatosGenerales';
+import { StepActividades } from './steps/StepActividades';
+import { StepGrupo } from './steps/StepGrupo';
+import { StepCheckout } from './steps/StepCheckout';
+import { StepFacturacion } from './steps/StepFacturacion';
+
+const COSTO_BASE = 2000;
+
+export interface MiembroWizard {
+  nombre: string;
+  apellido: string;
+}
+
+export interface DatosGeneralesWizard {
+  nombre: string;
+  apellido: string;
+  correo: string;
+  lada: string;
+  telefono: string;
+  extension: string;
+  genero: string;
+  carrera: string;
+  dependencia: string;
+  idCargo: string;
+  idTipoUsuario: string;
+  idInstitucion: string;
+  idEntidadFederativa: string;
+}
 
 interface RegistroFormProps {
   catalogos: {
@@ -14,286 +41,236 @@ interface RegistroFormProps {
     instituciones: Institucion[];
     tiposUsuario: TipoUsuario[];
   };
+  actividades: ActividadDTO[];
 }
+
+const STEPS = [
+  { id: 1, label: 'Datos Generales', icon: '👤' },
+  { id: 2, label: 'Actividades', icon: '🎯' },
+  { id: 3, label: 'Grupo', icon: '👥' },
+  { id: 4, label: 'Checkout', icon: '💳' },
+  { id: 5, label: 'Facturación', icon: '🧾' },
+];
 
 const initialState: RegistroActionState = { success: false };
 
-export function RegistroForm({ catalogos }: RegistroFormProps) {
+const emptyDatos: DatosGeneralesWizard = {
+  nombre: '', apellido: '', correo: '', lada: '', telefono: '',
+  extension: '', genero: '', carrera: '', dependencia: '',
+  idCargo: '', idTipoUsuario: '', idInstitucion: '', idEntidadFederativa: '',
+};
+
+export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
+  const [step, setStep] = useState(1);
+  const [datos, setDatos] = useState<DatosGeneralesWizard>(emptyDatos);
+  const [actividadesSeleccionadas, setActividadesSeleccionadas] = useState<ActividadDTO[]>([]);
+  const [grupoActivo, setGrupoActivo] = useState(false);
+  const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
+
+  const totalActividades = actividadesSeleccionadas.reduce((s, a) => s + (a.costo ?? 0), 0);
+  const nMiembros = grupoActivo ? miembros.length : 0;
+  const total = COSTO_BASE * (1 + nMiembros) + totalActividades;
 
   if (state.success) {
     return (
-      <div className="rounded-2xl bg-linear-to-br from-green-50 to-emerald-50 border border-green-200 p-8 text-center space-y-4">
-        <div className="flex justify-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400/30 rounded-full flex items-center justify-center mx-auto animate-bounce-slow">
+            <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-green-800">¡Registro exitoso!</h2>
-          <p className="text-green-700 mt-1">
-            Tu folio de registro es:{' '}
-            <strong className="text-lg font-mono bg-green-100 px-2 py-0.5 rounded">{state.folio}</strong>
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">¡Registro exitoso!</h2>
+            <p className="text-slate-300">Tu folio de registro es:</p>
+            <p className="text-2xl font-mono font-bold text-indigo-300 mt-1 bg-white/5 rounded-xl px-4 py-2 inline-block border border-white/10">
+              {state.folio}
+            </p>
+          </div>
+          <p className="text-sm text-slate-400 bg-white/5 rounded-xl px-5 py-4 border border-white/10 text-left">
+            📬 Revisa tu correo <strong className="text-white">{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
           </p>
+          <a
+            href="/perfil"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-900/40 transition-all hover:shadow-xl active:scale-95"
+          >
+            Ir a mi perfil
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </a>
         </div>
-        <p className="text-sm text-green-600 bg-green-100 rounded-lg px-4 py-3">
-          📬 Revisa tu correo <strong>{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
-        </p>
-        <a
-          id="btn-continuar-actividades"
-          href="/perfil"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 transition-all hover:shadow-lg active:scale-95"
-        >
-          Ir al mi perfil
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-        </a>
       </div>
     );
   }
 
   return (
-    <form action={formAction} className="space-y-6">
-      {state.errors?._form && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
-          {state.errors._form}
+    <div className="min-h-screen">
+      {/* Header */}
+      <div className="pt-10 pb-6 px-4 text-center">
+        <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-4">
+          <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+          <span className="text-indigo-300 text-sm font-medium">Congreso ANIEI 2026</span>
         </div>
-      )}
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Registro de participantes
+        </h1>
+        <p className="text-slate-400 mt-2 text-base">Completa los pasos para inscribirte al congreso</p>
+      </div>
 
-      {/* Datos personales */}
-      <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-600">Datos Personales</legend>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="nombre" className="text-sm font-medium text-gray-700">
-              Nombre <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="nombre" name="nombre" type="text" required
-              defaultValue={state.fields?.nombre ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            {state.errors?.nombre && <p className="text-xs text-red-500">{state.errors.nombre}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="apellido" className="text-sm font-medium text-gray-700">
-              Apellido <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="apellido" name="apellido" type="text" required
-              defaultValue={state.fields?.apellido ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            {state.errors?.apellido && <p className="text-xs text-red-500">{state.errors.apellido}</p>}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="correo" className="text-sm font-medium text-gray-700">
-            Correo electrónico <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="correo" name="correo" type="email" required
-            defaultValue={state.fields?.correo ?? ''}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      {/* Progress stepper */}
+      <div className="max-w-3xl mx-auto px-4 mb-8">
+        <div className="flex items-center justify-between relative">
+          {/* connector line */}
+          <div className="absolute top-5 left-0 right-0 h-0.5 bg-white/10" />
+          <div
+            className="absolute top-5 left-0 h-0.5 bg-indigo-500 transition-all duration-500"
+            style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
           />
-          {state.errors?.correo && <p className="text-xs text-red-500">{state.errors.correo}</p>}
+          {STEPS.map((s) => {
+            const done = step > s.id;
+            const active = step === s.id;
+            return (
+              <div key={s.id} className="relative flex flex-col items-center gap-2 z-10">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
+                    done
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-900/50'
+                      : active
+                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/50 scale-110'
+                      : 'bg-slate-900 border-white/10 text-slate-500'
+                  }`}
+                >
+                  {done ? '✓' : s.icon}
+                </div>
+                <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-300' : done ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Card */}
+      <div className="max-w-3xl mx-auto px-4 pb-16">
+        {/* Total indicator */}
+        <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-5 py-3 mb-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 text-sm">Total estimado</span>
+            {actividadesSeleccionadas.length > 0 && (
+              <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full px-2 py-0.5">
+                +{actividadesSeleccionadas.length} actividad{actividadesSeleccionadas.length > 1 ? 'es' : ''}
+              </span>
+            )}
+            {nMiembros > 0 && (
+              <span className="text-xs bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full px-2 py-0.5">
+                +{nMiembros} miembro{nMiembros > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <span className="text-xl font-bold text-white">
+            ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            <span className="text-xs font-normal text-slate-400 ml-1">MXN</span>
+          </span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="lada" className="text-sm font-medium text-gray-700">Lada</label>
-            <input
-              id="lada" name="lada" type="text" maxLength={10}
-              defaultValue={state.fields?.lada ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        <form action={formAction} className="space-y-0">
+          {/* Hidden fields for all wizard data */}
+          <input type="hidden" name="nombre" value={datos.nombre} />
+          <input type="hidden" name="apellido" value={datos.apellido} />
+          <input type="hidden" name="correo" value={datos.correo} />
+          <input type="hidden" name="lada" value={datos.lada} />
+          <input type="hidden" name="telefono" value={datos.telefono} />
+          <input type="hidden" name="extension" value={datos.extension} />
+          <input type="hidden" name="genero" value={datos.genero} />
+          <input type="hidden" name="carrera" value={datos.carrera} />
+          <input type="hidden" name="dependencia" value={datos.dependencia} />
+          <input type="hidden" name="idCargo" value={datos.idCargo} />
+          <input type="hidden" name="idTipoUsuario" value={datos.idTipoUsuario} />
+          <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
+          <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
+          {/* Activities */}
+          <input type="hidden" name="actividadesIds" value={actividadesSeleccionadas.map((a) => a.idActividad).join(',')} />
+          {/* Group members */}
+          <input type="hidden" name="numMiembros" value={grupoActivo ? miembros.length : 0} />
+          {grupoActivo && miembros.map((m, i) => (
+            <span key={i}>
+              <input type="hidden" name={`miembro_${i}_nombre`} value={m.nombre} />
+              <input type="hidden" name={`miembro_${i}_apellido`} value={m.apellido} />
+            </span>
+          ))}
+
+          {/* Step panels */}
+          <div className={step === 1 ? 'block' : 'hidden'}>
+            <StepDatosGenerales
+              catalogos={catalogos}
+              datos={datos}
+              errors={state.errors}
+              onChange={setDatos}
+              onNext={() => setStep(2)}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="telefono" className="text-sm font-medium text-gray-700">Teléfono</label>
-            <input
-              id="telefono" name="telefono" type="text" maxLength={20}
-              defaultValue={state.fields?.telefono ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          <div className={step === 2 ? 'block' : 'hidden'}>
+            <StepActividades
+              actividades={actividades}
+              seleccionadas={actividadesSeleccionadas}
+              onToggle={(a) => {
+                setActividadesSeleccionadas((prev) =>
+                  prev.find((s) => s.idActividad === a.idActividad)
+                    ? prev.filter((s) => s.idActividad !== a.idActividad)
+                    : [...prev, a],
+                );
+              }}
+              onBack={() => setStep(1)}
+              onNext={() => setStep(3)}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="extension" className="text-sm font-medium text-gray-700">Extensión</label>
-            <input
-              id="extension" name="extension" type="text" maxLength={10}
-              defaultValue={state.fields?.extension ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          <div className={step === 3 ? 'block' : 'hidden'}>
+            <StepGrupo
+              grupoActivo={grupoActivo}
+              miembros={miembros}
+              onToggleGrupo={() => {
+                setGrupoActivo((v) => !v);
+                if (grupoActivo) setMiembros([]);
+              }}
+              onMiembrosChange={setMiembros}
+              onBack={() => setStep(2)}
+              onNext={() => setStep(4)}
             />
           </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="genero" className="text-sm font-medium text-gray-700">
-              Género <span className="text-red-500">*</span>
-            </label>
-            <select
-              key={state.fields?.genero ?? ''}
-              id="genero" name="genero" required defaultValue={state.fields?.genero ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="" disabled>Seleccione...</option>
-              <option value="M">Masculino</option>
-              <option value="F">Femenino</option>
-              <option value="O">Otro</option>
-            </select>
-            {state.errors?.genero && <p className="text-xs text-red-500">{state.errors.genero}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="carrera" className="text-sm font-medium text-gray-700">Carrera</label>
-            <input
-              id="carrera" name="carrera" type="text" maxLength={128}
-              defaultValue={state.fields?.carrera ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          <div className={step === 4 ? 'block' : 'hidden'}>
+            <StepCheckout
+              total={total}
+              desglose={{
+                base: COSTO_BASE,
+                nMiembros,
+                actividades: actividadesSeleccionadas,
+              }}
+              errors={state.errors}
+              onBack={() => setStep(3)}
+              onNext={() => setStep(5)}
             />
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="dependencia" className="text-sm font-medium text-gray-700">Dependencia</label>
-          <input
-            id="dependencia" name="dependencia" type="text" maxLength={128}
-            defaultValue={state.fields?.dependencia ?? ''}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-      </fieldset>
-
-      {/* Datos institucionales */}
-      <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-600">Datos Institucionales</legend>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <SelectCatalogo
-            name="idCargo" label="Cargo" required
-            options={cargosToOptions(catalogos.cargos)}
-            error={state.errors?.idCargo}
-            defaultValue={state.fields?.idCargo}
-          />
-          <SelectCatalogo
-            name="idTipoUsuario" label="Tipo de participante" required
-            options={tiposUsuarioToOptions(catalogos.tiposUsuario)}
-            error={state.errors?.idTipoUsuario}
-            defaultValue={state.fields?.idTipoUsuario}
-          />
-        </div>
-
-        <SelectCatalogo
-          name="idInstitucion" label="Institución" required
-          options={institucionesToOptions(catalogos.instituciones)}
-          error={state.errors?.idInstitucion}
-          defaultValue={state.fields?.idInstitucion}
-        />
-
-        <SelectCatalogo
-          name="idEntidadFederativa" label="Estado" required
-          options={estadosToOptions(catalogos.estados)}
-          error={state.errors?.idEntidadFederativa}
-          defaultValue={state.fields?.idEntidadFederativa}
-        />
-      </fieldset>
-
-      {/* Datos del depósito */}
-      <fieldset className="space-y-4 rounded-lg border border-gray-200 p-4">
-        <legend className="px-2 text-sm font-semibold text-gray-600">Datos del Depósito</legend>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="bancoSucursal" className="text-sm font-medium text-gray-700">
-              Banco / Sucursal
-            </label>
-            <input
-              id="bancoSucursal" name="bancoSucursal" type="text" maxLength={100}
-              placeholder="Ej. BBVA Sucursal Centro"
-              defaultValue={state.fields?.bancoSucursal ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          <div className={step === 5 ? 'block' : 'hidden'}>
+            <StepFacturacion
+              estados={catalogos.estados}
+              errors={state.errors}
+              fields={state.fields}
+              isPending={isPending}
+              onBack={() => setStep(4)}
             />
-            {state.errors?.bancoSucursal && <p className="text-xs text-red-500">{state.errors.bancoSucursal}</p>}
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="ciudad" className="text-sm font-medium text-gray-700">
-              Ciudad
-            </label>
-            <input
-              id="ciudad" name="ciudad" type="text" maxLength={100}
-              placeholder="Ej. Guadalajara"
-              defaultValue={state.fields?.ciudad ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            {state.errors?.ciudad && <p className="text-xs text-red-500">{state.errors.ciudad}</p>}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="referencia" className="text-sm font-medium text-gray-700">
-            Referencia / Folio del depósito <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="referencia" name="referencia" type="text" maxLength={50} required
-            placeholder="Número de referencia o folio del comprobante"
-            defaultValue={state.fields?.referencia ?? ''}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-          {state.errors?.referencia && <p className="text-xs text-red-500">{state.errors.referencia}</p>}
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="monto" className="text-sm font-medium text-gray-700">
-              Monto ($) <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="monto" name="monto" type="number" step="0.01" min="0.01" required
-              placeholder="0.00"
-              defaultValue={state.fields?.monto ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            {state.errors?.monto && <p className="text-xs text-red-500">{state.errors.monto}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="fechaDeposito" className="text-sm font-medium text-gray-700">
-              Fecha del depósito <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="fechaDeposito" name="fechaDeposito" type="date" required
-              defaultValue={state.fields?.fechaDeposito ?? ''}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-            {state.errors?.fechaDeposito && <p className="text-xs text-red-500">{state.errors.fechaDeposito}</p>}
-          </div>
-        </div>
-
-        {/* Comprobante de pago (archivo) */}
-        <CampoArchivo name="comprobante" error={state.errors?.comprobante} />
-      </fieldset>
-
-      {/* Facturación */}
-      <SeccionFacturacion
-        estados={catalogos.estados}
-        errors={state.errors}
-        fields={state.fields}
-      />
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white font-medium transition-colors hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {isPending ? 'Registrando...' : 'Registrarse'}
-      </button>
-    </form>
+          {/* Global form error */}
+          {state.errors?._form && (
+            <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
+              {state.errors._form}
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }

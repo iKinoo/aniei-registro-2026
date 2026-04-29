@@ -83,7 +83,7 @@ export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario
               <option value="" disabled>Seleccione...</option>
               <option value="M">Masculino</option>
               <option value="F">Femenino</option>
-              <option value="O">Otro</option>
+              <option value="O">Prefiero no decirlo</option>
             </select>
             {state.errors?.genero && <p className="text-xs text-red-500">{state.errors.genero}</p>}
           </div>

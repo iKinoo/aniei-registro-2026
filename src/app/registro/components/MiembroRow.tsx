@@ -77,7 +77,7 @@ export function MiembroRow({ index, tiposUsuario, onRemove, errors }: MiembroRow
             <option value="" disabled>Seleccione...</option>
             <option value="M">Masculino</option>
             <option value="F">Femenino</option>
-            <option value="O">Otro</option>
+            <option value="O">Prefiero no decirlo</option>
           </select>
         </div>
 

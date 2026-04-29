@@ -44,4 +44,6 @@ export interface RegistroUsuarioDTO {
   deposito: DepositoDTO;
   archivo: ArchivoDTO;
   facturacion?: FacturacionDTO | null;
+  /** IDs de actividades a inscribir al usuario principal (opcional) */
+  actividadesIds?: number[];
 }
