@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
@@ -8,51 +8,41 @@ import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogo
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
 import { StepActividades } from './steps/StepActividades';
 import { StepGrupo } from './steps/StepGrupo';
-import { StepCheckout } from './steps/StepCheckout';
-import { StepFacturacion } from './steps/StepFacturacion';
+import { StepPago } from './steps/StepPago';
 
 const COSTO_BASE = 2000;
 
-export interface MiembroWizard {
-  nombre: string;
-  apellido: string;
-}
+export interface MiembroWizard { nombre: string; apellido: string; }
 
 export interface DatosGeneralesWizard {
-  nombre: string;
-  apellido: string;
-  correo: string;
-  lada: string;
-  telefono: string;
-  extension: string;
-  genero: string;
-  carrera: string;
-  dependencia: string;
-  idCargo: string;
-  idTipoUsuario: string;
-  idInstitucion: string;
-  idEntidadFederativa: string;
+  nombre: string; apellido: string; correo: string;
+  lada: string; telefono: string; extension: string;
+  genero: string; carrera: string; dependencia: string;
+  idCargo: string; idTipoUsuario: string; idInstitucion: string; idEntidadFederativa: string;
+}
+
+export interface DepositoWizard {
+  bancoSucursal: string; ciudad: string;
+  referencia: string; monto: string; fechaDeposito: string;
+}
+
+export interface FacturacionWizard {
+  activa: boolean; razonSocial: string; rfc: string;
+  calle: string; numExterior: string; numInterior: string;
+  colonia: string; municipio: string; codigoPostal: string; idEntidadFederativaRfc: string;
 }
 
 interface RegistroFormProps {
-  catalogos: {
-    cargos: Cargo[];
-    estados: Estado[];
-    instituciones: Institucion[];
-    tiposUsuario: TipoUsuario[];
-  };
+  catalogos: { cargos: Cargo[]; estados: Estado[]; instituciones: Institucion[]; tiposUsuario: TipoUsuario[] };
   actividades: ActividadDTO[];
 }
 
 const STEPS = [
   { id: 1, label: 'Datos Generales', icon: '👤' },
-  { id: 2, label: 'Actividades', icon: '🎯' },
-  { id: 3, label: 'Grupo', icon: '👥' },
-  { id: 4, label: 'Checkout', icon: '💳' },
-  { id: 5, label: 'Facturación', icon: '🧾' },
+  { id: 2, label: 'Actividades',     icon: '🎯' },
+  { id: 3, label: 'Grupo',           icon: '👥' },
+  { id: 4, label: 'Pago',            icon: '💳' },
 ];
-
-const initialState: RegistroActionState = { success: false };
 
 const emptyDatos: DatosGeneralesWizard = {
   nombre: '', apellido: '', correo: '', lada: '', telefono: '',
@@ -60,41 +50,65 @@ const emptyDatos: DatosGeneralesWizard = {
   idCargo: '', idTipoUsuario: '', idInstitucion: '', idEntidadFederativa: '',
 };
 
+const emptyDeposito: DepositoWizard = {
+  bancoSucursal: '', ciudad: '', referencia: '', monto: '', fechaDeposito: '',
+};
+
+const emptyFacturacion: FacturacionWizard = {
+  activa: false, razonSocial: '', rfc: '', calle: '', numExterior: '',
+  numInterior: '', colonia: '', municipio: '', codigoPostal: '', idEntidadFederativaRfc: '',
+};
+
+const initialState: RegistroActionState = { success: false };
+
 export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
   const [step, setStep] = useState(1);
+  const [maxStep, setMaxStep] = useState(1); // highest step reached
   const [datos, setDatos] = useState<DatosGeneralesWizard>(emptyDatos);
   const [actividadesSeleccionadas, setActividadesSeleccionadas] = useState<ActividadDTO[]>([]);
   const [grupoActivo, setGrupoActivo] = useState(false);
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
+  const [deposito, setDeposito] = useState<DepositoWizard>(emptyDeposito);
+  const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
+  const [montoTouched, setMontoTouched] = useState(false);
 
   const totalActividades = actividadesSeleccionadas.reduce((s, a) => s + (a.costo ?? 0), 0);
   const nMiembros = grupoActivo ? miembros.length : 0;
   const total = COSTO_BASE * (1 + nMiembros) + totalActividades;
 
+  // Auto-sync monto when total changes (unless user manually edited it)
+  useEffect(() => {
+    if (!montoTouched) {
+      setDeposito((prev) => ({ ...prev, monto: total.toFixed(2) }));
+    }
+  }, [total, montoTouched]);
+
+  function goTo(n: number) {
+    setStep(n);
+    setMaxStep((prev) => Math.max(prev, n));
+  }
+
   if (state.success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400/30 rounded-full flex items-center justify-center mx-auto animate-bounce-slow">
-            <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="max-w-md w-full text-center space-y-6 bg-white rounded-3xl border border-slate-200 shadow-xl p-8">
+          <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">¡Registro exitoso!</h2>
-            <p className="text-slate-300">Tu folio de registro es:</p>
-            <p className="text-2xl font-mono font-bold text-indigo-300 mt-1 bg-white/5 rounded-xl px-4 py-2 inline-block border border-white/10">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">¡Registro exitoso!</h2>
+            <p className="text-slate-500">Tu folio de registro es:</p>
+            <p className="text-2xl font-mono font-bold text-indigo-600 mt-1 bg-indigo-50 rounded-xl px-4 py-2 inline-block border border-indigo-100">
               {state.folio}
             </p>
           </div>
-          <p className="text-sm text-slate-400 bg-white/5 rounded-xl px-5 py-4 border border-white/10 text-left">
-            📬 Revisa tu correo <strong className="text-white">{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
+          <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-4 border border-slate-200 text-left">
+            📬 Revisa tu correo <strong className="text-slate-800">{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
           </p>
-          <a
-            href="/perfil"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-900/40 transition-all hover:shadow-xl active:scale-95"
-          >
+          <a href="/perfil" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all active:scale-95">
             Ir a mi perfil
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -109,21 +123,20 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
     <div className="min-h-screen">
       {/* Header */}
       <div className="pt-10 pb-6 px-4 text-center">
-        <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 mb-4">
-          <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
-          <span className="text-indigo-300 text-sm font-medium">Congreso ANIEI 2026</span>
+        <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-4 py-1.5 mb-4">
+          <span className="w-2 h-2 bg-indigo-500 rounded-full" />
+          <span className="text-indigo-600 text-sm font-medium">Congreso ANIEI 2026</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
           Registro de participantes
         </h1>
-        <p className="text-slate-400 mt-2 text-base">Completa los pasos para inscribirte al congreso</p>
+        <p className="text-slate-500 mt-2 text-base">Completa los pasos para inscribirte al congreso</p>
       </div>
 
-      {/* Progress stepper */}
-      <div className="max-w-3xl mx-auto px-4 mb-8">
+      {/* Progress stepper — icons are clickable to go back */}
+      <div className="max-w-2xl mx-auto px-4 mb-8">
         <div className="flex items-center justify-between relative">
-          {/* connector line */}
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-white/10" />
+          <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200" />
           <div
             className="absolute top-5 left-0 h-0.5 bg-indigo-500 transition-all duration-500"
             style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
@@ -131,20 +144,21 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
           {STEPS.map((s) => {
             const done = step > s.id;
             const active = step === s.id;
+            const clickable = s.id < step;
             return (
               <div key={s.id} className="relative flex flex-col items-center gap-2 z-10">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
-                    done
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-900/50'
-                      : active
-                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-900/50 scale-110'
-                      : 'bg-slate-900 border-white/10 text-slate-500'
-                  }`}
+                <button
+                  type="button"
+                  onClick={() => clickable && goTo(s.id)}
+                  title={clickable ? `Volver a ${s.label}` : s.label}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 focus:outline-none
+                    ${done ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100 cursor-pointer' :
+                      active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 scale-110' :
+                      'bg-white border-slate-200 text-slate-400 cursor-default'}`}
                 >
                   {done ? '✓' : s.icon}
-                </div>
-                <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-300' : done ? 'text-slate-400' : 'text-slate-600'}`}>
+                </button>
+                <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-600' : done ? 'text-emerald-600' : 'text-slate-400'}`}>
                   {s.label}
                 </span>
               </div>
@@ -153,31 +167,33 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
         </div>
       </div>
 
-      {/* Card */}
-      <div className="max-w-3xl mx-auto px-4 pb-16">
-        {/* Total indicator */}
-        <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-5 py-3 mb-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <span className="text-slate-400 text-sm">Total estimado</span>
+      {/* Total indicator */}
+      <div className="max-w-2xl mx-auto px-4 mb-4">
+        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-slate-500 text-sm">Total estimado</span>
             {actividadesSeleccionadas.length > 0 && (
-              <span className="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full px-2 py-0.5">
+              <span className="text-xs bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
                 +{actividadesSeleccionadas.length} actividad{actividadesSeleccionadas.length > 1 ? 'es' : ''}
               </span>
             )}
             {nMiembros > 0 && (
-              <span className="text-xs bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full px-2 py-0.5">
+              <span className="text-xs bg-violet-100 text-violet-600 border border-violet-200 rounded-full px-2 py-0.5">
                 +{nMiembros} miembro{nMiembros > 1 ? 's' : ''}
               </span>
             )}
           </div>
-          <span className="text-xl font-bold text-white">
+          <span className="text-xl font-bold text-indigo-700">
             ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
             <span className="text-xs font-normal text-slate-400 ml-1">MXN</span>
           </span>
         </div>
+      </div>
 
-        <form action={formAction} className="space-y-0">
-          {/* Hidden fields for all wizard data */}
+      {/* Form */}
+      <div className="max-w-2xl mx-auto px-4 pb-16">
+        <form action={formAction}>
+          {/* All hidden fields carrying wizard state to server action */}
           <input type="hidden" name="nombre" value={datos.nombre} />
           <input type="hidden" name="apellido" value={datos.apellido} />
           <input type="hidden" name="correo" value={datos.correo} />
@@ -191,9 +207,8 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
           <input type="hidden" name="idTipoUsuario" value={datos.idTipoUsuario} />
           <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
           <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
-          {/* Activities */}
+          {/* Deposito hidden (StepPago renders real inputs directly) */}
           <input type="hidden" name="actividadesIds" value={actividadesSeleccionadas.map((a) => a.idActividad).join(',')} />
-          {/* Group members */}
           <input type="hidden" name="numMiembros" value={grupoActivo ? miembros.length : 0} />
           {grupoActivo && miembros.map((m, i) => (
             <span key={i}>
@@ -201,71 +216,61 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
               <input type="hidden" name={`miembro_${i}_apellido`} value={m.apellido} />
             </span>
           ))}
+          <input type="hidden" name="requiereFacturacion" value={facturacion.activa ? 'true' : 'false'} />
 
-          {/* Step panels */}
+          {/* Step panels — always mounted, shown/hidden with CSS */}
           <div className={step === 1 ? 'block' : 'hidden'}>
             <StepDatosGenerales
               catalogos={catalogos}
               datos={datos}
               errors={state.errors}
               onChange={setDatos}
-              onNext={() => setStep(2)}
+              onNext={() => goTo(2)}
             />
           </div>
           <div className={step === 2 ? 'block' : 'hidden'}>
             <StepActividades
               actividades={actividades}
               seleccionadas={actividadesSeleccionadas}
-              onToggle={(a) => {
+              onToggle={(a) =>
                 setActividadesSeleccionadas((prev) =>
                   prev.find((s) => s.idActividad === a.idActividad)
                     ? prev.filter((s) => s.idActividad !== a.idActividad)
                     : [...prev, a],
-                );
-              }}
-              onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
+                )
+              }
+              onBack={() => goTo(1)}
+              onNext={() => goTo(3)}
             />
           </div>
           <div className={step === 3 ? 'block' : 'hidden'}>
             <StepGrupo
               grupoActivo={grupoActivo}
               miembros={miembros}
-              onToggleGrupo={() => {
-                setGrupoActivo((v) => !v);
-                if (grupoActivo) setMiembros([]);
-              }}
+              onToggleGrupo={() => { setGrupoActivo((v) => !v); if (grupoActivo) setMiembros([]); }}
               onMiembrosChange={setMiembros}
-              onBack={() => setStep(2)}
-              onNext={() => setStep(4)}
+              onBack={() => goTo(2)}
+              onNext={() => goTo(4)}
             />
           </div>
           <div className={step === 4 ? 'block' : 'hidden'}>
-            <StepCheckout
+            <StepPago
               total={total}
-              desglose={{
-                base: COSTO_BASE,
-                nMiembros,
-                actividades: actividadesSeleccionadas,
-              }}
-              errors={state.errors}
-              onBack={() => setStep(3)}
-              onNext={() => setStep(5)}
-            />
-          </div>
-          <div className={step === 5 ? 'block' : 'hidden'}>
-            <StepFacturacion
+              desglose={{ base: COSTO_BASE, nMiembros, actividades: actividadesSeleccionadas }}
+              deposito={deposito}
+              facturacion={facturacion}
               estados={catalogos.estados}
               errors={state.errors}
-              fields={state.fields}
               isPending={isPending}
-              onBack={() => setStep(4)}
+              onDepositoChange={(d) => setDeposito(d)}
+              onMontoTouch={() => setMontoTouched(true)}
+              onFacturacionChange={(f) => setFacturacion(f)}
+              onBack={() => goTo(3)}
             />
           </div>
 
-          {/* Global form error */}
           {state.errors?._form && (
-            <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
+            <div className="mt-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
               {state.errors._form}
             </div>
           )}
