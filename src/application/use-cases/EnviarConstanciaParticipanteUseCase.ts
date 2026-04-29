@@ -11,10 +11,10 @@ export class EnviarConstanciaParticipanteUseCase {
     private readonly usuarioRepo: IUsuarioRepository,
   ) {}
 
-  async execute(idActividad: number, idUsuario: number): Promise<void> {
+  async execute(idActividad: number, folioRegistro: string): Promise<void> {
     const [actividad, usuario] = await Promise.all([
       this.actividadRepo.obtenerPorId(idActividad),
-      this.usuarioRepo.buscarPorId(idUsuario),
+      this.usuarioRepo.buscarPorId(folioRegistro),
     ]);
 
     if (!actividad || !usuario) {

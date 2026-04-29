@@ -1,13 +1,11 @@
 import { Email } from '../value-objects/Email';
 import { Telefono } from '../value-objects/Telefono';
-import { FolioRecibo } from '../value-objects/FolioRecibo';
 import { CodigoBarras } from '../value-objects/CodigoBarras';
 import { Genero } from '../enums/Genero';
 import { RegistroError } from '../errors/RegistroError';
 
 export interface UsuarioProps {
-  idUsuario?: number | null;
-  folioRecibo?: FolioRecibo | null;
+  folioRegistro?: string | null;
   codigoBarras?: CodigoBarras | null;
   nombre: string;
   apellido: string;
@@ -25,8 +23,7 @@ export interface UsuarioProps {
 }
 
 export class Usuario {
-  readonly idUsuario: number | null;
-  private _folioRecibo: FolioRecibo | null;
+  readonly folioRegistro: string | null;
   private _codigoBarras: CodigoBarras | null;
   readonly nombre: string;
   readonly apellido: string;
@@ -43,8 +40,7 @@ export class Usuario {
   readonly fechaRegistro: Date;
 
   private constructor(props: UsuarioProps) {
-    this.idUsuario = props.idUsuario ?? null;
-    this._folioRecibo = props.folioRecibo ?? null;
+    this.folioRegistro = props.folioRegistro ?? null;
     this._codigoBarras = props.codigoBarras ?? null;
     this.nombre = props.nombre;
     this.apellido = props.apellido;
@@ -77,16 +73,11 @@ export class Usuario {
     });
   }
 
-  get folioRecibo(): FolioRecibo | null { return this._folioRecibo; }
   get codigoBarras(): CodigoBarras | null { return this._codigoBarras; }
   get verificado(): boolean { return this._verificado; }
 
   verificar(): void {
     this._verificado = true;
-  }
-
-  asignarFolio(folio: FolioRecibo): void {
-    this._folioRecibo = folio;
   }
 
   asignarCodigoBarras(codigo: CodigoBarras): void {

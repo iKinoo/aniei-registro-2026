@@ -1,5 +1,5 @@
 import { getUsuarioRepository, getCatalogoRepository, getPdfService } from '@/infrastructure/config/container';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 import { NextResponse } from 'next/server';
 
 export default async function ConstanciaPage({
@@ -11,7 +11,7 @@ export default async function ConstanciaPage({
 
   try {
     const usuarioRepo = getUsuarioRepository();
-    const folioVO = FolioRecibo.create(folio);
+    const folioVO = FolioRegistro.create(folio);
     const usuario = await usuarioRepo.buscarPorFolio(folioVO);
 
     if (!usuario) {

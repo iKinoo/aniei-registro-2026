@@ -2,15 +2,13 @@ import { usuarios } from '@/generated/prisma/client';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
 import { CodigoBarras } from '@/core/value-objects/CodigoBarras';
 import { Genero } from '@/core/enums/Genero';
 
 export class UsuarioMapper {
   static toDomain(raw: usuarios): Usuario {
     return Usuario.create({
-      idUsuario: raw.id_usuario,
-      folioRecibo: raw.folio_recibo ? FolioRecibo.create(raw.folio_recibo) : null,
+      folioRegistro: raw.folio_registro,
       codigoBarras: raw.codigo_barras ? CodigoBarras.create(raw.codigo_barras) : null,
       nombre: raw.nombre,
       apellido: raw.apellido,
@@ -30,8 +28,8 @@ export class UsuarioMapper {
 
   static toPersistence(usuario: Usuario) {
     return {
-      folio_recibo: usuario.folioRecibo?.toString() ?? null,
-      codigo_barras: usuario.codigoBarras?.toString() ?? null,
+      ...(usuario.folioRegistro ? { folio_registro: usuario.folioRegistro.toString() } : {}),
+      ...(usuario.codigoBarras ? { codigo_barras: usuario.codigoBarras.toString() } : {}),
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       correo: usuario.correo.toString(),

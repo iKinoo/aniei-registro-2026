@@ -62,10 +62,10 @@ export async function registrarGrupoRapidoAction(
     // 2. Encontrar al responsable (usuario logueado)
     const acceso = await prisma.accesos.findUnique({
       where: { email: session.user.email },
-      select: { id_usuario: true },
+      select: { folio_registro: true },
     });
 
-    if (!acceso?.id_usuario) {
+    if (!acceso?.folio_registro) {
       return {
         success: false,
         error: 'Usuario no encontrado',
@@ -122,7 +122,7 @@ export async function registrarGrupoRapidoAction(
     );
 
     const resultado = await useCase.execute({
-      responsableId: acceso.id_usuario,
+      responsableId: acceso.folio_registro,
       miembros: parseResult.data.miembros,
       archivo: {
         nombre: file.name,

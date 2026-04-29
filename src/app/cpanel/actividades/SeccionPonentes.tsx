@@ -40,7 +40,7 @@ function ModalRegistroPonente({ idActividad, rol, onSuccess, onClose }: ModalReg
       );
       if (!res.success) { setError(res.error); return; }
       onSuccess({
-        idUsuario: res.idUsuario,
+        folioRegistro: res.folioRegistro,
         nombre: form.nombre,
         apellido: form.apellido,
         correo: form.correo,
@@ -143,17 +143,17 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
     startTransition(async () => {
       const rolInicial = 'Ponente';
       if (idActividad != null) {
-        const res = await vincularPonenteAction(idActividad, u.idUsuario, rolInicial);
+        const res = await vincularPonenteAction(idActividad, u.folioRegistro, rolInicial);
         if (!res.success) { setError(res.error ?? 'Error al vincular'); return; }
       }
       const nuevo: PonenteDTO = {
-        idUsuario: u.idUsuario,
+        folioRegistro: u.folioRegistro,
         nombre: u.nombre,
         apellido: u.apellido,
         correo: u.correo,
         rol: rolInicial,
       };
-      const actualizado = ponentes.find((p) => p.idUsuario === u.idUsuario)
+      const actualizado = ponentes.find((p) => p.folioRegistro === u.folioRegistro)
         ? ponentes
         : [...ponentes, nuevo];
       notifyChange(actualizado);
@@ -162,18 +162,18 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
     });
   }
 
-  function handleQuitar(idUsuario: number) {
+  function handleQuitar(folioRegistro: string) {
     startTransition(async () => {
       if (idActividad != null) {
-        await desvincularPonenteAction(idActividad, idUsuario);
+        await desvincularPonenteAction(idActividad, folioRegistro);
       }
-      notifyChange(ponentes.filter((p) => p.idUsuario !== idUsuario));
+      notifyChange(ponentes.filter((p) => p.folioRegistro !== folioRegistro));
     });
   }
 
   function handleRegistroExitoso(ponente: PonenteDTO) {
     setShowRegistro(false);
-    const actualizado = ponentes.find((p) => p.idUsuario === ponente.idUsuario)
+    const actualizado = ponentes.find((p) => p.folioRegistro === ponente.folioRegistro)
       ? ponentes
       : [...ponentes, ponente];
     notifyChange(actualizado);
@@ -208,7 +208,7 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-10 overflow-hidden">
             {resultados.map((r) => (
               <button
-                key={r.idUsuario}
+                key={r.folioRegistro}
                 type="button"
                 onClick={() => handleAnadir(r)}
                 className={`w-full text-left px-4 py-3 text-sm hover:bg-indigo-50 transition-colors flex justify-between items-center`}
@@ -251,7 +251,7 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
       {ponentes.length > 0 && (
         <div className="space-y-1.5">
           {ponentes.map((p) => (
-            <div key={p.idUsuario} className="flex items-center justify-between px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <div key={p.folioRegistro} className="flex items-center justify-between px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-indigo-200 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0">
                   {p.nombre[0]}{p.apellido[0]}
@@ -262,13 +262,13 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
                     type="text"
                     value={p.rol ?? 'Ponente'}
                     onChange={(e) => {
-                      const actualizados = ponentes.map(x => x.idUsuario === p.idUsuario ? { ...x, rol: e.target.value } : x);
+                      const actualizados = ponentes.map(x => x.folioRegistro === p.folioRegistro ? { ...x, rol: e.target.value } : x);
                       notifyChange(actualizados);
                     }}
                     onBlur={(e) => {
                       if (idActividad != null) {
                         startTransition(async () => {
-                           await vincularPonenteAction(idActividad, p.idUsuario, e.target.value || 'Ponente');
+                           await vincularPonenteAction(idActividad, p.folioRegistro, e.target.value || 'Ponente');
                         });
                       }
                     }}
@@ -279,7 +279,7 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
               </div>
               <button
                 type="button"
-                onClick={() => handleQuitar(p.idUsuario)}
+                onClick={() => handleQuitar(p.folioRegistro)}
                 disabled={isPending}
                 className="text-slate-400 hover:text-rose-500 transition-colors ml-2 shrink-0"
                 aria-label="Quitar ponente"

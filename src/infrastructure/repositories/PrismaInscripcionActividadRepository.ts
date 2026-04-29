@@ -9,12 +9,12 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     const rows = await this.prisma.inscripcion_actividades.findMany({
       where: { id_actividad: idActividad },
       include: {
-        usuarios: { select: { id_usuario: true, nombre: true, apellido: true, correo: true } },
+        usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } },
       },
       orderBy: { fecha_inscripcion: 'asc' },
     });
     return rows.map((r) => ({
-      idUsuario: r.usuarios!.id_usuario,
+      folioRegistro: r.usuarios!.folio_registro,
       nombre: r.usuarios!.nombre,
       apellido: r.usuarios!.apellido,
       correo: r.usuarios!.correo,
@@ -23,11 +23,11 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     }));
   }
 
-  async crearMuchas(idUsuario: number, idsActividades: number[]): Promise<void> {
+  async crearMuchas(folioRegistro: string, idsActividades: number[]): Promise<void> {
     if (idsActividades.length === 0) return;
     await this.prisma.inscripcion_actividades.createMany({
       data: idsActividades.map((idActividad) => ({
-        id_usuario: idUsuario,
+        folio_registro: folioRegistro,
         id_actividad: idActividad,
         fecha_inscripcion: new Date(),
       })),
@@ -35,9 +35,9 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     });
   }
 
-  async obtenerIdsPorUsuario(idUsuario: number): Promise<number[]> {
+  async obtenerIdsPorUsuario(folioRegistro: string): Promise<number[]> {
     const rows = await this.prisma.inscripcion_actividades.findMany({
-      where: { id_usuario: idUsuario },
+      where: { folio_registro: folioRegistro },
       select: { id_actividad: true },
     });
     return rows.map((r) => r.id_actividad!).filter((id): id is number => id !== null);
@@ -57,7 +57,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
    * no impida las demás (una actividad llena no bloquea las otras).
    */
   async crearMuchasConValidacion(
-    idUsuario: number,
+    folioRegistro: string,
     idsActividades: number[],
   ): Promise<{ ok: number[]; sinCupo: number[] }> {
     const ok: number[] = [];
@@ -82,7 +82,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
             if (!actividad || !actividad.cupo_maximo) {
               await tx.inscripcion_actividades.create({
                 data: {
-                  id_usuario: idUsuario,
+                  folio_registro: folioRegistro,
                   id_actividad: idActividad,
                   fecha_inscripcion: new Date(),
                 },
@@ -104,7 +104,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
 
             await tx.inscripcion_actividades.create({
               data: {
-                id_usuario: idUsuario,
+                folio_registro: folioRegistro,
                 id_actividad: idActividad,
                 fecha_inscripcion: new Date(),
               },
@@ -132,11 +132,11 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     return { ok, sinCupo };
   }
 
-  async actualizarUrlConstancia(idActividad: number, idUsuario: number, url: string): Promise<void> {
+  async actualizarUrlConstancia(idActividad: number, folioRegistro: string, url: string): Promise<void> {
     await this.prisma.inscripcion_actividades.update({
       where: {
-        id_usuario_id_actividad: {
-          id_usuario: idUsuario,
+        folio_registro_id_actividad: {
+          folio_registro: folioRegistro,
           id_actividad: idActividad,
         },
       },

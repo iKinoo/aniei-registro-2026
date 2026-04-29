@@ -1,6 +1,6 @@
 export interface InscripcionActividadDTO {
   idInscripcion: number;
-  idUsuario: number;
+  folioRegistro: string;
   idActividad: number;
   fechaInscripcion: string;
   urlConstancia?: string | null;

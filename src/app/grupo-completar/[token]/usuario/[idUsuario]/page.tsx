@@ -25,9 +25,8 @@ function NotFoundUI() {
 
 export default async function UsuarioCompletarPage(props: { params: Promise<{ token: string; idUsuario: string }> }) {
   const { token, idUsuario } = await props.params;
-  const idNum = Number(idUsuario);
 
-  if (isNaN(idNum)) return <NotFoundUI />;
+  if (!idUsuario) return <NotFoundUI />;
 
   // Find group and verify user is in it and needs completion
   const grupo = await prisma.grupos_registro.findUnique({
@@ -35,7 +34,7 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
     include: {
       responsable: true,
       miembros: {
-        where: { id_usuario: idNum }
+        where: { folio_registro: idUsuario }
       },
     },
   });
@@ -102,7 +101,7 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
           </div>
 
           <div className="px-4 py-5 sm:p-6 pt-0">
-            <CompletarRegistroForm token={token} idUsuario={idNum} catalogos={catalogos} usuario={usuario} />
+            <CompletarRegistroForm token={token} folioRegistro={idUsuario} catalogos={catalogos} usuario={usuario} />
           </div>
         </div>
       </div>

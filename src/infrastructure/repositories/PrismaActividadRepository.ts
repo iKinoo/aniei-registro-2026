@@ -9,7 +9,7 @@ const include = {
   actividad_costo: true,
   _count: { select: { inscripcion_actividades: true } },
   actividad_ponentes: {
-    include: { usuarios: { select: { id_usuario: true, nombre: true, apellido: true, correo: true } } },
+    include: { usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } } },
     orderBy: { rol: 'asc' as const },
   },
 } as const;
@@ -43,13 +43,13 @@ function mapToDTO(row: any): ActividadDTO {
       : null,
     costo: row.actividad_costo
       ? {
-          folioRecibo: row.actividad_costo.folio_recibo ?? null,
+          folioRegistro: row.actividad_costo.folio_registro ?? null,
           monto: row.actividad_costo.monto ? Number(row.actividad_costo.monto) : null,
         }
       : null,
     cupoOcupado: row._count?.inscripcion_actividades ?? 0,
-    ponentes: (row.actividad_ponentes ?? []).map((p: { id_usuario_ponente: number; rol: string | null; usuarios: { id_usuario: number; nombre: string; apellido: string; correo: string } }) => ({
-      idUsuario: p.id_usuario_ponente,
+    ponentes: (row.actividad_ponentes ?? []).map((p: { folio_registro_ponente: number; rol: string | null; usuarios: { folio_registro: string; nombre: string; apellido: string; correo: string } }) => ({
+      folioRegistro: p.folio_registro_ponente,
       nombre: p.usuarios.nombre,
       apellido: p.usuarios.apellido,
       correo: p.usuarios.correo,
@@ -84,7 +84,7 @@ export class PrismaActividadRepository implements IActividadRepository {
         ? {
             actividad_costo: {
               create: {
-                folio_recibo: data.costo.folioRecibo ?? null,
+                folio_registro: data.costo.folioRegistro ?? null,
                 monto: data.costo.monto,
               },
             },
@@ -145,11 +145,11 @@ export class PrismaActividadRepository implements IActividadRepository {
             actividad_costo: {
               upsert: {
                 create: {
-                  folio_recibo: data.costo.folioRecibo ?? null,
+                  folio_registro: data.costo.folioRegistro ?? null,
                   monto: data.costo.monto,
                 },
                 update: {
-                  folio_recibo: data.costo.folioRecibo ?? null,
+                  folio_registro: data.costo.folioRegistro ?? null,
                   monto: data.costo.monto,
                 },
               },

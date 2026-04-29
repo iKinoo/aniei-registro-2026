@@ -1,5 +1,5 @@
 export interface UsuarioForAdminDTO {
-  idUsuario: number;
+  folioRegistro: string;
   nombreCompleto: string;
   correo: string;
   telefono: string | null;

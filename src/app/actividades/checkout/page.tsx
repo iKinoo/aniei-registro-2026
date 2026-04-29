@@ -20,17 +20,17 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (ids.length === 0) redirect('/actividades');
 
-  // Obtener id_usuario del acceso actual
+  // Obtener folio_registro del acceso actual
   const acceso = await prisma.accesos.findUnique({
     where: { email: session.user.email },
-    select: { id_usuario: true },
+    select: { folio_registro: true },
   });
 
   // Cargar la facturación previa del usuario (si existe)
   let facturacionDefaults: FacturacionDefaults | undefined;
-  if (acceso?.id_usuario) {
+  if (acceso?.folio_registro) {
     try {
-      const facturacion = await getFacturacionRepository().buscarPorUsuario(acceso.id_usuario);
+      const facturacion = await getFacturacionRepository().buscarPorUsuario(acceso.folio_registro);
       if (facturacion) {
         facturacionDefaults = {
           razonSocial:          facturacion.razonSocial,

@@ -22,16 +22,16 @@ interface Props {
 export default function DetalleActividadClient({ actividad, nombreTipo, ponentes, inscritos }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [loadingGenerar, setLoadingGenerar] = useState<number | null>(null);
-  const [loadingSend, setLoadingSend] = useState<number | null>(null);
+  const [loadingGenerar, setLoadingGenerar] = useState<string | null>(null);
+  const [loadingSend, setLoadingSend] = useState<string | null>(null);
 
   const manejaConstanciasParticipantes = actividad.tipoActividad?.generaConstanciaParticipante ?? false;
-  const [selectedInscritos, setSelectedInscritos] = useState<Set<number>>(
-    new Set(manejaConstanciasParticipantes ? inscritos.map(i => i.idUsuario) : [])
+  const [selectedInscritos, setSelectedInscritos] = useState<Set<string>>(
+    new Set(manejaConstanciasParticipantes ? inscritos.map(i => i.folioRegistro) : [])
   );
   const [loadingBatch, setLoadingBatch] = useState(false);
 
-  const toggleSeleccionInscrito = (id: number) => {
+  const toggleSeleccionInscrito = (id: string) => {
     const next = new Set(selectedInscritos);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -40,7 +40,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
 
   const toggleSeleccionTodosInscritos = () => {
     if (selectedInscritos.size === inscritos.length) setSelectedInscritos(new Set());
-    else setSelectedInscritos(new Set(inscritos.map(i => i.idUsuario)));
+    else setSelectedInscritos(new Set(inscritos.map(i => i.folioRegistro)));
   };
 
   const handleGenerarParticipanteBatch = async () => {
@@ -60,10 +60,10 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     }
   };
 
-  const handleGenerarParticipante = async (idUsuario: number) => {
-    setLoadingGenerar(idUsuario);
+  const handleGenerarParticipante = async (folioRegistro: string) => {
+    setLoadingGenerar(folioRegistro);
     try {
-      const res = await generarConstanciaParticipanteAction(actividad.idActividad, idUsuario);
+      const res = await generarConstanciaParticipanteAction(actividad.idActividad, folioRegistro);
       if (!res.success) alert(res.error || 'Error al generar la constancia');
       else startTransition(() => router.refresh());
     } finally {
@@ -71,10 +71,10 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     }
   };
 
-  const handleEnviarParticipante = async (idUsuario: number) => {
-    setLoadingSend(idUsuario);
+  const handleEnviarParticipante = async (folioRegistro: string) => {
+    setLoadingSend(folioRegistro);
     try {
-      const res = await enviarConstanciaParticipanteAction(actividad.idActividad, idUsuario);
+      const res = await enviarConstanciaParticipanteAction(actividad.idActividad, folioRegistro);
       if (!res.success) alert(res.error || 'Error al enviar por correo');
       else alert('Constancia enviada correctamente al correo del participante.');
     } finally {
@@ -82,10 +82,10 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     }
   };
 
-  const handleGenerar = async (idUsuario: number) => {
-    setLoadingGenerar(idUsuario);
+  const handleGenerar = async (folioRegistro: string) => {
+    setLoadingGenerar(folioRegistro);
     try {
-      const res = await generarConstanciaPonenteAction(actividad.idActividad, idUsuario);
+      const res = await generarConstanciaPonenteAction(actividad.idActividad, folioRegistro);
       if (!res.success) {
         alert(res.error || 'Error al generar la constancia');
       } else {
@@ -98,10 +98,10 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     }
   };
 
-  const handleEnviar = async (idUsuario: number) => {
-    setLoadingSend(idUsuario);
+  const handleEnviar = async (folioRegistro: string) => {
+    setLoadingSend(folioRegistro);
     try {
-      const res = await enviarConstanciaPonenteAction(actividad.idActividad, idUsuario);
+      const res = await enviarConstanciaPonenteAction(actividad.idActividad, folioRegistro);
       if (!res.success) {
         alert(res.error || 'Error al enviar por correo');
       } else {
@@ -163,7 +163,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
               <p className="px-6 py-8 text-center text-slate-500">No hay ponentes asignados a esta actividad.</p>
             ) : (
               ponentes.map(p => (
-                <div key={p.idUsuario} className="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div key={p.folioRegistro} className="px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <p className="font-semibold text-slate-900">{p.nombre} {p.apellido}</p>
                     <p className="text-sm text-slate-500">{p.rol || 'Ponente'} • {p.correo}</p>
@@ -171,11 +171,11 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                   
                   <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => handleGenerar(p.idUsuario)}
-                      disabled={loadingGenerar === p.idUsuario}
+                      onClick={() => handleGenerar(p.folioRegistro)}
+                      disabled={loadingGenerar === p.folioRegistro}
                       className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
                     >
-                      {loadingGenerar === p.idUsuario ? 'Generando...' : (p.urlConstancia ? 'Volver a generar constancia' : 'Generar constancia')}
+                      {loadingGenerar === p.folioRegistro ? 'Generando...' : (p.urlConstancia ? 'Volver a generar constancia' : 'Generar constancia')}
                     </button>
 
                     {p.urlConstancia && (
@@ -196,11 +196,11 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                           Descargar
                         </a>
                         <button
-                          onClick={() => handleEnviar(p.idUsuario)}
-                          disabled={loadingSend === p.idUsuario}
+                          onClick={() => handleEnviar(p.folioRegistro)}
+                          disabled={loadingSend === p.folioRegistro}
                           className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                         >
-                          {loadingSend === p.idUsuario ? 'Enviando...' : 'Enviar al correo del ponente'}
+                          {loadingSend === p.folioRegistro ? 'Enviando...' : 'Enviar al correo del ponente'}
                         </button>
                       </>
                     )}
@@ -257,14 +257,14 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                   </tr>
                 ) : (
                   inscritos.map((i) => (
-                    <tr key={i.idUsuario} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={i.folioRegistro} className="hover:bg-slate-50/50 transition-colors">
                       {manejaConstanciasParticipantes && (
                         <td className="px-6 py-3 text-center align-middle">
                           <input
                             type="checkbox"
                             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                            checked={selectedInscritos.has(i.idUsuario)}
-                            onChange={() => toggleSeleccionInscrito(i.idUsuario)}
+                            checked={selectedInscritos.has(i.folioRegistro)}
+                            onChange={() => toggleSeleccionInscrito(i.folioRegistro)}
                             disabled={loadingBatch}
                           />
                         </td>
@@ -280,11 +280,11 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                         <td className="px-6 py-3 text-right">
                           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
                             <button
-                              onClick={() => handleGenerarParticipante(i.idUsuario)}
-                              disabled={loadingGenerar === i.idUsuario || loadingBatch}
+                              onClick={() => handleGenerarParticipante(i.folioRegistro)}
+                              disabled={loadingGenerar === i.folioRegistro || loadingBatch}
                               className="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50 min-w-max"
                             >
-                              {loadingGenerar === i.idUsuario ? 'Generando...' : (i.urlConstancia ? 'Regenerar' : 'Generar')}
+                              {loadingGenerar === i.folioRegistro ? 'Generando...' : (i.urlConstancia ? 'Regenerar' : 'Generar')}
                             </button>
 
                             {i.urlConstancia && (
@@ -298,11 +298,11 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                                   Ver/Descargar
                                 </a>
                                 <button
-                                  onClick={() => handleEnviarParticipante(i.idUsuario)}
-                                  disabled={loadingSend === i.idUsuario || loadingBatch}
+                                  onClick={() => handleEnviarParticipante(i.folioRegistro)}
+                                  disabled={loadingSend === i.folioRegistro || loadingBatch}
                                   className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50 min-w-max"
                                 >
-                                  {loadingSend === i.idUsuario ? 'Enviando...' : 'Enviar correo'}
+                                  {loadingSend === i.folioRegistro ? 'Enviando...' : 'Enviar correo'}
                                 </button>
                               </>
                             )}

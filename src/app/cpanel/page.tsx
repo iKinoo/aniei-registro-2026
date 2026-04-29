@@ -39,8 +39,8 @@ export default function AdminPanel() {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [fileErrors, setFileErrors] = useState<Record<number, string>>({});
-  const [loadingFiles, setLoadingFiles] = useState<Record<number, boolean>>({});
+  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
+  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
 
   // Debounce search
   useEffect(() => {
@@ -70,11 +70,11 @@ export default function AdminPanel() {
   }, [fetchData]);
 
   // Handler for resending confirmation
-  const handleResend = async (idUsuario: number) => {
+  const handleResend = async (folioRegistro: string) => {
     if (!confirm('¿Estás seguro de que deseas reenviar la constancia de registro a este usuario?')) return;
 
     // Optimistic UI could go here, but since it's an email, better to wait
-    const result = await reenviarConstanciaAction(idUsuario);
+    const result = await reenviarConstanciaAction(folioRegistro);
     if (result.success) {
       alert('Constancia reenviada exitosamente 🎉');
     } else {
@@ -82,20 +82,20 @@ export default function AdminPanel() {
     }
   };
 
-  const handleVerArchivo = async (idUsuario: number, ruta: string) => {
-    setLoadingFiles(prev => ({ ...prev, [idUsuario]: true }));
-    setFileErrors(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+  const handleVerArchivo = async (folioRegistro: string, ruta: string) => {
+    setLoadingFiles(prev => ({ ...prev, [folioRegistro]: true }));
+    setFileErrors(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
 
     const result = await obtenerUrlArchivoAction(ruta);
     
-    setLoadingFiles(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+    setLoadingFiles(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
 
     if (result.success) {
       window.open(result.url, '_blank');
     } else {
-      setFileErrors(prev => ({ ...prev, [idUsuario]: result.error }));
+      setFileErrors(prev => ({ ...prev, [folioRegistro]: result.error }));
       setTimeout(() => {
-        setFileErrors(prev => { const next = { ...prev }; delete next[idUsuario]; return next; });
+        setFileErrors(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
       }, 4000);
     }
   };
@@ -157,7 +157,7 @@ export default function AdminPanel() {
                   </tr>
                 ) : (
                   usuarios.map((user) => (
-                    <tr key={user.idUsuario} className=" hover:bg-slate-50/80 transition-colors duration-150">
+                    <tr key={user.folioRegistro} className=" hover:bg-slate-50/80 transition-colors duration-150">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-medium text-slate-900">{user.nombreCompleto}</span>
@@ -192,23 +192,23 @@ export default function AdminPanel() {
                         {user.deposito?.archivo?.ruta && (
                           <div className="inline-flex flex-col items-center">
                             <button
-                              onClick={() => handleVerArchivo(user.idUsuario, user.deposito!.archivo.ruta)}
-                              disabled={loadingFiles[user.idUsuario]}
+                              onClick={() => handleVerArchivo(user.folioRegistro, user.deposito!.archivo.ruta)}
+                              disabled={loadingFiles[user.folioRegistro]}
                               className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {loadingFiles[user.idUsuario] ? <SpinnerIcon /> : <FileIcon />} Ver Archivo
+                              {loadingFiles[user.folioRegistro] ? <SpinnerIcon /> : <FileIcon />} Ver Archivo
                             </button>
-                            {fileErrors[user.idUsuario] && (
+                            {fileErrors[user.folioRegistro] && (
                               <div 
                                 className="absolute  z-50 w-48 bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg shadow-sm border border-red-200 whitespace-normal text-left transition-all duration-300"
                               >
-                                {fileErrors[user.idUsuario]}
+                                {fileErrors[user.folioRegistro]}
                               </div>
                             )}
                           </div>
                         )}
                         <button
-                          onClick={() => handleResend(user.idUsuario)}
+                          onClick={() => handleResend(user.folioRegistro)}
                           className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                         >
                           <SendIcon /> Reenviar Correo

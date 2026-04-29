@@ -6,7 +6,7 @@ export interface MiembroRapidoInputDTO {
 }
 
 export interface RegistrarGrupoRapidoDTO {
-  responsableId: number; // ID of the logged in user creating the group
+  responsableId: string; // ID of the logged in user creating the group
   miembros: MiembroRapidoInputDTO[];
   archivo: ArchivoDTO; // The single deposit slip
 }

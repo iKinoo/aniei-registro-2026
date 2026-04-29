@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsuarioRepository, getCatalogoRepository, getPdfService } from '@/infrastructure/config/container';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 
 export async function GET(
   _request: NextRequest,
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { folio } = await params;
-    const folioVO = FolioRecibo.create(folio);
+    const folioVO = FolioRegistro.create(folio);
 
     const usuarioRepo = getUsuarioRepository();
     const usuario = await usuarioRepo.buscarPorFolio(folioVO);

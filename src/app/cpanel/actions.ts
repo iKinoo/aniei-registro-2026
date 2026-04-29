@@ -18,7 +18,7 @@ export async function getUsuariosAdminAction(page: number, limit: number, search
   }
 }
 
-export async function reenviarConstanciaAction(idUsuario: number) {
+export async function reenviarConstanciaAction(folioRegistro: string) {
   try {
     const enviarConfirmacion = new EnviarConfirmacion(
       getEmailService(),
@@ -27,11 +27,11 @@ export async function reenviarConstanciaAction(idUsuario: number) {
       getStorageService()
     );
 
-    await enviarConfirmacion.execute(idUsuario);
+    await enviarConfirmacion.execute(folioRegistro);
 
     return { success: true, message: 'Constancia reenviada exitosamente' };
   } catch (error) {
-    console.error(`Error in reenviarConstanciaAction for user ${idUsuario}:`, error);
+    console.error(`Error in reenviarConstanciaAction for user ${folioRegistro}:`, error);
     return { success: false, error: 'Ocurrió un error al reenviar la constancia' };
   }
 }

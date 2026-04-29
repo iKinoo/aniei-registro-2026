@@ -8,43 +8,43 @@ datasource db {
 }
 
 model accesos {
-  id_acceso  Int       @id @default(autoincrement())
-  id_usuario Int?
-  email      String    @unique @db.VarChar(100)
-  rol        String?   @default("USER") @db.VarChar(20)
-  nombre     String?   @db.VarChar(150)
-  auth_id    String?   @unique @db.Uuid
-  password   String?   @db.VarChar(255)
-  usuarios   usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_acceso      Int       @id @default(autoincrement())
+  folio_registro String?   @db.VarChar(15)
+  email          String    @unique @db.VarChar(100)
+  rol            String?   @default("USER") @db.VarChar(20)
+  nombre         String?   @db.VarChar(150)
+  auth_id        String?   @unique @db.Uuid
+  password       String?   @db.VarChar(255)
+  usuarios       usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model actividad_ponentes {
-  id_actividad       Int
-  id_usuario_ponente Int
-  rol                String?     @db.VarChar(50)
-  url_constancia     String?
-  actividades        actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios           usuarios    @relation(fields: [id_usuario_ponente], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  id_actividad           Int
+  folio_registro_ponente String      @db.VarChar(15)
+  rol                    String?     @db.VarChar(50)
+  url_constancia         String?
+  actividades            actividades @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
+  usuarios               usuarios    @relation(fields: [folio_registro_ponente], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([id_actividad, id_usuario_ponente])
+  @@id([id_actividad, folio_registro_ponente])
 }
 
 model actividades {
-  id_actividad             Int                       @id @default(autoincrement())
-  nombre                   String                    @db.VarChar(200)
-  cupo_maximo              Int?                      @default(0)
-  fecha_inicio             DateTime                  @db.Timestamp(6)
-  fecha_fin                DateTime                  @db.Timestamp(6)
-  id_tipo_actividad        Int?
-  id_institucion_sede      Int?
-  id_sala                  Int?                      @default(0)
-  actividad_costo          actividad_costo?
-  actividad_ponentes       actividad_ponentes[]
-  instituciones            instituciones?            @relation(fields: [id_institucion_sede], references: [id_institucion], onUpdate: NoAction)
-  tipo_actividad           tipo_actividad?           @relation(fields: [id_tipo_actividad], references: [id_tipo_actividad], onDelete: Restrict, onUpdate: NoAction)
-  asistencia_actividades   asistencia_actividades[]
-  equipos                  equipos[]
-  inscripcion_actividades  inscripcion_actividades[]
+  id_actividad            Int                       @id @default(autoincrement())
+  nombre                  String                    @db.VarChar(200)
+  cupo_maximo             Int?                      @default(0)
+  fecha_inicio            DateTime                  @db.Timestamp(6)
+  fecha_fin               DateTime                  @db.Timestamp(6)
+  id_tipo_actividad       Int?
+  id_institucion_sede     Int?
+  id_sala                 Int?                      @default(0)
+  actividad_costo         actividad_costo?
+  actividad_ponentes      actividad_ponentes[]
+  instituciones           instituciones?            @relation(fields: [id_institucion_sede], references: [id_institucion], onUpdate: NoAction)
+  tipo_actividad          tipo_actividad?           @relation(fields: [id_tipo_actividad], references: [id_tipo_actividad], onDelete: Restrict, onUpdate: NoAction)
+  asistencia_actividades  asistencia_actividades[]
+  equipos                 equipos[]
+  inscripcion_actividades inscripcion_actividades[]
 }
 
 model actividad_costo {
@@ -56,13 +56,13 @@ model actividad_costo {
 
 model asistencia_actividades {
   id_asistencia      Int          @id @default(autoincrement())
-  id_usuario         Int?
+  folio_registro     String?      @db.VarChar(15)
   id_actividad       Int?
   fecha_hora_marcaje DateTime?    @default(now()) @db.Timestamp(6)
   actividades        actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios           usuarios?    @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  usuarios           usuarios?    @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([id_usuario, id_actividad])
+  @@unique([folio_registro, id_actividad])
 }
 
 model cargos {
@@ -73,7 +73,7 @@ model cargos {
 
 model depositos {
   id_deposito     Int       @id @default(autoincrement())
-  id_usuario      Int?
+  folio_registro  String?   @db.VarChar(15)
   banco_sucursal  String?   @db.VarChar(100)
   ciudad          String?   @db.VarChar(100)
   referencia      String    @db.VarChar(50)
@@ -84,16 +84,16 @@ model depositos {
   archivo_nombre  String    @db.VarChar(255)
   archivo_mime    String    @db.VarChar(100)
   archivo_tamanio Int
-  usuarios        usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  usuarios        usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model equipo_integrantes {
   id_integrante    Int      @id @default(autoincrement())
   id_equipo        Int
-  id_usuario       Int
+  folio_registro   String   @db.VarChar(15)
   es_representante Boolean? @default(false)
   equipos          equipos  @relation(fields: [id_equipo], references: [id_equipo], onDelete: Cascade, onUpdate: NoAction)
-  usuarios         usuarios @relation(fields: [id_usuario], references: [id_usuario], onUpdate: NoAction)
+  usuarios         usuarios @relation(fields: [folio_registro], references: [folio_registro], onUpdate: NoAction)
 }
 
 model equipos {
@@ -116,7 +116,7 @@ model estados {
 
 model facturaciones {
   id_facturacion            Int       @id @default(autoincrement())
-  id_usuario                Int?
+  folio_registro            String?   @db.VarChar(15)
   razon_social              String    @db.VarChar(150)
   rfc                       String    @db.VarChar(20)
   calle                     String?   @db.VarChar(100)
@@ -127,19 +127,19 @@ model facturaciones {
   codigo_postal             String?   @db.VarChar(10)
   id_entidad_federativa_rfc Int?
   estados                   estados?  @relation(fields: [id_entidad_federativa_rfc], references: [id_entidad_federativa], onUpdate: NoAction)
-  usuarios                  usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  usuarios                  usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model inscripcion_actividades {
   id_inscripcion    Int          @id @default(autoincrement())
-  id_usuario        Int?
+  folio_registro    String?      @db.VarChar(15)
   id_actividad      Int?
   fecha_inscripcion DateTime?    @default(now()) @db.Timestamp(6)
   url_constancia    String?      @db.VarChar(500)
   actividades       actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios          usuarios?    @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  usuarios          usuarios?    @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([id_usuario, id_actividad])
+  @@unique([folio_registro, id_actividad])
 }
 
 model instituciones {
@@ -148,27 +148,16 @@ model instituciones {
   abreviatura    String?       @db.VarChar(30)
   actividades    actividades[]
   equipos        equipos[]
-  talleres       talleres[]
   usuarios       usuarios[]
 }
 
-model talleres {
-  id_taller              Int            @id @default(autoincrement())
-  nombre_taller          String         @db.VarChar(150)
-  cupo_maximo            Int?           @default(0)
-  horario_texto          String?        @db.VarChar(50)
-  dias_semana            String?        @db.VarChar(50)
-  id_institucion_imparte Int?
-  instituciones          instituciones? @relation(fields: [id_institucion_imparte], references: [id_institucion], onUpdate: NoAction)
-}
-
 model tipo_actividad {
-  id_tipo_actividad                Int           @id @default(autoincrement())
-  descripcion                      String        @db.VarChar(50)
-  clave                            String?       @db.VarChar(50)
-  maneja_equipos                   Boolean?      @default(false)
-  genera_constancia_participante   Boolean?      @default(false)
-  actividades                      actividades[]
+  id_tipo_actividad              Int           @id @default(autoincrement())
+  descripcion                    String        @db.VarChar(50)
+  clave                          String?       @db.VarChar(50)
+  maneja_equipos                 Boolean?      @default(false)
+  genera_constancia_participante Boolean?      @default(false)
+  actividades                    actividades[]
 }
 
 model tipo_usuario {
@@ -183,8 +172,8 @@ model titulos {
 }
 
 model usuarios {
-  id_usuario              Int                       @id @default(autoincrement())
-  folio_recibo            String?                   @unique @db.VarChar(15)
+  folio_registro String @id @default(dbgenerated("('ANI26-'::text || lpad((nextval('usuarios_folio_seq'::regclass))::text, 4, '0'::text))")) @db.VarChar(15)
+
   codigo_barras           String?                   @unique @db.VarChar(50)
   nombre                  String                    @db.VarChar(125)
   apellido                String                    @db.VarChar(256)
@@ -218,10 +207,10 @@ model usuarios {
 }
 
 model grupos_registro {
-  id             Int        @id @default(autoincrement())
-  token          String     @unique @db.VarChar(100)
-  id_responsable Int
-  fecha_registro DateTime   @default(now()) @db.Timestamp(6)
-  responsable    usuarios   @relation("GrupoResponsable", fields: [id_responsable], references: [id_usuario], onDelete: Cascade)
-  miembros       usuarios[] @relation("GrupoMiembros")
+  id                         Int        @id @default(autoincrement())
+  token                      String     @unique @db.VarChar(100)
+  folio_registro_responsable String     @db.VarChar(15)
+  fecha_registro             DateTime   @default(now()) @db.Timestamp(6)
+  responsable                usuarios   @relation("GrupoResponsable", fields: [folio_registro_responsable], references: [folio_registro], onDelete: Cascade)
+  miembros                   usuarios[] @relation("GrupoMiembros")
 }

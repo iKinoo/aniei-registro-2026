@@ -215,7 +215,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
         {a.ponentes && a.ponentes.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {a.ponentes.slice(0, 2).map((p) => (
-              <span key={p.idUsuario} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-xs text-slate-700">
+              <span key={p.folioRegistro} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-xs text-slate-700">
                 <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>

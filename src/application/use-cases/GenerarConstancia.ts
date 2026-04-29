@@ -11,10 +11,10 @@ export class GenerarConstancia {
     private readonly catalogoRepo: ICatalogoRepository,
   ) {}
 
-  async execute(idUsuario: number): Promise<string> {
-    const usuario = await this.usuarioRepo.buscarPorId(idUsuario);
+  async execute(folioRegistro: string): Promise<string> {
+    const usuario = await this.usuarioRepo.buscarPorId(folioRegistro);
     if (!usuario) {
-      throw new Error(`Usuario con id ${idUsuario} no encontrado`);
+      throw new Error(`Usuario con id ${folioRegistro} no encontrado`);
     }
 
     const [instituciones, tiposUsuario] = await Promise.all([
@@ -25,7 +25,7 @@ export class GenerarConstancia {
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
     const tipoUsuario = tiposUsuario.find((t) => t.idTipoUsuario === usuario.idTipoUsuario);
 
-    const folio = usuario.folioRecibo?.toString() ?? `ANIEI-2026-${String(idUsuario).padStart(4, '0')}`;
+    const folio = usuario.folioRegistro?.toString() ?? `ANIEI-2026-${String(folioRegistro).padStart(4, '0')}`;
     const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
       year: 'numeric', month: 'long', day: 'numeric',
     });

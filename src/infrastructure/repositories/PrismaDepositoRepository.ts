@@ -12,9 +12,9 @@ export class PrismaDepositoRepository implements IDepositoRepository {
     return DepositoMapper.toDomain(created);
   }
 
-  async buscarPorUsuario(idUsuario: number): Promise<Deposito | null> {
+  async buscarPorUsuario(folioRegistro: string): Promise<Deposito | null> {
     const found = await this.prisma.depositos.findFirst({
-      where: { id_usuario: idUsuario },
+      where: { folio_registro: folioRegistro },
       orderBy: { fecha_registro: 'desc' },
     });
     return found ? DepositoMapper.toDomain(found) : null;

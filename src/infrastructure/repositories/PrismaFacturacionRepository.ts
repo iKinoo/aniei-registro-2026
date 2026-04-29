@@ -12,9 +12,9 @@ export class PrismaFacturacionRepository implements IFacturacionRepository {
     return FacturacionMapper.toDomain(created);
   }
 
-  async buscarPorUsuario(idUsuario: number): Promise<Facturacion | null> {
+  async buscarPorUsuario(folioRegistro: string): Promise<Facturacion | null> {
     const found = await this.prisma.facturaciones.findFirst({
-      where: { id_usuario: idUsuario },
+      where: { folio_registro: folioRegistro },
     });
     return found ? FacturacionMapper.toDomain(found) : null;
   }

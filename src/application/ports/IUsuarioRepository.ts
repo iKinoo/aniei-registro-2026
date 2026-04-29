@@ -1,19 +1,18 @@
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 
 export interface IUsuarioRepository {
   crear(usuario: Usuario): Promise<Usuario>;
   crearMuchos(usuarios: Usuario[]): Promise<Usuario[]>;
   buscarPorCorreo(correo: Email): Promise<Usuario | null>;
-  buscarPorId(id: number): Promise<Usuario | null>;
-  buscarPorFolio(folio: FolioRecibo): Promise<Usuario | null>;
-  actualizarFolio(id: number, folio: FolioRecibo): Promise<void>;
-  verificar(id: number): Promise<void>;
+  buscarPorId(id: string): Promise<Usuario | null>;
+  buscarPorFolio(folio: FolioRegistro): Promise<Usuario | null>;
+  verificar(id: string): Promise<void>;
   
   crearGrupoTransaccional(data: {
     token: string;
-    responsableId: number;
+    responsableId: string;
     institucionId: number;
     dependenciaId: string;
     estadoId: number;
@@ -25,5 +24,5 @@ export interface IUsuarioRepository {
       correoDummy: string;
       passwordHash: string;
     }>;
-  }): Promise<{ usuariosIds: number[], folios: string[] }>;
+  }): Promise<{ usuariosIds: string[], folios: string[] }>;
 }

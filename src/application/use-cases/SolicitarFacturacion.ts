@@ -14,13 +14,13 @@ export class SolicitarFacturacion {
   ) {}
 
   async execute(dto: FacturacionDTO): Promise<Facturacion> {
-    const usuario = await this.usuarioRepo.buscarPorId(dto.idUsuario);
+    const usuario = await this.usuarioRepo.buscarPorId(dto.folioRegistro);
     if (!usuario) {
-      throw new Error(`Usuario con id ${dto.idUsuario} no encontrado`);
+      throw new Error(`Usuario con id ${dto.folioRegistro} no encontrado`);
     }
 
     const facturacion = Facturacion.create({
-      idUsuario: dto.idUsuario,
+      folioRegistro: dto.folioRegistro,
       razonSocial: dto.razonSocial,
       rfc: dto.rfc,
       calle: dto.calle,

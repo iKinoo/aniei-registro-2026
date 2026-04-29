@@ -11,18 +11,18 @@ export class EnviarConfirmacion {
     private readonly storageService: IStorageService,
   ) {}
 
-  async execute(idUsuario: number): Promise<void> {
-    const usuario = await this.usuarioRepo.buscarPorId(idUsuario);
+  async execute(folioRegistro: string): Promise<void> {
+    const usuario = await this.usuarioRepo.buscarPorId(folioRegistro);
     if (!usuario) {
-      throw new Error(`Usuario con id ${idUsuario} no encontrado`);
+      throw new Error(`Usuario con id ${folioRegistro} no encontrado`);
     }
 
     const instituciones = await this.catalogoRepo.obtenerInstituciones();
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
 
-    const folio = usuario.folioRecibo?.toString();
+    const folio = usuario.folioRegistro?.toString();
     if (!folio) {
-      throw new Error(`El usuario con id ${idUsuario} no tiene folio asignado`);
+      throw new Error(`El usuario con id ${folioRegistro} no tiene folio asignado`);
     }
 
     // Descargar el pdf de la constancia desde el storage

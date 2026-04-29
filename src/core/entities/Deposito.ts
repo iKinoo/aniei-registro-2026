@@ -3,7 +3,7 @@ import { Monto } from '../value-objects/Monto';
 
 export interface DepositoProps {
   idDeposito?: number | null;
-  idUsuario: number;
+  folioRegistro: string;
   bancoSucursal?: string | null;
   ciudad?: string | null;
   referencia: string;
@@ -18,7 +18,7 @@ export interface DepositoProps {
 
 export class Deposito {
   readonly idDeposito: number | null;
-  readonly idUsuario: number;
+  readonly folioRegistro: string;
   readonly bancoSucursal: string | null;
   readonly ciudad: string | null;
   readonly referencia: string;
@@ -30,7 +30,7 @@ export class Deposito {
 
   private constructor(props: DepositoProps, archivo: ArchivoComprobante) {
     this.idDeposito = props.idDeposito ?? null;
-    this.idUsuario = props.idUsuario;
+    this.folioRegistro = props.folioRegistro;
     this.bancoSucursal = props.bancoSucursal ?? null;
     this.ciudad = props.ciudad ?? null;
     this.referencia = props.referencia;

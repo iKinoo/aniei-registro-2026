@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/database/client';
+import AutoLogout from './AutoLogout';
 import styles from './page.module.css';
 
 export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
@@ -24,22 +25,15 @@ export default async function PerfilPage() {
   });
 
   if (!acceso || !acceso.usuarios) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.card}>
-          <h1 className={styles.title}>Perfil Incompleto</h1>
-          <p className={styles.description}>No se encontraron datos de registro asociados a este acceso.</p>
-        </div>
-      </div>
-    );
+    return <AutoLogout />;
   }
 
   const usuario = acceso.usuarios;
 
   // Cargar inscripciones a actividades con detalle
-  const inscripciones = acceso.id_usuario
+  const inscripciones = acceso.folio_registro
     ? await prisma.inscripcion_actividades.findMany({
-        where: { id_usuario: acceso.id_usuario },
+        where: { folio_registro: acceso.folio_registro },
         include: {
           actividades: {
             include: {
@@ -62,7 +56,7 @@ export default async function PerfilPage() {
             <p className={styles.headerSub}>Congreso ANIEI 2026</p>
             <h1 className={styles.title}>Mi Perfil</h1>
           </div>
-          <div className={styles.folioBadge}>{usuario.folio_recibo || 'Sin folio'}</div>
+          <div className={styles.folioBadge}>{usuario.folio_registro || 'Sin folio'}</div>
         </div>
 
         <div className={styles.content}>

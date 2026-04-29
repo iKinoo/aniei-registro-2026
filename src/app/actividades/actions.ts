@@ -33,12 +33,12 @@ export async function getInscripcionesUsuarioAction() {
 
     const acceso = await prisma.accesos.findUnique({
       where: { email: session.user.email },
-      select: { id_usuario: true },
+      select: { folio_registro: true },
     });
-    if (!acceso?.id_usuario) return { success: true as const, data: [] as number[] };
+    if (!acceso?.folio_registro) return { success: true as const, data: [] as number[] };
 
     const repo = getInscripcionActividadRepository();
-    const ids = await repo.obtenerIdsPorUsuario(acceso.id_usuario);
+    const ids = await repo.obtenerIdsPorUsuario(acceso.folio_registro);
     return { success: true as const, data: ids };
   } catch (error) {
     console.error('Error en getInscripcionesUsuarioAction:', error);

@@ -15,7 +15,7 @@ import { Facturacion } from '@/core/entities/Facturacion';
 import { Monto } from '@/core/value-objects/Monto';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import { RegistroError } from '@/core/errors/RegistroError';
 
@@ -64,7 +64,7 @@ export class RegistrarUsuario {
 
     // 5. Persistir usuario
     const usuarioPersistido = await this.usuarioRepo.crear(usuario);
-    const idUsuario = usuarioPersistido.idUsuario!;
+    const folioRegistro = usuarioPersistido.folioRegistro!;
 
     // 5.5 Generar contraseña y crear perfil de acceso
     const generatedPassword = Math.random().toString(36).slice(-8);
@@ -73,19 +73,16 @@ export class RegistrarUsuario {
       dto.correo,
       passwordHash,
       'USER',
-      idUsuario,
+      folioRegistro,
       `${dto.nombre} ${dto.apellido}`
     );
 
-    // 6. Generar folio y asignarlo
-    const folio = `ANIEI-2026-${String(idUsuario).padStart(4, '0')}`;
-    const folioVO = FolioRecibo.create(folio);
-    usuarioPersistido.asignarFolio(folioVO);
-    await this.usuarioRepo.actualizarFolio(idUsuario, folioVO);
+    // 6. Asignar folio (Ya generado por DB)
+    const folio = folioRegistro;
 
     // 7. Crear registro de depósito con comprobante de archivo
     const deposito = Deposito.create({
-      idUsuario,
+      folioRegistro,
       bancoSucursal: dto.deposito.bancoSucursal ?? null,
       ciudad: dto.deposito.ciudad ?? null,
       referencia: dto.deposito.referencia,
@@ -101,7 +98,7 @@ export class RegistrarUsuario {
     // 8. Guardar facturación si se proporcionó
     if (dto.facturacion) {
       const facturacion = Facturacion.create({
-        idUsuario,
+        folioRegistro,
         razonSocial: dto.facturacion.razonSocial,
         rfc: dto.facturacion.rfc,
         calle: dto.facturacion.calle ?? null,

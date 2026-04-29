@@ -28,7 +28,7 @@ export interface CompletarActionState {
 
 export async function completarRegistroAction(
   token: string,
-  idUsuario: number,
+  folioRegistro: string,
   prevState: CompletarActionState,
   formData: FormData
 ): Promise<CompletarActionState> {
@@ -40,7 +40,7 @@ export async function completarRegistroAction(
     // Verify token and user are valid and exist and have a dummy email
     const grupo = await prisma.grupos_registro.findUnique({
       where: { token },
-      include: { miembros: { where: { id_usuario: idUsuario } } },
+      include: { miembros: { where: { folio_registro: folioRegistro } } },
     });
 
     if (!grupo || grupo.miembros.length === 0) {
@@ -62,7 +62,7 @@ export async function completarRegistroAction(
     }
 
     const acceso = await prisma.accesos.findFirst({
-      where: { id_usuario: idUsuario }
+      where: { folio_registro: folioRegistro }
     });
 
     if (!acceso) {
@@ -81,7 +81,7 @@ export async function completarRegistroAction(
 
     await prisma.$transaction(async (tx) => {
       await tx.usuarios.update({
-        where: { id_usuario: idUsuario },
+        where: { folio_registro: folioRegistro },
         data: {
           correo: validatedData.correo,
           telefono: validatedData.telefono || null,
@@ -109,7 +109,7 @@ export async function completarRegistroAction(
     await emailService.enviarConfirmacionRegistro(validatedData.correo, {
       nombre: usuario.nombre,
       apellido: usuario.apellido,
-      folio: usuario.folio_recibo || 'N/A',
+      folio: usuario.folio_registro || 'N/A',
       institucion: institucion?.nombre || 'N/A',
       fecha: fechaStr,
       password: rawPassword,

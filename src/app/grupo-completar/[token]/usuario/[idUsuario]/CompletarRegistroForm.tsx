@@ -7,7 +7,7 @@ import { Cargo, Estado, Institucion } from '@/shared/types/catalogos';
 
 interface Props {
   token: string;
-  idUsuario: number;
+  folioRegistro: string;
   catalogos: {
     cargos: Cargo[];
     estados: Estado[];
@@ -26,8 +26,8 @@ interface Props {
 
 const initialState: CompletarActionState = { success: false };
 
-export function CompletarRegistroForm({ token, idUsuario, catalogos, usuario }: Props) {
-  const bindedAction = completarRegistroAction.bind(null, token, idUsuario);
+export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario }: Props) {
+  const bindedAction = completarRegistroAction.bind(null, token, folioRegistro);
   const [state, formAction, isPending] = useActionState(bindedAction, initialState);
 
   if (state.success) {

@@ -84,7 +84,7 @@ function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
     idSala: f.idSala,
     ...(f.tieneCosto && f.montoCosto && {
       costo: {
-        folioRecibo: f.folioCosto || undefined,
+        folioRegistro: f.folioCosto || undefined,
         monto: parseFloat(f.montoCosto),
       },
     }),
@@ -101,7 +101,7 @@ function actividadToForm(a: ActividadDTO): FormState {
     idInstitucionSede: a.idInstitucionSede ?? undefined,
     idSala: a.idSala ?? undefined,
     tieneCosto: !!a.costo,
-    folioCosto: a.costo?.folioRecibo ?? '',
+    folioCosto: a.costo?.folioRegistro ?? '',
     montoCosto: a.costo?.monto != null ? String(a.costo.monto) : '',
   };
 }

@@ -47,7 +47,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         abreviatura: r.instituciones.abreviatura ?? null,
       } : null,
       costo: r.actividad_costo ? {
-        folioRecibo: r.actividad_costo.folio_recibo ?? null,
+        folioRegistro: r.actividad_costo.folio_recibo ?? null,
         monto: r.actividad_costo.monto ? Number(r.actividad_costo.monto) : null,
       } : null,
       cupoOcupado: 0, // No necesario en el checkout (ya se validó en selección)
@@ -90,11 +90,11 @@ export async function confirmarInscripcionesAction(
 
   const acceso = await prisma.accesos.findUnique({
     where: { email: correo },
-    select: { id_usuario: true, nombre: true, usuarios: { select: { folio_recibo: true, nombre: true, apellido: true } } },
+    select: { folio_registro: true, nombre: true, usuarios: { select: { folio_registro: true, nombre: true, apellido: true } } },
   });
-  if (!acceso?.id_usuario) redirect('/login');
+  if (!acceso?.folio_registro) redirect('/login');
 
-  const idUsuario = acceso.id_usuario;
+  const folioRegistro = acceso.folio_registro;
   const errors: Record<string, string> = {};
 
   // 1. Validar y guardar depósito si hay costo
@@ -126,7 +126,7 @@ export async function confirmarInscripcionesAction(
     const urlComprobante = await storageService.subir(archivoRuta, buffer, file.type);
 
     const deposito = Deposito.create({
-      idUsuario,
+      folioRegistro,
       bancoSucursal: parsedDeposito.data.bancoSucursal || null,
       ciudad: parsedDeposito.data.ciudad || null,
       referencia: parsedDeposito.data.referencia,
@@ -162,7 +162,7 @@ export async function confirmarInscripcionesAction(
       return { success: false, errors };
     }
     const facturacion = Facturacion.create({
-      idUsuario,
+      folioRegistro,
       razonSocial: parsedFact.data.razonSocial,
       rfc: parsedFact.data.rfc,
       calle: parsedFact.data.calle || null,
@@ -177,7 +177,7 @@ export async function confirmarInscripcionesAction(
   }
 
   // 3. Crear inscripciones con validación atómica de cupo
-  const { ok, sinCupo } = await getInscripcionActividadRepository().crearMuchasConValidacion(idUsuario, idsActividades);
+  const { ok, sinCupo } = await getInscripcionActividadRepository().crearMuchasConValidacion(folioRegistro, idsActividades);
 
   // Si alguna actividad no pudo inscribirse por cupo lleno, informar al usuario
   if (sinCupo.length > 0) {
@@ -228,7 +228,7 @@ export async function confirmarInscripcionesAction(
 
   const usuario = acceso.usuarios;
   const nombreCompleto = usuario ? `${usuario.nombre} ${usuario.apellido}` : (acceso.nombre ?? correo);
-  const folio = usuario?.folio_recibo ?? '';
+  const folio = usuario?.folio_registro ?? '';
   const [primerNombre, ...resto] = nombreCompleto.split(' ');
   const apellido = resto.join(' ');
 

@@ -21,13 +21,13 @@ export class PrismaAccesoRepository implements IAccesoRepository {
     });
   }
 
-  async crear(email: string, passwordHash: string, rol: string, idUsuario?: number, nombre?: string): Promise<Acceso> {
+  async crear(email: string, passwordHash: string, rol: string, folioRegistro?: string, nombre?: string): Promise<Acceso> {
     const rawAcceso = await this.prisma.accesos.create({
       data: {
         email,
         password: passwordHash,
         rol,
-        id_usuario: idUsuario ?? null,
+        folio_registro: folioRegistro ?? null,
         nombre: nombre ?? null,
       },
     });

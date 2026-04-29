@@ -12,13 +12,13 @@ import {
 import { Genero } from '@/core/enums/Genero';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 import { PonenteDTO } from '@/application/dtos/ActividadDTO';
 
 // ---------- Búsqueda de usuarios ----------
 
 export interface UsuarioBusquedaResult {
-  idUsuario: number;
+  folioRegistro: string;
   nombre: string;
   apellido: string;
   correo: string;
@@ -36,14 +36,14 @@ export async function buscarUsuariosAction(query: string): Promise<{ success: tr
           { correo: { contains: q, mode: 'insensitive' } },
         ],
       },
-      select: { id_usuario: true, nombre: true, apellido: true, correo: true },
+      select: { folio_registro: true, nombre: true, apellido: true, correo: true },
       take: 10,
       orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
     });
     return {
       success: true,
       data: rows.map((r) => ({
-        idUsuario: r.id_usuario,
+        folioRegistro: r.folio_registro,
         nombre: r.nombre,
         apellido: r.apellido,
         correo: r.correo,
@@ -58,11 +58,11 @@ export async function buscarUsuariosAction(query: string): Promise<{ success: tr
 
 export async function vincularPonenteAction(
   idActividad: number,
-  idUsuario: number,
+  folioRegistro: string,
   rol: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await getPonentesRepository().vincular(idActividad, idUsuario, rol || 'Ponente');
+    await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e) };
@@ -71,10 +71,10 @@ export async function vincularPonenteAction(
 
 export async function desvincularPonenteAction(
   idActividad: number,
-  idUsuario: number,
+  folioRegistro: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await getPonentesRepository().desvincular(idActividad, idUsuario);
+    await getPonentesRepository().desvincular(idActividad, folioRegistro);
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e) };
@@ -108,7 +108,7 @@ export async function registrarPonenteAction(
   datos: RegistroPonenteInput,
   idActividad: number,
   rol: string,
-): Promise<{ success: true; idUsuario: number } | { success: false; error: string }> {
+): Promise<{ success: true; folioRegistro: string } | { success: false; error: string }> {
   try {
     // 1. Verificar correo duplicado
     const correoVO = Email.create(datos.correo);
@@ -146,7 +146,7 @@ export async function registrarPonenteAction(
     });
 
     const usuarioPersistido = await usuarioRepo.crear(usuario);
-    const idUsuario = usuarioPersistido.idUsuario!;
+    const folioRegistro = usuarioPersistido.folioRegistro!;
 
     // 4. Generar credenciales
     const generatedPassword = Math.random().toString(36).slice(-8);
@@ -155,18 +155,15 @@ export async function registrarPonenteAction(
       datos.correo,
       passwordHash,
       'USER',
-      idUsuario,
+      folioRegistro,
       `${datos.nombre} ${datos.apellido}`,
     );
 
     // 5. Asignar folio
-    const folio = `ANIEI-2026-${String(idUsuario).padStart(4, '0')}`;
-    const folioVO = FolioRecibo.create(folio);
-    usuarioPersistido.asignarFolio(folioVO);
-    await usuarioRepo.actualizarFolio(idUsuario, folioVO);
+    const folio = folioRegistro;
 
     // 6. Vincular como ponente de la actividad
-    await getPonentesRepository().vincular(idActividad, idUsuario, rol || 'Ponente');
+    await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
 
     // 7. Enviar correo de notificación (best-effort)
     try {
@@ -182,7 +179,7 @@ export async function registrarPonenteAction(
       console.error('Error al enviar correo de ponente:', emailErr);
     }
 
-    return { success: true, idUsuario };
+    return { success: true, folioRegistro };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { success: false, error: msg };

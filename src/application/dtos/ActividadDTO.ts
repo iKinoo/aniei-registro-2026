@@ -1,5 +1,5 @@
 export interface PonenteDTO {
-  idUsuario: number;
+  folioRegistro: string;
   nombre: string;
   apellido: string;
   correo: string;
@@ -8,7 +8,7 @@ export interface PonenteDTO {
 }
 
 export interface InscritoDTO {
-  idUsuario: number;
+  folioRegistro: string;
   nombre: string;
   apellido: string;
   correo: string;
@@ -31,7 +31,7 @@ export interface ActividadDTO {
   tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean; generaConstanciaParticipante: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
   // Optional details
-  costo: { folioRecibo: string | null; monto: number | null } | null;
+  costo: { folioRegistro: string | null; monto: number | null } | null;
   ponentes: PonenteDTO[];
 }
 
@@ -45,7 +45,7 @@ export interface CrearActividadDTO {
   idSala?: number;
   // Optional detail sections
   costo?: {
-    folioRecibo?: string;
+    folioRegistro?: string;
     monto?: number;
   };
 }

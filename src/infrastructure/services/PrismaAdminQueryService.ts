@@ -45,7 +45,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       const dep = user.depositos.length > 0 ? user.depositos[0] : null;
 
       return {
-        idUsuario: user.id_usuario,
+        folioRegistro: user.folio_registro,
         nombreCompleto: `${user.nombre} ${user.apellido}`,
         correo: user.correo,
         telefono: user.telefono || null,

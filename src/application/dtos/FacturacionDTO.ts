@@ -1,5 +1,5 @@
 export interface FacturacionDTO {
-  idUsuario: number;
+  folioRegistro: string;
   razonSocial: string;
   rfc: string;
   calle?: string | null;

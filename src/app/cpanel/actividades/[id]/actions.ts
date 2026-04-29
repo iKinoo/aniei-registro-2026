@@ -52,7 +52,7 @@ export async function getDetalleActividadAction(idActividadStr: string) {
   }
 }
 
-export async function generarConstanciaPonenteAction(idActividad: number, idUsuario: number) {
+export async function generarConstanciaPonenteAction(idActividad: number, folioRegistro: string) {
   try {
     const useCase = new GenerarConstanciaPonenteUseCase(
       getPdfService(),
@@ -62,7 +62,7 @@ export async function generarConstanciaPonenteAction(idActividad: number, idUsua
       getUsuarioRepository()
     );
 
-    const url = await useCase.execute(idActividad, idUsuario);
+    const url = await useCase.execute(idActividad, folioRegistro);
     return { success: true as const, url };
   } catch (error) {
     console.error('Error en generarConstanciaPonenteAction:', error);
@@ -70,7 +70,7 @@ export async function generarConstanciaPonenteAction(idActividad: number, idUsua
   }
 }
 
-export async function enviarConstanciaPonenteAction(idActividad: number, idUsuario: number) {
+export async function enviarConstanciaPonenteAction(idActividad: number, folioRegistro: string) {
   try {
     const useCase = new EnviarConstanciaPonenteUseCase(
       getPdfService(),
@@ -79,7 +79,7 @@ export async function enviarConstanciaPonenteAction(idActividad: number, idUsuar
       getUsuarioRepository()
     );
 
-    await useCase.execute(idActividad, idUsuario);
+    await useCase.execute(idActividad, folioRegistro);
     return { success: true as const };
   } catch (error) {
     console.error('Error en enviarConstanciaPonenteAction:', error);
@@ -87,7 +87,7 @@ export async function enviarConstanciaPonenteAction(idActividad: number, idUsuar
   }
 }
 
-export async function generarConstanciaParticipanteAction(idActividad: number, idUsuario: number) {
+export async function generarConstanciaParticipanteAction(idActividad: number, folioRegistro: string) {
   try {
     const useCase = new GenerarConstanciaParticipanteUseCase(
       getPdfService(),
@@ -97,7 +97,7 @@ export async function generarConstanciaParticipanteAction(idActividad: number, i
       getUsuarioRepository()
     );
 
-    const url = await useCase.execute(idActividad, idUsuario);
+    const url = await useCase.execute(idActividad, folioRegistro);
     return { success: true as const, url };
   } catch (error) {
     console.error('Error en generarConstanciaParticipanteAction:', error);
@@ -105,7 +105,7 @@ export async function generarConstanciaParticipanteAction(idActividad: number, i
   }
 }
 
-export async function enviarConstanciaParticipanteAction(idActividad: number, idUsuario: number) {
+export async function enviarConstanciaParticipanteAction(idActividad: number, folioRegistro: string) {
   try {
     const useCase = new EnviarConstanciaParticipanteUseCase(
       getPdfService(),
@@ -114,7 +114,7 @@ export async function enviarConstanciaParticipanteAction(idActividad: number, id
       getUsuarioRepository()
     );
 
-    await useCase.execute(idActividad, idUsuario);
+    await useCase.execute(idActividad, folioRegistro);
     return { success: true as const };
   } catch (error) {
     console.error('Error en enviarConstanciaParticipanteAction:', error);
@@ -122,7 +122,7 @@ export async function enviarConstanciaParticipanteAction(idActividad: number, id
   }
 }
 
-export async function generarConstanciaParticipanteBatchAction(idActividad: number, idUsuarios: number[]) {
+export async function generarConstanciaParticipanteBatchAction(idActividad: number, folioRegistros: string[]) {
   try {
     const useCase = new GenerarConstanciaParticipanteUseCase(
       getPdfService(),
@@ -133,12 +133,12 @@ export async function generarConstanciaParticipanteBatchAction(idActividad: numb
     );
 
     const resultados = [];
-    for (const id of idUsuarios) {
+    for (const id of folioRegistros) {
       try {
         const url = await useCase.execute(idActividad, id);
-        resultados.push({ idUsuario: id, success: true, url });
+        resultados.push({ folioRegistro: id, success: true, url });
       } catch (e) {
-         resultados.push({ idUsuario: id, success: false, error: e instanceof Error ? e.message : 'Error desconocido' });
+         resultados.push({ folioRegistro: id, success: false, error: e instanceof Error ? e.message : 'Error desconocido' });
       }
     }
     

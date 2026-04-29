@@ -13,10 +13,10 @@ export class GenerarConstanciaPonenteUseCase {
     private readonly usuarioRepo: IUsuarioRepository,
   ) {}
 
-  async execute(idActividad: number, idUsuario: number): Promise<string> {
+  async execute(idActividad: number, folioRegistro: string): Promise<string> {
     const [actividad, usuario] = await Promise.all([
       this.actividadRepo.obtenerPorId(idActividad),
-      this.usuarioRepo.buscarPorId(idUsuario),
+      this.usuarioRepo.buscarPorId(folioRegistro),
     ]);
 
     if (!actividad || !usuario) {
@@ -38,13 +38,13 @@ export class GenerarConstanciaPonenteUseCase {
       fecha: fechaStr,
     });
 
-    const ruta = `constancias/ponente-act-${idActividad}-usr-${idUsuario}.pdf`;
+    const ruta = `constancias/ponente-act-${idActividad}-usr-${folioRegistro}.pdf`;
     await this.storageService.subir(ruta, pdfBuffer, 'application/pdf');
 
     const fileRef = parseFileReference(ruta);
     const publicUrl = await this.storageService.getAccess(fileRef);
 
-    await this.ponentesRepo.actualizarUrlConstancia(idActividad, idUsuario, publicUrl);
+    await this.ponentesRepo.actualizarUrlConstancia(idActividad, folioRegistro, publicUrl);
 
     return publicUrl;
   }

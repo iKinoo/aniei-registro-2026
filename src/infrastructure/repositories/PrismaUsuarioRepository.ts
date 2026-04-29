@@ -2,7 +2,7 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
-import { FolioRecibo } from '@/core/value-objects/FolioRecibo';
+import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 import { UsuarioMapper } from '../mappers/UsuarioMapper';
 
 export class PrismaUsuarioRepository implements IUsuarioRepository {
@@ -30,37 +30,34 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     return found ? UsuarioMapper.toDomain(found) : null;
   }
 
-  async buscarPorId(id: number): Promise<Usuario | null> {
+  async buscarPorId(id: string): Promise<Usuario | null> {
     const found = await this.prisma.usuarios.findUnique({
-      where: { id_usuario: id },
+      where: { folio_registro: id },
     });
     return found ? UsuarioMapper.toDomain(found) : null;
   }
 
-  async buscarPorFolio(folio: FolioRecibo): Promise<Usuario | null> {
-    const found = await this.prisma.usuarios.findUnique({
-      where: { folio_recibo: folio.toString() },
-    });
-    return found ? UsuarioMapper.toDomain(found) : null;
-  }
-
-  async actualizarFolio(id: number, folio: FolioRecibo): Promise<void> {
+  async verificar(id: string): Promise<void> {
     await this.prisma.usuarios.update({
-      where: { id_usuario: id },
-      data: { folio_recibo: folio.toString() },
-    });
-  }
-
-  async verificar(id: number): Promise<void> {
-    await this.prisma.usuarios.update({
-      where: { id_usuario: id },
+      where: { folio_registro: id },
       data: { verificado: true },
     });
   }
 
+  async buscarPorFolio(folio: FolioRegistro): Promise<Usuario | null> {
+    const model = await this.prisma.usuarios.findUnique({
+      where: { folio_registro: folio.toString() },
+      include: {
+        accesos: true,
+      },
+    });
+    if (!model) return null;
+    return UsuarioMapper.toDomain(model);
+  }
+
   async crearGrupoTransaccional(data: {
     token: string;
-    responsableId: number;
+    responsableId: string;
     institucionId: number;
     dependenciaId: string; // Es string 128
     estadoId: number;      // id_entidad_federativa
@@ -72,17 +69,17 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       correoDummy: string;
       passwordHash: string;
     }>;
-  }): Promise<{ usuariosIds: number[], folios: string[] }> {
+  }): Promise<{ usuariosIds: string[], folios: string[] }> {
     return this.prisma.$transaction(async (tx) => {
       // 1. Crear el grupo
       const grupo = await tx.grupos_registro.create({
         data: {
           token: data.token,
-          id_responsable: data.responsableId,
+          responsable: { connect: { folio_registro: data.responsableId } },
         },
       });
 
-      const usuariosIds: number[] = [];
+      const usuariosIds: string[] = [];
       const folios: string[] = [];
 
       // 2. Insertar cada miembro
@@ -115,18 +112,11 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
         // Relacionar acceso con usuario
         await tx.accesos.update({
           where: { id_acceso: newAcceso.id_acceso },
-          data: { id_usuario: newUsuario.id_usuario },
+          data: { folio_registro: newUsuario.folio_registro },
         });
 
-        // Generar y asignar folio (el caso de uso lo asume así)
-        const folio = `ANIEI-GRP-${String(newUsuario.id_usuario).padStart(4, '0')}`;
-        await tx.usuarios.update({
-          where: { id_usuario: newUsuario.id_usuario },
-          data: { folio_recibo: folio }
-        });
-
-        usuariosIds.push(newUsuario.id_usuario);
-        folios.push(folio);
+        usuariosIds.push(newUsuario.folio_registro);
+        folios.push(newUsuario.folio_registro);
       }
 
       return { usuariosIds, folios };

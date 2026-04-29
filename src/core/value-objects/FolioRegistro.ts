@@ -1,7 +1,7 @@
-export class FolioRecibo {
+export class FolioRegistro {
   private constructor(private readonly valor: string) {}
 
-  static create(folio: string): FolioRecibo {
+  static create(folio: string): FolioRegistro {
     const trimmed = folio.trim();
     if (!trimmed) {
       throw new Error('El folio de recibo es requerido');
@@ -12,14 +12,14 @@ export class FolioRecibo {
     if (!/^[A-Za-z0-9\-]+$/.test(trimmed)) {
       throw new Error('El folio de recibo solo puede contener letras, números y guiones');
     }
-    return new FolioRecibo(trimmed);
+    return new FolioRegistro(trimmed);
   }
 
   toString(): string {
     return this.valor;
   }
 
-  equals(other: FolioRecibo): boolean {
+  equals(other: FolioRegistro): boolean {
     return this.valor === other.valor;
   }
 }

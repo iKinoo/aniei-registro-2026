@@ -6,7 +6,7 @@ export class DepositoMapper {
   static toDomain(raw: depositos): Deposito {
     return Deposito.create({
       idDeposito: raw.id_deposito,
-      idUsuario: raw.id_usuario ?? 0,
+      folioRegistro: raw.folio_registro ?? "",
       bancoSucursal: raw.banco_sucursal ?? null,
       ciudad: raw.ciudad ?? null,
       referencia: raw.referencia,
@@ -22,7 +22,7 @@ export class DepositoMapper {
 
   static toPersistence(deposito: Deposito) {
     return {
-      id_usuario: deposito.idUsuario,
+      folio_registro: deposito.folioRegistro,
       banco_sucursal: deposito.bancoSucursal,
       ciudad: deposito.ciudad,
       referencia: deposito.referencia,

@@ -5,7 +5,7 @@ export class FacturacionMapper {
   static toDomain(raw: facturaciones): Facturacion {
     return Facturacion.create({
       idFacturacion: raw.id_facturacion,
-      idUsuario: raw.id_usuario ?? 0,
+      folioRegistro: raw.folio_registro ?? "",
       razonSocial: raw.razon_social,
       rfc: raw.rfc,
       calle: raw.calle,
@@ -20,7 +20,7 @@ export class FacturacionMapper {
 
   static toPersistence(facturacion: Facturacion) {
     return {
-      id_usuario: facturacion.idUsuario,
+      folio_registro: facturacion.folioRegistro,
       razon_social: facturacion.razonSocial,
       rfc: facturacion.rfc,
       calle: facturacion.calle,

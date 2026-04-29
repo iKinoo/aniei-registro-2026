@@ -1,6 +1,6 @@
 export interface FacturacionProps {
   idFacturacion?: number | null;
-  idUsuario: number;
+  folioRegistro: string;
   razonSocial: string;
   rfc: string;
   calle?: string | null;
@@ -14,7 +14,7 @@ export interface FacturacionProps {
 
 export class Facturacion {
   readonly idFacturacion: number | null;
-  readonly idUsuario: number;
+  readonly folioRegistro: string;
   readonly razonSocial: string;
   readonly rfc: string;
   readonly calle: string | null;
@@ -27,7 +27,7 @@ export class Facturacion {
 
   private constructor(props: FacturacionProps) {
     this.idFacturacion = props.idFacturacion ?? null;
-    this.idUsuario = props.idUsuario;
+    this.folioRegistro = props.folioRegistro;
     this.razonSocial = props.razonSocial;
     this.rfc = props.rfc;
     this.calle = props.calle ?? null;
