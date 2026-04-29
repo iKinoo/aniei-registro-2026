@@ -30,7 +30,7 @@ export class ReactPdfService implements IPdfService {
   }
 
   async generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer> {
-    const qrUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://registro.aniei.org'}/grupo-completar/${datos.token}`;
+    const qrUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://aniei-registro-2026.vercel.app/'}/grupo-completar/${datos.token}`;
     const qrDataUrl = await QRCode.toDataURL(qrUrl);
     
     const element = React.createElement(HojaRegistroGrupoTemplate, { ...datos, qrDataUrl });

@@ -163,7 +163,7 @@ export class ResendEmailService implements IEmailService {
         <p>A continuación encontrarás adjunto un archivo PDF con la lista de tus miembros y un <strong>Código QR</strong>.</p>
         <p>Por favor, comparte este PDF o el Código QR con los integrantes de tu grupo. Cada integrante deberá escanear el código para acceder a su pase de registro, completar su información personal, correo y así generar su folio de entrada y contraseña.</p>
         <br/>
-        <p>Enlace de emergencia para completar registro: <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://registro.aniei.org'}/grupo-completar/${datos.token}">Enlace aquí</a></p>
+        <p>Enlace de emergencia para completar registro: <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://aniei-registro-2026.vercel.app/'}/grupo-completar/${datos.token}">Enlace aquí</a></p>
         <br/>
         <p>¡Gracias por sumarte al Congreso de la ANIEI 2026!</p>
       </div>
