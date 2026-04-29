@@ -156,9 +156,11 @@ export default async function PerfilPage() {
 
           {/* Acciones */}
           <div className={styles.actions}>
-            <a href="/actividades" className={styles.btnSecondary}>
-              Inscribirse a actividades
-            </a>
+            {inscripciones.length > 0 && (
+              <a href="/actividades" className={styles.btnSecondary}>
+                Inscribirse a actividades
+              </a>
+            )}
             <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
               Registro Grupal Rápido
             </a>

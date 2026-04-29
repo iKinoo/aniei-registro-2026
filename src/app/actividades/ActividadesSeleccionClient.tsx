@@ -290,6 +290,15 @@ export default function ActividadesSeleccionClient({ actividades, inscritasIds }
       {/* Hero header */}
       <div className="bg-linear-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <button 
+            onClick={() => router.push('/perfil')}
+            className="inline-flex items-center gap-2 text-indigo-200 hover:text-white transition-colors text-sm font-medium mb-6 group"
+          >
+            <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Regresar al perfil
+          </button>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
             Actividades del Congreso
           </h1>

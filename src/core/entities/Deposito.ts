@@ -14,6 +14,7 @@ export interface DepositoProps {
   archivoMime: string;
   archivoTamanio: number;
   fechaRegistro?: Date;
+  proposito?: string;
 }
 
 export class Deposito {
@@ -27,6 +28,7 @@ export class Deposito {
   readonly archivoUrl: string;
   readonly archivo: ArchivoComprobante;
   readonly fechaRegistro: Date;
+  readonly proposito: string;
 
   private constructor(props: DepositoProps, archivo: ArchivoComprobante) {
     this.idDeposito = props.idDeposito ?? null;
@@ -39,6 +41,7 @@ export class Deposito {
     this.archivoUrl = props.archivoUrl;
     this.archivo = archivo;
     this.fechaRegistro = props.fechaRegistro ?? new Date();
+    this.proposito = props.proposito ?? 'EVENTO_PRINCIPAL';
   }
 
   static create(props: DepositoProps): Deposito {

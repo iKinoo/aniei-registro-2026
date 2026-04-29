@@ -31,6 +31,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
           instituciones: true,
           tipo_usuario: true,
           depositos: {
+            where: { proposito: 'EVENTO_PRINCIPAL' },
             orderBy: { fecha_registro: 'desc' },
             take: 1, // Get only the most recent deposit
           },

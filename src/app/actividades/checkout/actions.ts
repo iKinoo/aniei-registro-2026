@@ -133,6 +133,7 @@ export async function confirmarInscripcionesAction(
       archivoNombre: file.name,
       archivoMime: file.type,
       archivoTamanio: file.size,
+      proposito: 'ACTIVIDADES',
     });
     await getDepositoRepository().crear(deposito);
   }
