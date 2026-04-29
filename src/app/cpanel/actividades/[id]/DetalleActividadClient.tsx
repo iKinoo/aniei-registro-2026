@@ -148,7 +148,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
               <p>
                 <strong className="text-slate-800">Cupo:</strong> {inscritos.length} / {actividad.cupoMaximo ? actividad.cupoMaximo : 'Sin límite'}
               </p>
-              <p><strong className="text-slate-800">Costo:</strong> {actividad.costo?.monto != null ? `$${actividad.costo.monto} MXN` : 'Gratis'}</p>
+              <p><strong className="text-slate-800">Costo:</strong> {actividad.costo != null && actividad.costo > 0 ? `$${actividad.costo} MXN` : 'Gratis'}</p>
             </div>
           </div>
         </div>

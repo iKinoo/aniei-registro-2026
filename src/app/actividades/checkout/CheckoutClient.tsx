@@ -97,9 +97,9 @@ function ResumenActividad({ a }: { a: ActividadDTO }) {
         <p className="text-xs text-slate-500 mt-0.5">{formatFecha(a.fechaInicio)}</p>
       </div>
       <div className="text-right shrink-0">
-        {a.costo?.monto != null ? (
+        {a.costo != null && a.costo > 0 ? (
           <span className="font-bold text-slate-800 text-sm">
-            ${a.costo.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            ${a.costo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
           </span>
         ) : (
           <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Sin costo</span>
@@ -121,7 +121,7 @@ export default function CheckoutClient({ actividades, estados, facturacionDefaul
   const [confirmacion, setConfirmacion] = useState<ConfirmacionInscripcionResult | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const total = actividades.reduce((s, a) => s + (a.costo?.monto ?? 0), 0);
+  const total = actividades.reduce((s, a) => s + (a.costo ?? 0), 0);
   const tieneCosto = total > 0;
   const idsActividades = actividades.map((a) => a.idActividad);
 

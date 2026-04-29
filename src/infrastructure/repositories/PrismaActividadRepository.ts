@@ -6,7 +6,7 @@ import { TipoActividad } from '@/shared/types/catalogos';
 const include = {
   tipo_actividad: true,
   instituciones: true,
-  actividad_costo: true,
+
   _count: { select: { inscripcion_actividades: true } },
   actividad_ponentes: {
     include: { usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } } },
@@ -41,12 +41,7 @@ function mapToDTO(row: any): ActividadDTO {
           abreviatura: row.instituciones.abreviatura ?? null,
         }
       : null,
-    costo: row.actividad_costo
-      ? {
-          folioRegistro: row.actividad_costo.folio_registro ?? null,
-          monto: row.actividad_costo.monto ? Number(row.actividad_costo.monto) : null,
-        }
-      : null,
+    costo: row.costo ? Number(row.costo) : 0,
     cupoOcupado: row._count?.inscripcion_actividades ?? 0,
     ponentes: (row.actividad_ponentes ?? []).map((p: { folio_registro_ponente: number; rol: string | null; usuarios: { folio_registro: string; nombre: string; apellido: string; correo: string } }) => ({
       folioRegistro: p.folio_registro_ponente,
@@ -78,18 +73,6 @@ export class PrismaActividadRepository implements IActividadRepository {
   }
 
   async crear(data: CrearActividadDTO): Promise<ActividadDTO> {
-    // Build nested costo only when monto is defined (required by schema)
-    const costoCreate =
-      data.costo?.monto != null
-        ? {
-            actividad_costo: {
-              create: {
-                folio_registro: data.costo.folioRegistro ?? null,
-                monto: data.costo.monto,
-              },
-            },
-          }
-        : {};
 
     const tipoConnect =
       data.idTipoActividad != null
@@ -110,7 +93,7 @@ export class PrismaActividadRepository implements IActividadRepository {
         id_sala: data.idSala ?? null,
         ...tipoConnect,
         ...institucionConnect,
-        ...costoCreate,
+        ...(data.costo !== undefined && { costo: data.costo }),
       },
       include,
     });
@@ -138,24 +121,6 @@ export class PrismaActividadRepository implements IActividadRepository {
           }
         : {};
 
-    // Only upsert costo when monto is present
-    const costoUpdate =
-      data.costo?.monto != null
-        ? {
-            actividad_costo: {
-              upsert: {
-                create: {
-                  folio_registro: data.costo.folioRegistro ?? null,
-                  monto: data.costo.monto,
-                },
-                update: {
-                  folio_registro: data.costo.folioRegistro ?? null,
-                  monto: data.costo.monto,
-                },
-              },
-            },
-          }
-        : {};
 
     const row = await this.prisma.actividades.update({
       where: { id_actividad: id },
@@ -167,7 +132,7 @@ export class PrismaActividadRepository implements IActividadRepository {
         ...(data.idSala !== undefined && { id_sala: data.idSala }),
         ...tipoUpdate,
         ...institucionUpdate,
-        ...costoUpdate,
+        ...(data.costo !== undefined && { costo: data.costo }),
       },
       include,
     });

@@ -56,7 +56,6 @@ const emptyForm = (): FormState => ({
   idInstitucionSede: undefined,
   idSala: undefined,
   tieneCosto: false,
-  folioCosto: '',
   montoCosto: '',
 });
 
@@ -69,7 +68,6 @@ interface FormState {
   idInstitucionSede?: number;
   idSala?: number;
   tieneCosto: boolean;
-  folioCosto: string;
   montoCosto: string;
 }
 
@@ -83,10 +81,7 @@ function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
     idInstitucionSede: f.idInstitucionSede,
     idSala: f.idSala,
     ...(f.tieneCosto && f.montoCosto && {
-      costo: {
-        folioRegistro: f.folioCosto || undefined,
-        monto: parseFloat(f.montoCosto),
-      },
+      costo: parseFloat(f.montoCosto),
     }),
   };
 }
@@ -100,9 +95,8 @@ function actividadToForm(a: ActividadDTO): FormState {
     idTipoActividad: a.idTipoActividad ?? undefined,
     idInstitucionSede: a.idInstitucionSede ?? undefined,
     idSala: a.idSala ?? undefined,
-    tieneCosto: !!a.costo,
-    folioCosto: a.costo?.folioRegistro ?? '',
-    montoCosto: a.costo?.monto != null ? String(a.costo.monto) : '',
+    tieneCosto: (a.costo ?? 0) > 0,
+    montoCosto: a.costo != null && a.costo > 0 ? String(a.costo) : '',
   };
 }
 
@@ -316,9 +310,9 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                         })()}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {a.costo?.monto != null ? (
+                        {a.costo != null && a.costo > 0 ? (
                           <span className="text-emerald-600 font-semibold text-xs">
-                            ${a.costo.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                            ${a.costo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                           </span>
                         ) : (
                           <span className="inline-flex px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs rounded-full font-medium">Gratis</span>
@@ -492,17 +486,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                   <span className="text-sm font-semibold text-slate-700">Esta actividad tiene costo de inscripción</span>
                 </label>
                 {form.tieneCosto && (
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <FormField label="Folio de Recibo">
-                      <input
-                        id="input-folio"
-                        type="text"
-                        className={inputCls}
-                        placeholder="Ej. REC-001"
-                        value={form.folioCosto}
-                        onChange={(e) => setField('folioCosto', e.target.value)}
-                      />
-                    </FormField>
+                  <div className="grid grid-cols-1 gap-4 mt-2">
                     <FormField label="Monto (MXN)" required>
                       <input
                         id="input-monto"

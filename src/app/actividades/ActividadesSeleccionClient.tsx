@@ -69,7 +69,7 @@ interface CartProps {
 }
 
 function CartSidebar({ selected, onRemove, onCheckout }: CartProps) {
-  const total = selected.reduce((s, a) => s + (a.costo?.monto ?? 0), 0);
+  const total = selected.reduce((s, a) => s + (a.costo ?? 0), 0);
 
   return (
     <aside className="sticky top-24 w-full lg:w-80 shrink-0">
@@ -87,9 +87,9 @@ function CartSidebar({ selected, onRemove, onCheckout }: CartProps) {
               <div key={a.idActividad} className="flex items-start gap-3 group">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 leading-snug line-clamp-2">{a.nombre}</p>
-                  {a.costo?.monto ? (
+                  {a.costo && a.costo > 0 ? (
                     <p className="text-xs text-emerald-600 font-semibold mt-0.5">
-                      ${a.costo.monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      ${a.costo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </p>
                   ) : (
                     <p className="text-xs text-slate-400 mt-0.5">Sin costo</p>
@@ -143,7 +143,7 @@ interface CardProps {
 }
 
 function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardProps) {
-  const tieneCosto = a.costo?.monto != null;
+  const tieneCosto = a.costo != null && a.costo > 0;
   const lleno = esCupoLleno(a);
   // Una actividad no es elegible si ya está inscrito o si no hay cupo
   const noElegible = isInscrita || lleno;
@@ -178,7 +178,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
           <div className="text-right shrink-0">
             {tieneCosto ? (
               <span className="text-sm font-bold text-slate-800">
-                ${a.costo!.monto!.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                ${a.costo!.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
             ) : (
               <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Gratis</span>

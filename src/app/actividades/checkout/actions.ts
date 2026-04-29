@@ -23,7 +23,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
   try {
     const rows = await prisma.actividades.findMany({
       where: { id_actividad: { in: ids } },
-      include: { tipo_actividad: true, instituciones: true, actividad_costo: true },
+      include: { tipo_actividad: true, instituciones: true },
     });
     const data: ActividadDTO[] = rows.map((r) => ({
       idActividad: r.id_actividad,
@@ -46,10 +46,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         nombre: r.instituciones.nombre,
         abreviatura: r.instituciones.abreviatura ?? null,
       } : null,
-      costo: r.actividad_costo ? {
-        folioRegistro: r.actividad_costo.folio_recibo ?? null,
-        monto: r.actividad_costo.monto ? Number(r.actividad_costo.monto) : null,
-      } : null,
+      costo: r.costo ? Number(r.costo) : 0,
       cupoOcupado: 0, // No necesario en el checkout (ya se validó en selección)
       ponentes: [],   // No necesario en el checkout
     }));
@@ -205,7 +202,7 @@ export async function confirmarInscripcionesAction(
   // 4. Preparar datos para correo y pantalla de confirmación
   const actividadesRows = await prisma.actividades.findMany({
     where: { id_actividad: { in: idsActividades } },
-    include: { actividad_costo: true },
+
     orderBy: { fecha_inicio: 'asc' },
   });
 
@@ -216,12 +213,12 @@ export async function confirmarInscripcionesAction(
   const actividadesParaCorreo = actividadesRows.map((a) => ({
     nombre: a.nombre,
     fecha: a.fecha_inicio.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }),
-    costo: a.actividad_costo?.monto
-      ? `$${Number(a.actividad_costo.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+    costo: a.costo && Number(a.costo) > 0
+      ? `$${Number(a.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
       : null,
   }));
 
-  const total = actividadesRows.reduce((s, a) => s + (a.actividad_costo?.monto ? Number(a.actividad_costo.monto) : 0), 0);
+  const total = actividadesRows.reduce((s, a) => s + (a.costo ? Number(a.costo) : 0), 0);
   const totalStr = total > 0
     ? `$${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
     : null;

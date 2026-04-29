@@ -31,7 +31,7 @@ export interface ActividadDTO {
   tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean; generaConstanciaParticipante: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
   // Optional details
-  costo: { folioRegistro: string | null; monto: number | null } | null;
+  costo: number;
   ponentes: PonenteDTO[];
 }
 
@@ -44,10 +44,7 @@ export interface CrearActividadDTO {
   idInstitucionSede?: number;
   idSala?: number;
   // Optional detail sections
-  costo?: {
-    folioRegistro?: string;
-    monto?: number;
-  };
+  costo?: number;
 }
 
 export type ActualizarActividadDTO = Partial<CrearActividadDTO>;

@@ -39,7 +39,6 @@ export default async function PerfilPage() {
             include: {
               tipo_actividad: true,
               instituciones: true,
-              actividad_costo: true,
             },
           },
         },
@@ -117,9 +116,9 @@ export default async function PerfilPage() {
                           {act.tipo_actividad.descripcion}
                         </span>
                       )}
-                      {act.actividad_costo?.monto ? (
+                      {act.costo && Number(act.costo) > 0 ? (
                         <span className={styles.costoBadge}>
-                          ${Number(act.actividad_costo.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          ${Number(act.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                         </span>
                       ) : (
                         <span className={styles.gratisBadge}>Gratis</span>
