@@ -1,7 +1,7 @@
 # PLAN & DESIGN — Sistema de Registro ANIEI 2026
 
-> **Estado:** Implementado (MVP funcional)  
-> **Stack:** Next.js 16 (App Router) · React 19 · PostgreSQL (Supabase) · Prisma 7 · TypeScript · Zod 4 · Tailwind CSS 4  
+> **Estado:** En desarrollo activo (MVP funcional con módulos expandidos)  
+> **Stack:** Next.js 16 (App Router) · React 19 · PostgreSQL (Supabase) · Prisma 7 · TypeScript · Zod 4 · Tailwind CSS 4 · NextAuth v5 · Nodemailer  
 > **Principio rector:** Clean Architecture (Arquitectura por capas / Hexagonal) adaptada a Next.js
 
 ---
@@ -20,9 +20,11 @@
 10. [Diagramas de Secuencia](#10-diagramas-de-secuencia)
 11. [Diagramas de Flujo](#11-diagramas-de-flujo)
 12. [Módulo de Registro Grupal](#12-módulo-de-registro-grupal)
-13. [Estrategia de Infraestructura Intercambiable](#13-estrategia-de-infraestructura-intercambiable)
-14. [Data Mapper Pattern (ORM ↔ Dominio)](#14-data-mapper-pattern-orm--dominio)
-15. [Decisiones de Diseño (ADRs)](#15-decisiones-de-diseño-adrs)
+13. [Módulo de Actividades](#13-módulo-de-actividades)
+14. [Módulo de Autenticación y CPanel](#14-módulo-de-autenticación-y-cpanel)
+15. [Estrategia de Infraestructura Intercambiable](#15-estrategia-de-infraestructura-intercambiable)
+16. [Data Mapper Pattern (ORM ↔ Dominio)](#16-data-mapper-pattern-orm--dominio)
+17. [Decisiones de Diseño (ADRs)](#17-decisiones-de-diseño-adrs)
 
 ---
 
@@ -30,10 +32,12 @@
 
 Sistema web de inscripción al congreso ANIEI 2026 que permite:
 
-- **Registro individual** de asistentes al congreso.
+- **Registro individual** de asistentes al congreso con selección de actividades.
 - **Registro grupal** (una persona inscribe N personas de la misma institución).
 - **Confirmación por correo** electrónico tras el registro exitoso.
-- **Generación de constancia PDF** de inscripción/participación.
+- **Generación de constancia PDF** de inscripción, participación y ponencia.
+- **Panel de administración (CPanel)** para gestión de usuarios, actividades, ponentes y envío de constancias.
+- **Autenticación** de administradores via Auth.js (NextAuth v5) con credenciales locales.
 - **Independencia de proveedores** de infraestructura (BD, correo, almacenamiento de archivos).
 
 El sistema se construye sobre Next.js aprovechando **Server Actions** como punto de entrada al backend, colocando frontend y backend en el mismo repositorio pero con separación lógica estricta entre capas.
@@ -47,10 +51,16 @@ El sistema se construye sobre Next.js aprovechando **Server Actions** como punto
 | RF-01 | Registro individual de asistente (datos personales + institución)         | Alta      |
 | RF-02 | Carga de comprobante de pago (imagen/PDF) durante el registro              | Alta      |
 | RF-03 | Envío de correo de confirmación de inscripción                            | Alta      |
-| RF-04 | Generación y envío de constancia PDF de inscripción                       | Alta      |
+| RF-04 | Generación y almacenamiento de constancia PDF de inscripción               | Alta      |
 | RF-05 | Registro grupal: una persona registra N asistentes de su misma institución (un solo comprobante, feedback de costo total) | Media     |
 | RF-06 | Solicitud de facturación                                                  | Media     |
 | RF-07 | Verificación de inscripción (flujo admin o automático)                    | Media     |
+| RF-08 | Inscripción a actividades del congreso (talleres, cursos, etc.)           | Media     |
+| RF-09 | Gestión de ponentes por actividad                                         | Media     |
+| RF-10 | Generación de constancias de participación y ponencia                     | Media     |
+| RF-11 | Panel de administración para gestión de usuarios y actividades            | Alta      |
+| RF-12 | Autenticación de administradores con credenciales locales                 | Alta      |
+| RF-13 | Envío de constancias desde el CPanel por el administrador                 | Media     |
 
 ---
 
@@ -60,10 +70,11 @@ El sistema se construye sobre Next.js aprovechando **Server Actions** como punto
 |--------|-----------------------------------------------------------------------------------------|
 | RNF-01 | La capa de dominio y aplicación **NO** deben depender de frameworks ni librerías externas |
 | RNF-02 | Cambiar de proveedor de BD (Supabase → VPS PostgreSQL) no debe afectar casos de uso      |
-| RNF-03 | Cambiar proveedor de correo (Resend → SendGrid → SMTP propio) requiere solo un adaptador  |
+| RNF-03 | Cambiar proveedor de correo (Nodemailer → SendGrid → SMTP propio) requiere solo un adaptador |
 | RNF-04 | Cambiar almacenamiento (Supabase Storage → S3 → filesystem) requiere solo un adaptador    |
 | RNF-05 | El módulo de registro grupal debe poder activarse/desactivarse sin modificar el flujo base |
 | RNF-06 | El sistema debe ser desplegable en Vercel, Docker (VPS) o cualquier plataforma Node.js     |
+| RNF-07 | La autenticación no debe depender de un proveedor externo (Auth.js con credenciales locales) |
 
 ---
 
@@ -132,46 +143,75 @@ En Clean Architecture tradicional (Express, Nest), un **Controller** recibe el r
 
 ```
 prisma/
-└── schema.prisma                  # Esquema Prisma (fuente de verdad BD)
+├── schema.prisma                  # Esquema Prisma (fuente de verdad BD)
+└── migrations/                    # Historial de migraciones
 
 prisma.config.ts                   # Configuración Prisma (usa DIRECT_URL)
 
 src/
 ├── app/                          # ── PRESENTATION LAYER (Next.js) ──
 │   ├── layout.tsx
-│   ├── page.tsx                  # Landing page
+│   ├── page.tsx                  # Landing page (redirect autenticado)
 │   ├── globals.css
+│   ├── login/
+│   │   ├── page.tsx              # Página de login de administradores
+│   │   └── actions/              # Server Actions de autenticación
 │   ├── api/
+│   │   ├── auth/[...nextauth]/
+│   │   │   └── route.ts          # API Routes de NextAuth v5
 │   │   └── constancia/
 │   │       └── [folio]/
 │   │           └── route.ts      # API Route: descarga PDF por folio
 │   ├── registro/
-│   │   ├── page.tsx              # Server Component: carga catálogos
+│   │   ├── page.tsx              # Server Component: carga catálogos y actividades
 │   │   ├── components/           # Componentes UI del registro
-│   │   │   ├── RegistroForm.tsx  # Client Component: form individual
-│   │   │   ├── GrupoForm.tsx     # Client Component: form grupal
-│   │   │   ├── MiembroRow.tsx    # Client Component: fila de miembro
-│   │   │   ├── SelectCatalogo.tsx # Client Component: select reutilizable
-│   │   │   └── CampoArchivo.tsx  # Client Component: upload con preview
+│   │   │   ├── RegistroForm.tsx  # Client Component: wizard multi-paso (6 pasos)
+│   │   │   └── steps/
+│   │   │       ├── StepDatosGenerales.tsx
+│   │   │       ├── StepActividades.tsx
+│   │   │       ├── StepGrupo.tsx
+│   │   │       ├── StepPago.tsx
+│   │   │       ├── StepFacturacion.tsx
+│   │   │       └── StepCheckout.tsx
 │   │   └── actions/
-│   │       ├── registrar-usuario.action.ts    # Server Action
-│   │       └── registrar-grupo.action.ts      # Server Action (modular)
+│   │       └── registrar-usuario.action.ts  # Server Action (individual + grupal)
 │   ├── confirmacion/
 │   │   └── page.tsx
-│   └── constancia/
-│       └── [folio]/
-│           └── page.tsx              # Vista de constancia con link a descarga
+│   ├── constancia/
+│   │   └── [folio]/
+│   │       └── page.tsx              # Vista de constancia con link a descarga
+│   ├── actividades/
+│   │   ├── page.tsx                  # Selección de actividades
+│   │   └── checkout/
+│   │       └── page.tsx              # Checkout de pago de actividades
+│   ├── grupo-completar/
+│   │   └── [token]/
+│   │       └── page.tsx              # Completar registro de miembros de grupo
+│   ├── perfil/
+│   │   ├── page.tsx                  # Perfil de usuario autenticado
+│   │   └── grupo/registro/
+│   │       └── page.tsx              # Registro rápido de grupo
+│   └── cpanel/                       # ── Panel de Administración ──
+│       ├── layout.tsx               # Layout con navegación admin
+│       ├── page.tsx                  # Gestión de usuarios
+│       ├── configuracion/
+│       │   └── page.tsx              # Configuración del sistema
+│       └── actividades/
+│           ├── page.tsx              # Listado de actividades
+│           └── [id]/
+│               └── page.tsx          # Detalle + gestión de ponentes
 │
 ├── core/                         # ── DOMAIN LAYER (puro TypeScript) ──
 │   ├── entities/
 │   │   ├── Usuario.ts
-│   │   ├── Deposito.ts    # Reemplaza Deposito legacy (archivo subido)
+│   │   ├── Deposito.ts           # Comprobante de pago (archivo subido)
 │   │   ├── Facturacion.ts
-│   │   └── GrupoRegistro.ts     # Entidad para registro grupal
+│   │   ├── GrupoRegistro.ts      # Entidad para registro grupal
+│   │   └── Acceso.ts             # Entidad de autenticación/roles
 │   ├── value-objects/
 │   │   ├── Email.ts
 │   │   ├── Telefono.ts
-│   │   ├── FolioRecibo.ts
+│   │   ├── FolioRegistro.ts      # PK string de usuario (e.g., ANI26-0001)
 │   │   ├── CodigoBarras.ts
 │   │   ├── Monto.ts
 │   │   └── ArchivoComprobante.ts # Validación de tipo/tamaño de archivo
@@ -183,67 +223,94 @@ src/
 │       └── Genero.ts
 │
 ├── application/                  # ── APPLICATION LAYER ──
-│   ├── ports/                    # Interfaces (contratos)
+│   ├── ports/                    # Interfaces (contratos) = 13 puertos
 │   │   ├── IUsuarioRepository.ts
 │   │   ├── IDepositoRepository.ts
 │   │   ├── IFacturacionRepository.ts
-│   │   ├── ICatalogoRepository.ts    # Lectura de catálogos
+│   │   ├── ICatalogoRepository.ts
+│   │   ├── IAccesoRepository.ts
+│   │   ├── IActividadRepository.ts
+│   │   ├── IInscripcionActividadRepository.ts
+│   │   ├── IPonentesRepository.ts
+│   │   ├── IAdminQueryService.ts
+│   │   ├── IAuthService.ts
 │   │   ├── IEmailService.ts
 │   │   ├── IPdfService.ts
 │   │   └── IStorageService.ts
 │   ├── use-cases/
-│   │   ├── RegistrarUsuario.ts         # Incluye subida de comprobante
-│   │   ├── RegistrarGrupoRapido.ts           # Modular (un solo comprobante)
+│   │   ├── RegistrarUsuario.ts
+│   │   ├── RegistrarGrupoRapido.ts
 │   │   ├── EnviarConfirmacion.ts
 │   │   ├── GenerarConstancia.ts
-│   │   └── SolicitarFacturacion.ts
+│   │   ├── GenerarConstanciaParticipanteUseCase.ts
+│   │   ├── GenerarConstanciaPonenteUseCase.ts
+│   │   ├── EnviarConstanciaParticipanteUseCase.ts
+│   │   ├── EnviarConstanciaPonenteUseCase.ts
+│   │   ├── SolicitarFacturacion.ts
+│   │   ├── GestionarActividades.ts
+│   │   ├── LoginCpanelUseCase.ts
+│   │   ├── ObtenerAccesoArchivo.ts
+│   │   └── ObtenerUsuariosForAdmin.ts
 │   └── dtos/
-│       ├── RegistroUsuarioDTO.ts       # Incluye ArchivoDTO
-│       ├── RegistroGrupoDTO.ts         # Un comprobante para todo el grupo
+│       ├── RegistroUsuarioDTO.ts       # Incluye ArchivoDTO, DepositoDTO
+│       ├── RegistrarGrupoRapidoDTO.ts
 │       ├── FacturacionDTO.ts
-│       ├── ResultadoRegistro.ts        # Respuesta de registro individual
-│       └── ResultadoRegistroGrupo.ts   # Respuesta de registro grupal
+│       ├── ActividadDTO.ts
+│       ├── InscripcionActividadDTO.ts
+│       ├── AuthSessionDTO.ts
+│       ├── UsuarioForAdminDTO.ts
+│       ├── PaginatedResult.ts
+│       ├── ResultadoRegistro.ts
+│       └── ResultadoRegistroGrupo.ts
 │
 ├── generated/                    # ── CÓDIGO GENERADO ──
-│   └── prisma/                   # Cliente Prisma generado (output custom)
-│       ├── client.ts
-│       ├── models.ts
-│       ├── models/                  # Tipos por tabla (usuarios.ts, etc.)
-│       └── ...
+│   └── prisma/                   # Cliente Prisma generado
 │
 ├── infrastructure/               # ── INFRASTRUCTURE LAYER ──
 │   ├── database/
 │   │   └── client.ts                     # Singleton PrismaClient (PrismaPg adapter)
-│   ├── mappers/                          # ── DATA MAPPERS (Prisma ↔ Domain) ──
-│   │   ├── UsuarioMapper.ts              # PrismaUsuario ↔ Usuario (entidad)
-│   │   ├── DepositoMapper.ts      # PrismaComprobante ↔ Deposito
-│   │   └── FacturacionMapper.ts          # PrismaFacturacion ↔ Facturacion
+│   ├── mappers/                          # ── DATA MAPPERS ──
+│   │   ├── UsuarioMapper.ts
+│   │   ├── DepositoMapper.ts
+│   │   └── FacturacionMapper.ts
 │   ├── repositories/
-│   │   ├── PrismaUsuarioRepository.ts    # Usa PrismaClient + UsuarioMapper
+│   │   ├── PrismaUsuarioRepository.ts
 │   │   ├── PrismaDepositoRepository.ts
 │   │   ├── PrismaFacturacionRepository.ts
-│   │   └── PrismaCatalogoRepository.ts
+│   │   ├── PrismaCatalogoRepository.ts
+│   │   ├── PrismaAccesoRepository.ts
+│   │   ├── PrismaActividadRepository.ts
+│   │   ├── PrismaInscripcionActividadRepository.ts
+│   │   └── PrismaPonentesRepository.ts
 │   ├── services/
 │   │   ├── email/
-│   │   │   ├── ResendEmailService.ts       # Adaptador Resend (implementado)
+│   │   │   ├── NodemailerEmailService.ts   # Adaptador Gmail SMTP
 │   │   │   └── templates/
-│   │   │       ├── confirmacion.ts         # HTML template confirmación
-│   │   │       └── constancia.ts           # HTML template constancia
+│   │   │       ├── confirmacion.ts
+│   │   │       ├── constancia.ts
+│   │   │       ├── confirmacion-actividades.ts
+│   │   │       └── notificacion-ponente.ts
 │   │   ├── pdf/
-│   │   │   ├── ReactPdfService.ts          # Adaptador @react-pdf/renderer (implementado)
+│   │   │   ├── ReactPdfService.ts          # Adaptador @react-pdf/renderer
 │   │   │   └── templates/
-│   │   │       └── ConstanciaTemplate.tsx  # Componente React PDF
-│   │   └── storage/
-│   │       └── SupabaseStorageService.ts   # Adaptador Supabase Storage (implementado)
+│   │   │       ├── ConstanciaTemplate.tsx
+│   │   │       ├── ConstanciaParticipanteTemplate.tsx
+│   │   │       ├── ConstanciaPonenteTemplate.tsx
+│   │   │       └── HojaRegistroGrupoTemplate.tsx
+│   │   ├── storage/
+│   │   │   └── SupabaseStorageService.ts   # Adaptador Supabase Storage
+│   │   ├── auth/
+│   │   │   └── AuthJsAuthService.ts        # Adaptador Auth.js (NextAuth v5)
+│   │   └── PrismaAdminQueryService.ts      # Servicio de consultas admin
 │   └── config/
-│       └── container.ts                    # Dependency Injection (hardcoded)
+│       ├── container.ts                    # Dependency Injection (factory)
+│       └── supabase/                       # Clientes Supabase (client, server)
 │
 └── shared/                       # ── UTILIDADES COMPARTIDAS ──
     ├── types/
-    │   └── catalogos.ts              # Cargo, Estado, Institucion, TipoUsuario, Titulo
-    ├── validation/               # Schemas Zod v4 (validación de input)
-    │   ├── registro.schema.ts
-    │   └── grupo.schema.ts
+    │   └── catalogos.ts              # Cargo, Estado, Institucion, TipoUsuario, Titulo, TipoActividad
+    ├── validation/                   # Schemas Zod v4 (validación de input)
+    │   └── registro.schema.ts
     └── constants/
 ```
 
@@ -268,17 +335,19 @@ graph TB
 
     subgraph Domain["🧠 Domain Layer (Pure TypeScript)"]
         Entities["Entities<br/>Usuario · Deposito<br/>Facturacion · GrupoRegistro"]
-        VO["Value Objects<br/>Email · FolioRecibo<br/>Monto · CodigoBarras<br/>ArchivoComprobante"]
+        VO["Value Objects<br/>Email · FolioRegistro<br/>Monto · CodigoBarras<br/>ArchivoComprobante"]
         DErr["Domain Errors"]
     end
 
     subgraph Infrastructure["🔌 Infrastructure Layer (Adapters)"]
-        Repos["Repositories<br/>PrismaUsuarioRepo<br/>PrismaDepositoRepo"]
+        Repos["Repositories<br/>PrismaUsuarioRepo<br/>PrismaDepositoRepo<br/>PrismaActividadRepo<br/>PrismaAccesoRepo"]
         Mappers["Data Mappers<br/>UsuarioMapper<br/>DepositoMapper<br/>FacturacionMapper"]
         ORM["Prisma ORM<br/>(PrismaClient)"]
-        EmailSvc["Email Adapters<br/>Resend · Nodemailer · SendGrid"]
+        EmailSvc["Email Adapters<br/>Nodemailer · SendGrid"]
         PdfSvc["PDF Adapters<br/>ReactPdf · Puppeteer"]
         StoreSvc["Storage Adapters<br/>Supabase · S3 · Local"]
+        AuthSvc["Auth Adapters<br/>Auth.js · Supabase"]
+        AdminSvc["Admin Services<br/>PrismaAdminQueryService"]
         DB[("PostgreSQL 17")]
     end
 
@@ -292,6 +361,8 @@ graph TB
     Ports -.->|"implementa"| EmailSvc
     Ports -.->|"implementa"| PdfSvc
     Ports -.->|"implementa"| StoreSvc
+    Ports -.->|"implementa"| AuthSvc
+    Ports -.->|"implementa"| AdminSvc
 
     Repos -->|"usa"| Mappers
     Repos -->|"query/insert"| ORM
@@ -312,8 +383,7 @@ graph TB
 ```mermaid
 classDiagram
     class Usuario {
-        -idUsuario: number | null
-        -folioRecibo: FolioRecibo | null
+        -folioRegistro: string | null
         -codigoBarras: CodigoBarras | null
         -nombre: string
         -apellido: string
@@ -330,23 +400,28 @@ classDiagram
         -fechaRegistro: Date
         +static create(props): Usuario
         +verificar(): void
-        +asignarFolio(folio: FolioRecibo): void
+        +asignarCodigoBarras(codigo: CodigoBarras): void
+        +nombreCompleto(): string
     }
 
     class Deposito {
-        -idComprobante: number | null
-        -idUsuario: number
+        -idDeposito: number | null
+        -folioRegistro: string
+        -bancoSucursal: string | null
+        -ciudad: string | null
+        -referencia: string
+        -monto: Monto
+        -fechaDeposito: Date
         -archivoUrl: string
         -archivo: ArchivoComprobante
-        -monto: Monto | null
-        -esGrupal: boolean
         -fechaRegistro: Date
+        -proposito: string
         +static create(props): Deposito
     }
 
     class Facturacion {
         -idFacturacion: number | null
-        -idUsuario: number
+        -folioRegistro: string
         -razonSocial: string
         -rfc: string
         -calle: string
@@ -363,9 +438,9 @@ classDiagram
         -responsable: Usuario
         -miembros: Usuario[]
         -idInstitucionCompartida: number
+        -idEntidadFederativaCompartida: number
         -responsableYaRegistrado: boolean
         +static create(responsable, miembros, yaRegistrado?): GrupoRegistro
-        +agregarMiembro(m: Usuario): void
         +obtenerTodos(): Usuario[]
         +obtenerNuevosRegistros(): Usuario[]
         +totalIntegrantes(): number
@@ -379,11 +454,12 @@ classDiagram
         +toString(): string
     }
 
-    class FolioRecibo {
+    class FolioRegistro {
         <<value-object>>
         -valor: string
-        +static create(folio: string): FolioRecibo
+        +static create(folio: string): FolioRegistro
         +toString(): string
+        +equals(other: FolioRegistro): boolean
     }
 
     class CodigoBarras {
@@ -424,6 +500,16 @@ classDiagram
         +getExtension(): string | null
     }
 
+    class Acceso {
+        -idAcceso: number
+        -email: string
+        -rol: string
+        -nombre: string | null
+        -authId: string | null
+        +static create(props): Acceso
+        +isAdmin(): boolean
+    }
+
     class Genero {
         <<enumeration>>
         MASCULINO
@@ -433,17 +519,17 @@ classDiagram
 
     Usuario *-- Email
     Usuario *-- Telefono
-    Usuario *-- FolioRecibo
     Usuario *-- CodigoBarras
     Deposito *-- Monto
     Deposito *-- ArchivoComprobante
     GrupoRegistro "1" *-- "1" Usuario : responsable
     GrupoRegistro "1" *-- "*" Usuario : miembros
+    Acceso --> Usuario : folioRegistro
 ```
 
 ### 7.2 Catálogos
 
-Los catálogos (`cargos`, `estados`, `instituciones`, `tipo_usuario`) se tratan como **datos de referencia** que se consultan por ID. No son entidades ricas del dominio; se modelan como tipos simples o interfaces de solo lectura:
+Los catálogos (`cargos`, `estados`, `instituciones`, `tipo_usuario`, `titulos`, `tipo_actividad`) se tratan como **datos de referencia** que se consultan por ID. No son entidades ricas del dominio; se modelan como tipos simples o interfaces de solo lectura:
 
 ```typescript
 // No son clases con lógica, solo tipos para catálogos (src/shared/types/catalogos.ts)
@@ -452,6 +538,7 @@ interface Estado { idEntidadFederativa: number; nombre: string }
 interface Institucion { idInstitucion: number; nombre: string; abreviatura: string | null }
 interface TipoUsuario { idTipoUsuario: number; descripcion: string }
 interface Titulo { idTitulo: number; descripcion: string }
+interface TipoActividad { idTipoActividad: number; clave: string | null; descripcion: string; manejaEquipos: boolean; generaConstanciaParticipante: boolean }
 ```
 
 ---
@@ -467,21 +554,22 @@ classDiagram
         +crear(usuario: Usuario): Promise~Usuario~
         +crearMuchos(usuarios: Usuario[]): Promise~Usuario[]~
         +buscarPorCorreo(correo: Email): Promise~Usuario | null~
-        +buscarPorId(id: number): Promise~Usuario | null~
-        +buscarPorFolio(folio: FolioRecibo): Promise~Usuario | null~
-        +verificar(id: number): Promise~void~
+        +buscarPorId(id: string): Promise~Usuario | null~
+        +buscarPorFolio(folio: FolioRegistro): Promise~Usuario | null~
+        +verificar(id: string): Promise~void~
+        +crearGrupoTransaccional(data): Promise~(usuariosIds, folios)~
     }
 
     class IDepositoRepository {
         <<port>>
-        +crear(comprobante: Deposito): Promise~Deposito~
-        +buscarPorUsuario(idUsuario: number): Promise~Deposito | null~
+        +crear(deposito: Deposito): Promise~Deposito~
+        +buscarPorUsuario(folioRegistro: string): Promise~Deposito | null~
     }
 
     class IFacturacionRepository {
         <<port>>
         +crear(facturacion: Facturacion): Promise~Facturacion~
-        +buscarPorUsuario(idUsuario: number): Promise~Facturacion | null~
+        +buscarPorUsuario(folioRegistro: string): Promise~Facturacion | null~
     }
 
     class ICatalogoRepository {
@@ -490,24 +578,76 @@ classDiagram
         +obtenerEstados(): Promise~Estado[]~
         +obtenerInstituciones(): Promise~Institucion[]~
         +obtenerTiposUsuario(): Promise~TipoUsuario[]~
+        +obtenerTiposActividad(): Promise~TipoActividad[]~
+    }
+
+    class IAccesoRepository {
+        <<port>>
+        +crear(acceso: Acceso): Promise~Acceso~
+        +buscarPorEmail(email: string): Promise~Acceso | null~
+        +actualizarRol(acceso: Acceso): Promise~Acceso~
+    }
+
+    class IActividadRepository {
+        <<port>>
+        +listar(): Promise~ActividadDTO[]~
+        +obtenerPorId(id: number): Promise~ActividadDTO | null~
+        +crear(data: CrearActividadDTO): Promise~ActividadDTO~
+        +actualizar(id: number, data): Promise~ActividadDTO~
+        +obtenerTiposActividad(): Promise~TipoActividad[]~
+    }
+
+    class IInscripcionActividadRepository {
+        <<port>>
+        +inscribirUsuario(folioRegistro: string, idActividad: number): void
+        +obtenerPorUsuario(folioRegistro: string): Promise~InscripcionActividadDTO[]~
+    }
+
+    class IPonentesRepository {
+        <<port>>
+        +crear(data): Promise~void~
+        +listarPorActividad(idActividad: number): Promise~Ponente[]~
+        +eliminar(idPonente: number): Promise~void~
+    }
+
+    class IAdminQueryService {
+        <<port>>
+        +obtenerUsuariosPaginado(params): PaginatedResult~UsuarioForAdminDTO~
+        +obtenerUsuario(folioRegistro: string): UsuarioForAdminDTO
+    }
+
+    class IAuthService {
+        <<port>>
+        %% +signIn(credentials): Promise~{ success, error? }~
+        +signOut(): Promise~void~
+        +getCurrentSession(): Promise~AuthSessionDTO | null~
     }
 
     class IEmailService {
         <<port>>
         +enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise~void~
         +enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise~void~
+        +enviarConfirmacionActividades(destinatario: string, datos): Promise~void~
+        +enviarNotificacionPonente(destinatario: string, datos): Promise~void~
+        +enviarConstanciaPonente(destinatario: string, pdfBuffer, nombre, actividad): Promise~void~
+        +enviarConstanciaParticipante(destinatario: string, pdfBuffer, nombre, actividad): Promise~void~
+        +enviarConfirmacionGrupoRapido(destinatario: string, datos, pdfBuffer): Promise~void~
     }
 
     class IPdfService {
         <<port>>
         +generarConstanciaInscripcion(datos: ConstanciaData): Promise~Buffer~
+        +generarConstanciaPonente(datos: ConstanciaPonenteData): Promise~Buffer~
+        +generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise~Buffer~
+        +generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise~Buffer~
     }
 
     class IStorageService {
         <<port>>
         +subir(ruta: string, buffer: Buffer, mime: string): Promise~string~
-        +obtenerUrl(ruta: string): Promise~string~
+        +getAccess(file: FileReference): Promise~string~
         +eliminar(ruta: string): Promise~void~
+        +descargar(ruta: string): Promise~Buffer~
     }
 
     class UsuarioMapper {
@@ -518,8 +658,8 @@ classDiagram
 
     class DepositoMapper {
         <<data-mapper>>
-        +toDomain(prismaComprobante): Deposito
-        +toPersistence(comprobante): PrismaComprobanteCreateInput
+        +toDomain(prismaDeposito): Deposito
+        +toPersistence(deposito): PrismaDepositoCreateInput
     }
 
     class FacturacionMapper {
@@ -533,7 +673,7 @@ classDiagram
         -prisma: PrismaClient
         -mapper: UsuarioMapper
     }
-    class ResendEmailService {
+    class NodemailerEmailService {
         <<adapter>>
     }
     class ReactPdfService {
@@ -542,12 +682,16 @@ classDiagram
     class SupabaseStorageService {
         <<adapter>>
     }
+    class AuthJsAuthService {
+        <<adapter>>
+    }
 
     IUsuarioRepository <|.. PrismaUsuarioRepo
     PrismaUsuarioRepo --> UsuarioMapper : usa
-    IEmailService <|.. ResendEmailService
+    IEmailService <|.. NodemailerEmailService
     IPdfService <|.. ReactPdfService
     IStorageService <|.. SupabaseStorageService
+    IAuthService <|.. AuthJsAuthService
 ```
 
 ### 8.2 Dependency Injection Container
@@ -557,24 +701,32 @@ El container es una **simple factory** que instancia adaptadores concretos. Actu
 ```
 container.ts
 ├── getUsuarioRepository()          → PrismaUsuarioRepository(prisma)
-├── getDepositoRepository()  → PrismaDepositoRepository(prisma)
+├── getDepositoRepository()         → PrismaDepositoRepository(prisma)
 ├── getFacturacionRepository()      → PrismaFacturacionRepository(prisma)
 ├── getCatalogoRepository()         → PrismaCatalogoRepository(prisma)
-├── getEmailService()               → ResendEmailService(RESEND_API_KEY, EMAIL_FROM)
+├── getAccesoRepository()           → PrismaAccesoRepository(prisma)
+├── getActividadRepository()        → PrismaActividadRepository(prisma)
+├── getInscripcionActividadRepository() → PrismaInscripcionActividadRepository(prisma)
+├── getPonentesRepository()         → PrismaPonentesRepository(prisma)
+├── getAdminQueryService()          → PrismaAdminQueryService(prisma)
+├── getEmailService()               → NodemailerEmailService(GMAIL_USER, GMAIL_APP_PASSWORD, EMAIL_FROM)
 ├── getPdfService()                 → ReactPdfService()
-└── getStorageService()             → SupabaseStorageService(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+├── getStorageService()             → SupabaseStorageService(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+└── getAuthService()                → AuthJsAuthService()
 ```
 
 **Variables de entorno requeridas por el container:**
 
 ```
-RESEND_API_KEY          # API key de Resend
-EMAIL_FROM              # Remitente (e.g. "ANIEI 2026 <registro@dominio.com>")
-NEXT_PUBLIC_SUPABASE_URL # URL del proyecto Supabase
+GMAIL_USER               # Usuario de Gmail (para Nodemailer SMTP)
+GMAIL_APP_PASSWORD        # App password de Gmail
+EMAIL_FROM               # Remitente (e.g. "ANIEI 2026 <registro@dominio.com>")
+NEXT_PUBLIC_SUPABASE_URL  # URL del proyecto Supabase
 SUPABASE_SERVICE_ROLE_KEY # Service role key de Supabase
+AUTH_SECRET               # Secreto para JWT de NextAuth
 ```
 
-> **Nota:** Para agregar switching por variable de entorno (e.g. `EMAIL_PROVIDER=resend|sendgrid`), se modificaría únicamente este archivo.
+> **Nota:** Para agregar switching por variable de entorno (e.g. `EMAIL_PROVIDER=nodemailer|sendgrid`), se modificaría únicamente este archivo.
 
 ---
 
@@ -586,22 +738,24 @@ SUPABASE_SERVICE_ROLE_KEY # Service role key de Supabase
 classDiagram
     class RegistrarUsuario {
         -usuarioRepo: IUsuarioRepository
-        -comprobanteRepo: IDepositoRepository
+        -depositoRepo: IDepositoRepository
         -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
         -catalogoRepo: ICatalogoRepository
+        -actividadRepo: IActividadRepository
+        -inscripcionActividadRepo: IInscripcionActividadRepository
         +execute(dto: RegistroUsuarioDTO): Promise~ResultadoRegistro~
     }
 
     class RegistrarGrupoRapido {
         -usuarioRepo: IUsuarioRepository
-        -comprobanteRepo: IDepositoRepository
+        -depositoRepo: IDepositoRepository
         -storageService: IStorageService
         -emailService: IEmailService
         -pdfService: IPdfService
         -catalogoRepo: ICatalogoRepository
-        +execute(dto: RegistroGrupoDTO): Promise~ResultadoRegistroGrupo~
+        +execute(dto: RegistrarGrupoRapidoDTO): Promise~ResultadoRegistroGrupo~
     }
 
     class GenerarConstancia {
@@ -609,14 +763,44 @@ classDiagram
         -storageService: IStorageService
         -usuarioRepo: IUsuarioRepository
         -catalogoRepo: ICatalogoRepository
-        +execute(idUsuario: number): Promise~string~
+        +execute(folioRegistro: string): Promise~string~
+    }
+
+    class GenerarConstanciaParticipanteUseCase {
+        -pdfService: IPdfService
+        -storageService: IStorageService
+        -usuarioRepo: IUsuarioRepository
+        -inscripcionRepo: IInscripcionActividadRepository
+        -actividadRepo: IActividadRepository
+        +execute(folioRegistro: string, idActividad: number): Promise~string~
+    }
+
+    class GenerarConstanciaPonenteUseCase {
+        -pdfService: IPdfService
+        -storageService: IStorageService
+        -ponentesRepo: IPonentesRepository
+        -actividadRepo: IActividadRepository
+        +execute(idPonente: number): Promise~string~
     }
 
     class EnviarConfirmacion {
         -emailService: IEmailService
         -usuarioRepo: IUsuarioRepository
         -catalogoRepo: ICatalogoRepository
-        +execute(idUsuario: number): Promise~void~
+        +execute(folioRegistro: string): Promise~void~
+    }
+
+    class EnviarConstanciaParticipanteUseCase {
+        -emailService: IEmailService
+        -usuarioRepo: IUsuarioRepository
+        -actividadRepo: IActividadRepository
+        +execute(folioRegistro: string, idActividad: number, pdfBuffer: Buffer): Promise~void~
+    }
+
+    class EnviarConstanciaPonenteUseCase {
+        -emailService: IEmailService
+        -ponentesRepo: IPonentesRepository
+        +execute(idPonente: number, pdfBuffer: Buffer): Promise~void~
     }
 
     class SolicitarFacturacion {
@@ -625,11 +809,39 @@ classDiagram
         +execute(dto: FacturacionDTO): Promise~Facturacion~
     }
 
+    class GestionarActividades {
+        -actividadRepo: IActividadRepository
+        -catalogoRepo: ICatalogoRepository
+        +listar(): Promise~ActividadDTO[]~
+        +crear(dto): Promise~ActividadDTO~
+        +actualizar(id, dto): Promise~ActividadDTO~
+        +obtenerTiposActividad(): Promise~TipoActividad[]~
+    }
+
+    class LoginCpanelUseCase {
+        -accesoRepo: IAccesoRepository
+        -usuarioRepo: IUsuarioRepository
+        -catalogoRepo: ICatalogoRepository
+        +execute(credentials): Promise~AuthSessionDTO~
+    }
+
+    class ObtenerAccesoArchivo {
+        -storageService: IStorageService
+        +execute(ruta: string): Promise~string~
+    }
+
+    class ObtenerUsuariosForAdmin {
+        -adminQueryService: IAdminQueryService
+        +execute(filtros, pagina): Promise~PaginatedResult~UsuarioForAdminDTO~~
+    }
+
     RegistrarUsuario ..> IUsuarioRepository
     RegistrarUsuario ..> IDepositoRepository
     RegistrarUsuario ..> IStorageService
     RegistrarUsuario ..> IEmailService
     RegistrarUsuario ..> IPdfService
+    RegistrarUsuario ..> IActividadRepository
+    RegistrarUsuario ..> IInscripcionActividadRepository
 
     RegistrarGrupoRapido ..> IUsuarioRepository
     RegistrarGrupoRapido ..> IDepositoRepository
@@ -641,6 +853,9 @@ classDiagram
     GenerarConstancia ..> IStorageService
     EnviarConfirmacion ..> IEmailService
     SolicitarFacturacion ..> IFacturacionRepository
+    LoginCpanelUseCase ..> IAccesoRepository
+    ObtenerAccesoArchivo ..> IStorageService
+    ObtenerUsuariosForAdmin ..> IAdminQueryService
 ```
 
 ### 9.2 Descripción de Casos de Uso Principales
@@ -651,7 +866,7 @@ classDiagram
 |-----------------|------------------------------------------------------------------------------------|
 | **Actor**       | Asistente                                                                          |
 | **Precondición**| El correo no está registrado previamente                                           |
-| **Flujo**       | 1. Asistente llena formulario + adjunta comprobante de pago (imagen/PDF) → 2. Validación (Zod: datos + archivo; Dominio: reglas de negocio) → 3. Subir comprobante a storage → 4. Crear entidad Usuario → 5. Crear entidad Deposito con URL → 6. Persistir usuario y comprobante → 7. Generar constancia PDF → 8. Almacenar constancia → 9. Enviar correo de confirmación (el envío de constancia PDF se delega al administrador a través del CPanel) |
+| **Flujo**       | 1. Asistente llena formulario multi-paso (datos personales → selección de actividades → grupo opcional → datos de pago → facturación opcional → checkout) + adjunta comprobante de pago → 2. Validación (Zod: datos + archivo; Dominio: reglas de negocio) → 3. Subir comprobante a storage → 4. Crear entidad Usuario → 5. Crear entidad Deposito con URL → 6. Persistir usuario y comprobante → 7. Inscribir en actividades seleccionadas → 8. Generar constancia PDF → 9. Almacenar constancia → 10. Enviar correo de confirmación (el envío de constancia PDF se delega al administrador a través del CPanel) |
 | **Postcondición**| Usuario creado, comprobante almacenado, correo enviado, constancia PDF generada y almacenada |
 | **Error**       | Correo duplicado → `RegistroError.CORREO_DUPLICADO` · Archivo inválido → `ComprobanteError.TIPO_NO_PERMITIDO` |
 
@@ -671,7 +886,7 @@ classDiagram
 | Campo           | Detalle                                                                            |
 |-----------------|------------------------------------------------------------------------------------|
 | **Actor**       | Sistema (automático tras registro) o Asistente (descarga manual)                   |
-| **Flujo**       | 1. Obtener datos del usuario → 2. Renderizar PDF con template → 3. Subir a storage → 4. Retornar URL |
+| **Flujo**       | 1. Obtener datos del usuario por folio → 2. Renderizar PDF con template → 3. Subir a storage → 4. Retornar URL |
 
 ---
 
@@ -726,7 +941,7 @@ sequenceDiagram
     DB-->>Repo: usuario con id
     Repo-->>UC: usuario persistido
 
-    UC->>Comp: Deposito.create(idUsuario, urlComprobante, archivo, monto)
+    UC->>Comp: Deposito.create(folioRegistro, urlComprobante, archivo, monto)
     Comp-->>UC: comprobante (entidad)
 
     UC->>CompRepo: crear(comprobante)
@@ -770,7 +985,7 @@ sequenceDiagram
     R->>CC: Adjunta UN SOLO comprobante<br/>de pago (cubre a todo el grupo)
     CC->>SA: submit (FormData con archivo)
     SA->>Val: validar(formData + file)
-    Val-->>SA: RegistroGrupoDTO ✓
+    Val-->>SA: RegistrarGrupoRapidoDTO ✓
 
     SA->>UC: execute(dto)
 
@@ -842,7 +1057,7 @@ sequenceDiagram
     SA->>Container: getUsuarioRepository()
     Container-->>SA: postgresUsuarioRepo
     SA->>Container: getEmailService()
-    Container-->>SA: resendEmailService
+    Container-->>SA: nodemailerEmailService
     SA->>Container: getPdfService()
     Container-->>SA: reactPdfService
     SA->>Container: getStorageService()
@@ -913,7 +1128,7 @@ flowchart TD
     
     O --> P[Almacenar PDF en storage]
     
-    P --> Q[Enviar correo de confirmación<br/>(sin adjunto)]
+    P --> Q["Enviar correo de confirmación<br/>(sin adjunto)"]
     
     Q --> R([Mostrar página de confirmación<br/>con folio y enlace a constancia])
 ```
@@ -968,7 +1183,7 @@ ENABLE_GROUP_REGISTRATION=true | false
 
 1. **Entidad dedicada** (`GrupoRegistro`): encapsula la lógica de herencia de campos compartidos.
 2. **Use Case independiente** (`RegistrarGrupoRapido`): no modifica `RegistrarUsuario`, lo complementa.
-3. **Server Action separado**: `registrar-grupo.action.ts` existe junto a `registrar-usuario.action.ts`.
+3. **Server Action unificado**: `registrar-usuario.action.ts` maneja ambos flujos (individual y grupal) en un solo archivo.
 4. **UI condicional**: el componente `GrupoForm` solo se renderiza si la feature flag está activa.
 5. **Sin cambios en BD**: los miembros del grupo son `usuarios` regulares; la relación grupal se maneja a nivel de aplicación.
 6. **Un solo comprobante grupal**: el responsable sube un único comprobante de pago que cubre a todo el grupo. La UI muestra el costo total como feedback.
@@ -1045,9 +1260,142 @@ classDiagram
 
 ---
 
-## 13. Estrategia de Infraestructura Intercambiable
+## 13. Módulo de Actividades
 
-### 13.1 Mapa de Proveedores
+### 13.1 Visión General
+
+El sistema permite la **inscripción a actividades** del congreso (talleres, cursos, conferencias) tanto en el flujo de registro individual como desde el checkout de actividades (`/actividades/checkout`). Además, el CPanel permite gestionar actividades y asignar **ponentes** a cada una.
+
+### 13.2 Modelo de Datos
+
+Las actividades se modelan usando Prisma con las siguientes tablas:
+
+```
+actividades (id_actividad, nombre, fecha, costo, id_tipo_actividad, ...)
+├── tipo_actividad (id_tipo_actividad, clave, descripcion, maneja_equipos, genera_constancia_participante)
+├── inscripcion_actividades (id_inscripcion, folio_registro, id_actividad, constancia_url, ...)
+├── actividad_ponentes (id_ponente, id_actividad, nombre, apellido, correo, rol, ...)
+├── asistencia_actividades (id_asistencia, folio_registro, id_actividad, ...)
+└── equipos / equipo_integrantes (para actividades que manejan equipos)
+```
+
+### 13.3 Tipos de Actividad
+
+Cada actividad pertenece a un `TipoActividad` que define su comportamiento:
+
+| Propiedad                    | Descripción                                             |
+|------------------------------|---------------------------------------------------------|
+| `clave`                      | Identificador único del tipo (e.g., "TALLER", "CURSO")  |
+| `manejaEquipos`              | Si `true`, permite formar equipos de participantes       |
+| `generaConstanciaParticipante` | Si `true`, se genera constancia de participación         |
+
+### 13.4 Puertos del Módulo de Actividades
+
+| Puerto                              | Responsabilidad                                        |
+|-------------------------------------|--------------------------------------------------------|
+| `IActividadRepository`              | CRUD de actividades + listado de tipos                 |
+| `IInscripcionActividadRepository`   | Inscribir/desinscribir usuarios en actividades         |
+| `IPonentesRepository`               | Gestión de ponentes por actividad                      |
+
+### 13.5 Casos de Uso de Actividades
+
+| Caso de Uso                          | Descripción                                            |
+|--------------------------------------|--------------------------------------------------------|
+| `GestionarActividades`               | CRUD de actividades desde el CPanel                    |
+| `GenerarConstanciaParticipanteUseCase` | Genera PDF de constancia de participación             |
+| `GenerarConstanciaPonenteUseCase`    | Genera PDF de constancia de ponencia                   |
+| `EnviarConstanciaParticipanteUseCase` | Envía constancia de participación por email            |
+| `EnviarConstanciaPonenteUseCase`     | Envía constancia de ponencia por email                 |
+
+### 13.6 Inscripción a Actividades
+
+Al registrarse, un usuario puede seleccionar actividades opcionales:
+
+- **Flujo individual:** El `RegistroUsuarioDTO` incluye `actividadesIds?: number[]`.
+- **Flujo checkout:** Para usuarios ya registrados, pueden agregar actividades desde `/actividades/checkout`.
+- Las inscripciones se guardan en `inscripcion_actividades` asociando `folio_registro` → `id_actividad`.
+- Algunas actividades tienen costo adicional que se suma al monto del comprobante.
+
+---
+
+## 14. Módulo de Autenticación y CPanel
+
+### 14.1 Autenticación con Auth.js (NextAuth v5)
+
+La autenticación usa **NextAuth v5** con el proveedor de **Credentials** y almacenamiento local en PostgreSQL:
+
+```
+app/login/       → Formulario de login (público)
+app/api/auth/    → API Routes de NextAuth (JWT sessions)
+app/cpanel/      → Panel de administración (protegido por middleware)
+```
+
+**Flujo de autenticación:**
+1. Administrador accede a `/login` e ingresa email + contraseña.
+2. El Server Action instancia `LoginCpanelUseCase` que valida credenciales contra la tabla `accesos`.
+3. NextAuth crea un JWT con los claims de sesión (rol, nombre, email).
+4. El middleware `auth()` protege rutas `/cpanel/*`.
+
+**Entidad `Acceso`:**
+```typescript
+class Acceso {
+  idAcceso: number;
+  email: string;
+  rol: string;           // "admin" | "operador"
+  nombre: string | null;
+  isAdmin(): boolean;
+}
+```
+
+**Puerto `IAuthService`:**
+```typescript
+interface IAuthService {
+  signIn(credentials: SignInCredentials): Promise<{ success: boolean; error?: string }>;
+  signOut(): Promise<void>;
+  getCurrentSession(): Promise<AuthSessionDTO | null>;
+}
+```
+
+**Adaptador `AuthJsAuthService`:** Wrapper sobre las funciones de NextAuth (`signIn`, `signOut`, `auth`) para mantener la arquitectura hexagonal.
+
+### 14.2 Panel de Administración (CPanel)
+
+El CPanel (`/cpanel`) es un dashboard protegido para administradores con las siguientes secciones:
+
+| Ruta                       | Funcionalidad                                              |
+|----------------------------|------------------------------------------------------------|
+| `/cpanel`                  | Gestión de usuarios: búsqueda, paginación, reenvío de constancias |
+| `/cpanel/actividades`      | CRUD de actividades del congreso                           |
+| `/cpanel/actividades/[id]` | Detalle de actividad + gestión de ponentes                 |
+| `/cpanel/configuracion`    | Configuración del sistema (tipos de actividad, etc.)        |
+
+**Funcionalidades del CPanel:**
+- **Búsqueda y paginación** de usuarios (`ObtenerUsuariosForAdmin` via `IAdminQueryService`).
+- **Reenvío de constancias** por email (`EnviarConfirmacion` — el admin dispara el envío manualmente).
+- **Gestión de actividades**: crear, editar, listar actividades y sus tipos (`GestionarActividades`).
+- **Gestión de ponentes**: agregar/eliminar ponentes por actividad (`IPonentesRepository`).
+- **Acceso a archivos protegidos**: descarga de comprobantes de pago con URLs firmadas (`ObtenerAccesoArchivo`).
+
+### 14.3 Servicio de Consultas Admin
+
+El `IAdminQueryService` (implementado por `PrismaAdminQueryService`) proporciona consultas optimizadas para el CPanel:
+
+```typescript
+interface IAdminQueryService {
+  obtenerUsuariosPaginado(params: {
+    pagina: number;
+    limite: number;
+    busqueda?: string;
+    verificado?: boolean;
+  }): Promise<PaginatedResult<UsuarioForAdminDTO>>;
+}
+```
+
+---
+
+## 15. Estrategia de Infraestructura Intercambiable
+
+### 15.1 Mapa de Proveedores
 
 ```mermaid
 graph LR
@@ -1056,20 +1404,26 @@ graph LR
         P2["IEmailService"]
         P3["IPdfService"]
         P4["IStorageService"]
+        P5["IAuthService"]
+        P6["IActividadRepository"]
     end
 
     subgraph Actual["Adaptadores Actuales"]
         A1["PrismaUsuarioRepo<br/>(Prisma ORM + Data Mapper)"]
-        A2["ResendEmailService"]
+        A2["NodemailerEmailService<br/>(Gmail SMTP)"]
         A3["ReactPdfService"]
         A4["SupabaseStorageService"]
+        A5["AuthJsAuthService<br/>(NextAuth v5)"]
+        A6["PrismaActividadRepo"]
     end
 
     subgraph Futuro["Adaptadores Futuros"]
         F1["DrizzleUsuarioRepo<br/>KyselyUsuarioRepo"]
-        F2["SendGridEmailService<br/>NodemailerEmailService"]
+        F2["SendGridEmailService<br/>SMTP genérico"]
         F3["PuppeteerPdfService"]
         F4["S3StorageService<br/>LocalStorageService"]
+        F5["SupabaseAuthService<br/>Custom OAuth"]
+        F6["DrizzleActividadRepo"]
     end
 
     P1 -.-> A1
@@ -1080,9 +1434,13 @@ graph LR
     P3 -.-> F3
     P4 -.-> A4
     P4 -.-> F4
+    P5 -.-> A5
+    P5 -.-> F5
+    P6 -.-> A6
+    P6 -.-> F6
 ```
 
-### 13.2 Ejemplo Conceptual del Container
+### 15.2 Ejemplo Conceptual del Container
 
 ```typescript
 // infrastructure/config/container.ts
@@ -1105,13 +1463,30 @@ export function getCatalogoRepository(): ICatalogoRepository {
     return new PrismaCatalogoRepository(prisma);
 }
 
+export function getAccesoRepository(): IAccesoRepository {
+    return new PrismaAccesoRepository(prisma);
+}
+
+export function getActividadRepository(): IActividadRepository {
+    return new PrismaActividadRepository(prisma);
+}
+
+export function getInscripcionActividadRepository(): IInscripcionActividadRepository {
+    return new PrismaInscripcionActividadRepository(prisma);
+}
+
+export function getPonentesRepository(): IPonentesRepository {
+    return new PrismaPonentesRepository(prisma);
+}
+
 export function getEmailService(): IEmailService {
-    const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.EMAIL_FROM;
-    if (!apiKey || !from) {
-        throw new Error('RESEND_API_KEY y EMAIL_FROM deben estar configuradas');
+    const user = process.env.GMAIL_USER;
+    const pass = process.env.GMAIL_APP_PASSWORD;
+    const from = process.env.EMAIL_FROM || user;
+    if (!user || !pass || !from) {
+        throw new Error('GMAIL_USER, GMAIL_APP_PASSWORD y EMAIL_FROM deben estar configuradas');
     }
-    return new ResendEmailService(apiKey, from);
+    return new NodemailerEmailService(user, pass, from);
 }
 
 export function getPdfService(): IPdfService {
@@ -1122,28 +1497,36 @@ export function getStorageService(): IStorageService {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
-        throw new Error('Supabase URL y Service Role Key deben estar configuradas');
+        throw new Error('NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY deben estar configuradas');
     }
     return new SupabaseStorageService(url, key);
 }
+
+export function getAdminQueryService(): IAdminQueryService {
+    return new PrismaAdminQueryService(prisma);
+}
+
+export function getAuthService(): IAuthService {
+    return new AuthJsAuthService();
+}
 ```
 
-### 13.3 Escenarios de Migración
+### 15.3 Escenarios de Migración
 
 | Escenario                         | Qué cambia                              | Qué NO cambia                  |
 |-----------------------------------|------------------------------------------|---------------------------------|
 | Supabase → VPS con PostgreSQL     | `DATABASE_URL` en `.env`                 | Use Cases, Domain, Presentation |
 | Prisma → Drizzle                  | Repos, Mappers, esquema ORM              | Use Cases, Domain, Presentation |
-| Resend → SendGrid                 | Nuevo adapter `SendGridEmailService`     | Use Cases, Domain, Presentation |
+| Nodemailer → SendGrid                 | Nuevo adapter `SendGridEmailService`     | Use Cases, Domain, Presentation |
 | Supabase Storage → S3             | Nuevo adapter `S3StorageService`         | Use Cases, Domain, Presentation |
 | Agregar nuevo proveedor de PDF    | Nuevo adapter implementando `IPdfService`| Use Cases, Domain, Presentation |
 | Desactivar registro grupal        | `ENABLE_GROUP_REGISTRATION=false`        | Todo el resto del sistema       |
 
 ---
 
-## 14. Data Mapper Pattern (ORM ↔ Dominio)
+## 16. Data Mapper Pattern (ORM ↔ Dominio)
 
-### 14.1 Concepto
+### 16.1 Concepto
 
 El **Data Mapper** es la pieza que aísla el dominio del ORM. Cada Mapper traduce entre dos mundos:
 
@@ -1164,7 +1547,7 @@ El dominio **nunca** importa tipos de Prisma. Los repositorios son los únicos q
    (conoce Prisma)                   (puro TypeScript)
 ```
 
-### 14.2 Diagrama de Flujo del Data Mapper
+### 16.2 Diagrama de Flujo del Data Mapper
 
 ```mermaid
 sequenceDiagram
@@ -1181,7 +1564,7 @@ sequenceDiagram
     DB-->>Prisma: row (PrismaUsuario)
     Prisma-->>Repo: prismaUsuario
     Repo->>Mapper: toDomain(prismaUsuario)
-    Note over Mapper: Crea Value Objects:<br/>Email.create(), Telefono.create(),<br/>FolioRecibo.create(), etc.
+    Note over Mapper: Crea Value Objects:<br/>Email.create(), Telefono.create(),<br/>FolioRegistro.create(), etc.
     Mapper-->>Repo: Usuario (entidad dominio)
     Repo-->>UC: Usuario
 
@@ -1199,41 +1582,38 @@ sequenceDiagram
     Repo-->>UC: Usuario
 ```
 
-### 14.3 Ejemplo Conceptual de un Mapper
+### 16.3 Ejemplo Conceptual de un Mapper
 
 ```typescript
 // infrastructure/mappers/UsuarioMapper.ts
 
-import type { usuarios as PrismaUsuario } from "@/generated/prisma/client";
+import { usuarios } from "@/generated/prisma/client";
 import { Usuario } from "@/core/entities/Usuario";
 import { Email } from "@/core/value-objects/Email";
 import { Telefono } from "@/core/value-objects/Telefono";
-import { FolioRecibo } from "@/core/value-objects/FolioRecibo";
 import { CodigoBarras } from "@/core/value-objects/CodigoBarras";
+import { Genero } from "@/core/enums/Genero";
 
 export class UsuarioMapper {
-  static toDomain(raw: PrismaUsuario): Usuario {
+  static toDomain(raw: usuarios): Usuario {
     return Usuario.create({
-      idUsuario: raw.id_usuario,
+      folioRegistro: raw.folio_registro,
+      codigoBarras: raw.codigo_barras
+        ? CodigoBarras.create(raw.codigo_barras)
+        : null,
       nombre: raw.nombre,
       apellido: raw.apellido,
       correo: Email.create(raw.correo),
       telefono: raw.telefono
         ? Telefono.create(raw.telefono, raw.lada, raw.extension)
         : null,
-      genero: raw.genero,
+      genero: (raw.genero as Genero) ?? Genero.OTRO,
       carrera: raw.carrera,
       dependencia: raw.dependencia,
-      folioRecibo: raw.folio_recibo
-        ? FolioRecibo.create(raw.folio_recibo)
-        : null,
-      codigoBarras: raw.codigo_barras
-        ? CodigoBarras.create(raw.codigo_barras)
-        : null,
-      idCargo: raw.id_cargo,
-      idTipoUsuario: raw.id_tipo_usuario,
-      idInstitucion: raw.id_institucion,
-      idEntidadFederativa: raw.id_entidad_federativa,
+      idCargo: raw.id_cargo ?? 0,
+      idTipoUsuario: raw.id_tipo_usuario ?? 0,
+      idInstitucion: raw.id_institucion ?? 0,
+      idEntidadFederativa: raw.id_entidad_federativa ?? 0,
       verificado: raw.verificado ?? false,
       fechaRegistro: raw.fecha_registro ?? new Date(),
     });
@@ -1241,17 +1621,21 @@ export class UsuarioMapper {
 
   static toPersistence(usuario: Usuario) {
     return {
+      ...(usuario.folioRegistro
+        ? { folio_registro: usuario.folioRegistro.toString() }
+        : {}),
+      ...(usuario.codigoBarras
+        ? { codigo_barras: usuario.codigoBarras.toString() }
+        : {}),
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       correo: usuario.correo.toString(),
       telefono: usuario.telefono?.getNumero() ?? null,
       lada: usuario.telefono?.getLada() ?? null,
       extension: usuario.telefono?.getExtension() ?? null,
-      genero: usuario.genero,
+      genero: usuario.genero as string,
       carrera: usuario.carrera,
       dependencia: usuario.dependencia,
-      folio_recibo: usuario.folioRecibo?.toString() ?? null,
-      codigo_barras: usuario.codigoBarras?.toString() ?? null,
       id_cargo: usuario.idCargo,
       id_tipo_usuario: usuario.idTipoUsuario,
       id_institucion: usuario.idInstitucion,
@@ -1262,7 +1646,7 @@ export class UsuarioMapper {
 }
 ```
 
-### 14.4 Ejemplo Conceptual de un Repositorio con Prisma + Mapper
+### 16.4 Ejemplo Conceptual de un Repositorio con Prisma + Mapper
 
 ```typescript
 // infrastructure/repositories/PrismaUsuarioRepository.ts
@@ -1271,6 +1655,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 import type { IUsuarioRepository } from "@/application/ports/IUsuarioRepository";
 import type { Usuario } from "@/core/entities/Usuario";
 import type { Email } from "@/core/value-objects/Email";
+import type { FolioRegistro } from "@/core/value-objects/FolioRegistro";
 import { UsuarioMapper } from "@/infrastructure/mappers/UsuarioMapper";
 
 export class PrismaUsuarioRepository implements IUsuarioRepository {
@@ -1289,9 +1674,16 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     return found ? UsuarioMapper.toDomain(found) : null;
   }
 
-  async buscarPorId(id: number): Promise<Usuario | null> {
+  async buscarPorId(id: string): Promise<Usuario | null> {
     const found = await this.prisma.usuarios.findUnique({
-      where: { id_usuario: id },
+      where: { folio_registro: id },
+    });
+    return found ? UsuarioMapper.toDomain(found) : null;
+  }
+
+  async buscarPorFolio(folio: FolioRegistro): Promise<Usuario | null> {
+    const found = await this.prisma.usuarios.findUnique({
+      where: { folio_registro: folio.toString() },
     });
     return found ? UsuarioMapper.toDomain(found) : null;
   }
@@ -1305,22 +1697,33 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     return results;
   }
 
-  async verificar(id: number): Promise<void> {
+  async verificar(id: string): Promise<void> {
     await this.prisma.usuarios.update({
-      where: { id_usuario: id },
+      where: { folio_registro: id },
       data: { verificado: true },
+    });
+  }
+
+  async crearGrupoTransaccional(data: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const resultados: any[] = [];
+      for (const miembro of data.miembros) {
+        const created = await tx.usuarios.create({ data: miembro });
+        resultados.push(created);
+      }
+      return { usuariosIds: resultados, folios: resultados.map(r => r.folio_registro) };
     });
   }
 }
 ```
 
-### 14.5 Resumen Visual
+### 16.5 Resumen Visual
 
 ```mermaid
 graph LR
     subgraph Domain["🧠 Dominio (Puro)"]
         E["Usuario<br/>Deposito<br/>Facturacion"]
-        VO["Email · Monto<br/>FolioRecibo · Telefono"]
+        VO["Email · Monto<br/>FolioRegistro · Telefono"]
     end
 
     subgraph Mapper["🔄 Data Mappers"]
@@ -1348,7 +1751,7 @@ graph LR
 
 ---
 
-## 15. Decisiones de Diseño (ADRs)
+## 17. Decisiones de Diseño (ADRs)
 
 ### ADR-01: Server Actions como Controllers
 
@@ -1377,7 +1780,7 @@ graph LR
 
 ### ADR-04: Value Objects para Validación de Dominio
 
-- **Contexto:** Campos como `Email`, `Monto`, `FolioRecibo` tienen reglas de validación intrínsecas.
+- **Contexto:** Campos como `Email`, `Monto`, `FolioRegistro` tienen reglas de validación intrínsecas.
 - **Decisión:** Modelarlos como Value Objects inmutables que validan en su constructor (`create` factory).
 - **Razón:** La validación de negocio vive en el dominio, no en Zod ni en la BD. Zod valida forma (string, number), el dominio valida semántica (es un email válido, el monto es positivo).
 - **Consecuencia:** Doble validación (Zod en action + VO en dominio) que garantiza integridad incluso si se usa el caso de uso desde otro contexto.
@@ -1444,6 +1847,37 @@ graph LR
   - La tabla `accesos` fue actualizada para almacenar un campo `password` (con hashing) para administradores.
   - En consecuencia, el acceso a archivos de validación (`ObtenerAccesoArchivo`) o los listados (`ObtenerUsuariosForAdmin`) integran validación de rol de cuenta local obtenida mediante la sesión de Auth.js.
 
+### ADR-11: Migración de PK Numérica a Folio String (`folio_registro`)
+
+- **Contexto:** Originalmente el diseño usaba un `id_usuario` numérico auto-incremental como PK de `usuarios`, con un `folio_recibo` separado.
+- **Decisión:** Migrar a `folio_registro` (VARCHAR(15)) como clave primaria única de `usuarios`, auto-generada por secuencia PostgreSQL (formato `ANI26-XXXX`).
+- **Razón:** El folio es un identificador significativo y público para el asistente (aparece en constancias y correos). Tenerlo como PK simplifica las relaciones y evita un campo artificial adicional.
+- **Consecuencia:**
+  - Todas las tablas relacionadas (`depositos`, `facturaciones`, `accesos`, `inscripcion_actividades`) referencian `folio_registro` como FK.
+  - Los repositorios y mappers operan con `string` en vez de `number` para identificar usuarios.
+  - Se eliminó el Value Object `FolioRecibo` en favor de `FolioRegistro`.
+  - La entidad `Usuario` ya no tiene `idUsuario` ni `folioRecibo`, solo `folioRegistro`.
+
+### ADR-12: Nodemailer como Proveedor de Correo
+
+- **Contexto:** El diseño original contemplaba Resend como proveedor de correo. En producción se migró a Gmail SMTP via Nodemailer.
+- **Decisión:** Implementar `NodemailerEmailService` como adaptador concreto, usando credenciales SMTP de Gmail (`GMAIL_USER`, `GMAIL_APP_PASSWORD`).
+- **Razón:** Gmail SMTP es gratuito, confiable, y no requiere configuración de DNS adicional (DKIM, SPF) para dominios personalizados. Nodemailer es la librería estándar de Node.js para envío de correos.
+- **Consecuencia:**
+  - El container factory usa `GMAIL_USER` y `GMAIL_APP_PASSWORD` en vez de `RESEND_API_KEY`.
+  - Se generaron templates HTML adicionales para actividades y notificaciones de ponentes.
+  - El puerto `IEmailService` fue expandido de 2 a 7 métodos para cubrir todos los tipos de correo.
+
+### ADR-13: Registro de Actividades como Dato Opcional en RegistroUsuarioDTO
+
+- **Contexto:** El congreso ANIEI 2026 ofrece actividades paralelas (talleres, cursos) con costo adicional opcional.
+- **Decisión:** Incluir `actividadesIds?: number[]` en el `RegistroUsuarioDTO` y procesar la inscripción como parte opcional del flujo de registro.
+- **Razón:** Permite que el asistente seleccione actividades durante el registro sin fricción adicional, simplificando el flujo de usuario.
+- **Consecuencia:**
+  - `RegistrarUsuario` ahora depende también de `IActividadRepository` e `IInscripcionActividadRepository`.
+  - El wizard de registro (6 pasos) incluye `StepActividades` para selección.
+  - El costo de actividades se suma al monto del comprobante en el checkout.
+
 ---
 
 ## Apéndice A: Mapeo Dominio ↔ Base de Datos
@@ -1459,6 +1893,10 @@ graph LR
 | `Estado` (catálogo)   | `estados`              | Lectura solamente                            |
 | `Institucion` (cat)   | `instituciones`        | Lectura solamente                            |
 | `TipoUsuario` (cat)   | `tipo_usuario`         | Lectura solamente                            |
+| `TipoActividad` (cat)  | `tipo_actividad`       | Lectura solamente                            |
+| `Actividad`            | `actividades`          | Actividades del congreso                     |
+| `InscripcionActividad` | `inscripcion_actividades` | Relación usuario-actividad                |
+| `Ponente`              | `actividad_ponentes`   | Ponentes de actividades                      |
 
 ## Apéndice B: Variables de Entorno Esperadas
 
@@ -1471,9 +1909,12 @@ DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-1-us-east-2.pooler.supabase.c
 NEXT_PUBLIC_SUPABASE_URL="https://[REF].supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 
-# ── Email & Auth.js ──
-RESEND_API_KEY="re_..."
+# ── Email (Nodemailer: Gmail SMTP) ──
+GMAIL_USER="tu_usuario@gmail.com"
+GMAIL_APP_PASSWORD="tu_app_password_de_16_caracteres"
 EMAIL_FROM="ANIEI 2026 <registro@dominio.com>"
+
+# ── Auth.js (NextAuth v5) ──
 AUTH_SECRET="tu_secreto_para_auth_js"
 
 # ── Feature Flags ──
