@@ -7,7 +7,7 @@ import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAcce
 import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
-import { ResendEmailService } from '@/infrastructure/services/email/ResendEmailService';
+import { NodemailerEmailService } from '@/infrastructure/services/email/NodemailerEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
@@ -59,12 +59,13 @@ export function getPonentesRepository(): IPonentesRepository {
 }
 
 export function getEmailService(): IEmailService {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
-  if (!apiKey || !from) {
-    throw new Error('RESEND_API_KEY y EMAIL_FROM deben estar configuradas');
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  const from = process.env.EMAIL_FROM || user;
+  if (!user || !pass || !from) {
+    throw new Error('GMAIL_USER, GMAIL_APP_PASSWORD y EMAIL_FROM deben estar configuradas');
   }
-  return new ResendEmailService(apiKey, from);
+  return new NodemailerEmailService(user, pass, from);
 }
 
 export function getPdfService(): IPdfService {

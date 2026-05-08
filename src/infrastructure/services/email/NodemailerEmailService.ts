@@ -1,32 +1,34 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, ConfirmacionGrupoRapidoData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
 import { renderConfirmacionActividadesHTML } from './templates/confirmacion-actividades';
 import { renderNotificacionPonenteHTML } from './templates/notificacion-ponente';
 
-export class ResendEmailService implements IEmailService {
-  private readonly resend: Resend;
+export class NodemailerEmailService implements IEmailService {
+  private readonly transporter: nodemailer.Transporter;
   private readonly from: string;
 
-  constructor(apiKey: string, from: string) {
-    this.resend = new Resend(apiKey);
+  constructor(user: string, pass: string, from: string) {
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass,
+      },
+    });
     this.from = from;
   }
 
   async enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise<void> {
     const html = renderConfirmacionHTML(datos);
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Registro Confirmado — ANIEI 2026 (Folio: ${datos.folio})`,
       html,
     });
-
-    if (error) {
-      throw new Error(`Error al enviar correo de confirmación: ${error.message}`);
-    }
   }
 
   async enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise<void> {
@@ -36,7 +38,7 @@ export class ResendEmailService implements IEmailService {
       folio,
     });
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Constancia de Inscripción — ANIEI 2026 (${folio})`,
@@ -48,39 +50,28 @@ export class ResendEmailService implements IEmailService {
         },
       ],
     });
-
-    if (error) {
-      throw new Error(`Error al enviar constancia: ${error.message}`);
-    }
   }
+
   async enviarConfirmacionActividades(destinatario: string, datos: ConfirmacionActividadesData): Promise<void> {
     const html = renderConfirmacionActividadesHTML(datos);
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Inscripción a Actividades Confirmada — ANIEI 2026 (Folio: ${datos.folio})`,
       html,
     });
-
-    if (error) {
-      throw new Error(`Error al enviar correo de actividades: ${error.message}`);
-    }
   }
 
   async enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void> {
     const html = renderNotificacionPonenteHTML(datos);
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Has sido registrado como Ponente — ANIEI 2026`,
       html,
     });
-
-    if (error) {
-      throw new Error(`Error al enviar notificación a ponente: ${error.message}`);
-    }
   }
 
   async enviarConstanciaPonente(
@@ -100,7 +91,7 @@ export class ResendEmailService implements IEmailService {
       </div>
     `;
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Constancia de Participación - ${nombreActividad}`,
@@ -110,10 +101,6 @@ export class ResendEmailService implements IEmailService {
         content: pdfBuffer,
       }],
     });
-
-    if (error) {
-      throw new Error(`Error al enviar constancia de ponente: ${error.message}`);
-    }
   }
 
   async enviarConstanciaParticipante(
@@ -133,7 +120,7 @@ export class ResendEmailService implements IEmailService {
       </div>
     `;
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Constancia de Participación - ${nombreActividad}`,
@@ -143,10 +130,6 @@ export class ResendEmailService implements IEmailService {
         content: pdfBuffer,
       }],
     });
-
-    if (error) {
-      throw new Error(`Error al enviar constancia de participante: ${error.message}`);
-    }
   }
 
   async enviarConfirmacionGrupoRapido(
@@ -169,7 +152,7 @@ export class ResendEmailService implements IEmailService {
       </div>
     `;
 
-    const { error } = await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: this.from,
       to: destinatario,
       subject: `Confirmación de Registro Grupal Rápido — ANIEI 2026`,
@@ -179,9 +162,5 @@ export class ResendEmailService implements IEmailService {
         content: pdfBuffer,
       }],
     });
-
-    if (error) {
-      throw new Error(`Error al enviar confirmación grupal: ${error.message}`);
-    }
   }
 }
