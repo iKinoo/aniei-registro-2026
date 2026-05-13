@@ -89,12 +89,6 @@ export async function registrarUsuarioAction(
 
     const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
 
-    // Extraer actividades seleccionadas (IDs separados por coma)
-    const actividadesRaw = (formData.get('actividadesIds') as string) ?? '';
-    const actividadesIds = actividadesRaw
-      ? actividadesRaw.split(',').map(Number).filter((n) => !isNaN(n) && n > 0)
-      : [];
-
     // Extraer miembros del grupo
     const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
     const miembros: { nombre: string; apellido: string }[] = [];
@@ -228,7 +222,6 @@ export async function registrarUsuarioAction(
               idEntidadFederativaRfc: parsedFacturacion.data.idEntidadFederativaRfc ?? null,
             }
           : null,
-      actividadesIds: actividadesIds.length > 0 ? actividadesIds : undefined,
     });
 
     // Registro grupal: si hay miembros, usar RegistrarGrupoRapido con el mismo comprobante

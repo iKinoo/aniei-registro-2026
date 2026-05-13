@@ -1,14 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { Estado } from '@/shared/types/catalogos';
 import { DepositoWizard, FacturacionWizard } from '../RegistroForm';
 import { estadosToOptions } from '../SelectCatalogo';
 
 interface Props {
   total: number;
-  desglose: { base: number; nMiembros: number; actividades: ActividadDTO[] };
+  desglose: { base: number; nMiembros: number };
   deposito: DepositoWizard;
   facturacion: FacturacionWizard;
   estados: Estado[];
@@ -111,14 +110,6 @@ export function StepPago({
               <span className="text-violet-600 font-medium">+${(desglose.base * desglose.nMiembros).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
             </div>
           )}
-          {desglose.actividades.map((a) => (
-            <div key={a.idActividad} className="flex justify-between text-sm">
-              <span className="text-slate-500 truncate mr-4">{a.nombre}</span>
-              <span className="text-emerald-600 font-medium shrink-0">
-                {a.costo && a.costo > 0 ? `+$${a.costo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'Gratis'}
-              </span>
-            </div>
-          ))}
           <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center">
             <span className="font-semibold text-slate-900">Total</span>
             <span className="text-2xl font-extrabold text-indigo-700">

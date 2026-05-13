@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useActionState } from 'react';
-import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
 import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
-import { StepActividades } from './steps/StepActividades';
 import { StepGrupo } from './steps/StepGrupo';
 import { StepPago } from './steps/StepPago';
 
@@ -34,14 +32,12 @@ export interface FacturacionWizard {
 
 interface RegistroFormProps {
   catalogos: { cargos: Cargo[]; estados: Estado[]; instituciones: Institucion[]; tiposUsuario: TipoUsuario[] };
-  actividades: ActividadDTO[];
 }
 
 const STEPS = [
   { id: 1, label: 'Datos Generales', icon: '👤' },
-  { id: 2, label: 'Actividades',     icon: '🎯' },
-  { id: 3, label: 'Grupo',           icon: '👥' },
-  { id: 4, label: 'Pago',            icon: '💳' },
+  { id: 2, label: 'Grupo',           icon: '👥' },
+  { id: 3, label: 'Pago',            icon: '💳' },
 ];
 
 const emptyDatos: DatosGeneralesWizard = {
@@ -61,21 +57,19 @@ const emptyFacturacion: FacturacionWizard = {
 
 const initialState: RegistroActionState = { success: false };
 
-export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
+export function RegistroForm({ catalogos }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
   const [step, setStep] = useState(1);
   const [maxStep, setMaxStep] = useState(1); // highest step reached
   const [datos, setDatos] = useState<DatosGeneralesWizard>(emptyDatos);
-  const [actividadesSeleccionadas, setActividadesSeleccionadas] = useState<ActividadDTO[]>([]);
   const [grupoActivo, setGrupoActivo] = useState(false);
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
   const [deposito, setDeposito] = useState<DepositoWizard>(emptyDeposito);
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
   const [montoTouched, setMontoTouched] = useState(false);
 
-  const totalActividades = actividadesSeleccionadas.reduce((s, a) => s + (a.costo ?? 0), 0);
   const nMiembros = grupoActivo ? miembros.length : 0;
-  const total = COSTO_BASE * (1 + nMiembros) + totalActividades;
+  const total = COSTO_BASE * (1 + nMiembros);
 
   // Auto-sync monto when total changes (unless user manually edited it)
   useEffect(() => {
@@ -108,12 +102,17 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
           <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-4 border border-slate-200 text-left">
             📬 Revisa tu correo <strong className="text-slate-800">{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
           </p>
-          <a href="/perfil" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all active:scale-95">
-            Ir a mi perfil
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </a>
+          <div className="flex flex-col gap-3">
+            <a href="/actividades" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all active:scale-95">
+              Seleccionar actividades
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
+            <a href="/perfil" className="inline-flex items-center justify-center gap-2 px-8 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl transition-all active:scale-95">
+              Ir a mi perfil
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -172,11 +171,6 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
         <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-slate-500 text-sm">Total estimado</span>
-            {actividadesSeleccionadas.length > 0 && (
-              <span className="text-xs bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-full px-2 py-0.5">
-                +{actividadesSeleccionadas.length} actividad{actividadesSeleccionadas.length > 1 ? 'es' : ''}
-              </span>
-            )}
             {nMiembros > 0 && (
               <span className="text-xs bg-violet-100 text-violet-600 border border-violet-200 rounded-full px-2 py-0.5">
                 +{nMiembros} miembro{nMiembros > 1 ? 's' : ''}
@@ -208,7 +202,6 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
           <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
           <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
           {/* Deposito hidden (StepPago renders real inputs directly) */}
-          <input type="hidden" name="actividadesIds" value={actividadesSeleccionadas.map((a) => a.idActividad).join(',')} />
           <input type="hidden" name="numMiembros" value={grupoActivo ? miembros.length : 0} />
           {grupoActivo && miembros.map((m, i) => (
             <span key={i}>
@@ -229,34 +222,19 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
             />
           </div>
           <div className={step === 2 ? 'block' : 'hidden'}>
-            <StepActividades
-              actividades={actividades}
-              seleccionadas={actividadesSeleccionadas}
-              onToggle={(a) =>
-                setActividadesSeleccionadas((prev) =>
-                  prev.find((s) => s.idActividad === a.idActividad)
-                    ? prev.filter((s) => s.idActividad !== a.idActividad)
-                    : [...prev, a],
-                )
-              }
-              onBack={() => goTo(1)}
-              onNext={() => goTo(3)}
-            />
-          </div>
-          <div className={step === 3 ? 'block' : 'hidden'}>
             <StepGrupo
               grupoActivo={grupoActivo}
               miembros={miembros}
               onToggleGrupo={() => { setGrupoActivo((v) => !v); if (grupoActivo) setMiembros([]); }}
               onMiembrosChange={setMiembros}
-              onBack={() => goTo(2)}
-              onNext={() => goTo(4)}
+              onBack={() => goTo(1)}
+              onNext={() => goTo(3)}
             />
           </div>
-          <div className={step === 4 ? 'block' : 'hidden'}>
+          <div className={step === 3 ? 'block' : 'hidden'}>
             <StepPago
               total={total}
-              desglose={{ base: COSTO_BASE, nMiembros, actividades: actividadesSeleccionadas }}
+              desglose={{ base: COSTO_BASE, nMiembros }}
               deposito={deposito}
               facturacion={facturacion}
               estados={catalogos.estados}
@@ -265,7 +243,7 @@ export function RegistroForm({ catalogos, actividades }: RegistroFormProps) {
               onDepositoChange={(d) => setDeposito(d)}
               onMontoTouch={() => setMontoTouched(true)}
               onFacturacionChange={(f) => setFacturacion(f)}
-              onBack={() => goTo(3)}
+              onBack={() => goTo(2)}
             />
           </div>
 
