@@ -36,6 +36,7 @@ export interface RegistroFormFields {
   referencia?: string;
   monto?: string;
   fechaDeposito?: string;
+  notas?: string;
   requiereFacturacion?: boolean;
   razonSocial?: string;
   rfc?: string;
@@ -83,6 +84,7 @@ export async function registrarUsuarioAction(
       referencia: formData.get('referencia') as string,
       monto: formData.get('monto') as string,
       fechaDeposito: formData.get('fechaDeposito') as string,
+      notas: formData.get('notas') as string,
     };
 
     const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
@@ -199,6 +201,7 @@ export async function registrarUsuarioAction(
         referencia: parsedDeposito.data.referencia,
         monto: parsedDeposito.data.monto,
         fechaDeposito: parsedDeposito.data.fechaDeposito,
+        notas: parsedDeposito.data.notas || null,
       },
       archivo: {
         nombre: file.name,
@@ -227,6 +230,7 @@ export async function registrarUsuarioAction(
       try {
         const grupoUseCase = new RegistrarGrupoRapido(
           getUsuarioRepository(),
+          getDepositoRepository(),
           getStorageService(),
           getEmailService(),
           getPdfService(),
@@ -234,6 +238,14 @@ export async function registrarUsuarioAction(
         await grupoUseCase.execute({
           responsableId: resultado.folio,
           miembros,
+          deposito: {
+            bancoSucursal: parsedDeposito.data.bancoSucursal || null,
+            ciudad: parsedDeposito.data.ciudad || null,
+            referencia: parsedDeposito.data.referencia,
+            monto: parsedDeposito.data.monto,
+            fechaDeposito: parsedDeposito.data.fechaDeposito,
+            notas: parsedDeposito.data.notas || null,
+          },
           archivo: {
             nombre: file.name,
             mime: file.type,
@@ -283,6 +295,7 @@ export async function registrarUsuarioAction(
       referencia: formData.get('referencia') as string,
       monto: formData.get('monto') as string,
       fechaDeposito: formData.get('fechaDeposito') as string,
+      notas: formData.get('notas') as string,
       requiereFacturacion: formData.get('requiereFacturacion') === 'true',
       razonSocial: formData.get('razonSocial') as string,
       rfc: formData.get('rfc') as string,

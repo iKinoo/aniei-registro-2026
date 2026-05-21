@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/database/client';
+import { HistorialDepositos, DepositoHistorialItem } from '@/app/components/HistorialDepositos';
 import AutoLogout from './AutoLogout';
 import styles from './page.module.css';
 
@@ -45,6 +46,28 @@ export default async function PerfilPage() {
         orderBy: { fecha_inscripcion: 'desc' },
       })
     : [];
+
+  // Cargar historial de depósitos
+  const depositosRaw = acceso.folio_registro
+    ? await prisma.depositos.findMany({
+        where: { folio_registro: acceso.folio_registro },
+        orderBy: { fecha_registro: 'desc' },
+      })
+    : [];
+
+  const depositos: DepositoHistorialItem[] = depositosRaw.map((d) => ({
+    idDeposito: d.id_deposito,
+    proposito: d.proposito ?? 'EVENTO_PRINCIPAL',
+    monto: Number(d.monto),
+    referencia: d.referencia,
+    bancoSucursal: d.banco_sucursal,
+    ciudad: d.ciudad,
+    fechaDeposito: d.fecha_deposito,
+    fechaRegistro: d.fecha_registro ?? new Date(),
+    notas: d.notas,
+    archivoUrl: d.archivo_url,
+    archivoNombre: d.archivo_nombre,
+  }));
 
   return (
     <div className={styles.container}>
@@ -154,6 +177,15 @@ export default async function PerfilPage() {
             </div>
           )}
 
+          {/* Historial de Depósitos */}
+          <div className={styles.sectionTitle}>
+            Historial de Depósitos
+            <span className={styles.actividadesBadge}>{depositos.length}</span>
+          </div>
+          <div className="mb-8">
+            <HistorialDepositos depositos={depositos} />
+          </div>
+
           {/* Acciones */}
           <div className={styles.actions}>
             {inscripciones.length > 0 && (
@@ -162,7 +194,7 @@ export default async function PerfilPage() {
               </a>
             )}
             <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
-              Registro Grupal Rápido
+              Registro Grupal
             </a>
             <a href="/api/auth/signout" className={styles.logoutButton}>
               Cerrar Sesión

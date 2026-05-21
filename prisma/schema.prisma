@@ -84,6 +84,7 @@ model depositos {
   archivo_nombre  String    @db.VarChar(255)
   archivo_mime    String    @db.VarChar(100)
   archivo_tamanio Int
+  notas           String?   @db.VarChar(500)
   usuarios        usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 }
 

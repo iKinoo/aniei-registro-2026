@@ -18,6 +18,7 @@ export class DepositoMapper {
       archivoTamanio: raw.archivo_tamanio,
       fechaRegistro: raw.fecha_registro ?? new Date(),
       proposito: raw.proposito ?? 'EVENTO_PRINCIPAL',
+      notas: raw.notas ?? null,
     });
   }
 
@@ -34,6 +35,7 @@ export class DepositoMapper {
       archivo_mime: deposito.archivo.getMime(),
       archivo_tamanio: deposito.archivo.getTamanio(),
       proposito: deposito.proposito,
+      notas: deposito.notas,
     };
   }
 }

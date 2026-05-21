@@ -5,6 +5,7 @@ import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { Estado } from '@/shared/types/catalogos';
 import { SeccionFacturacion, FacturacionDefaults } from '@/app/registro/components/SeccionFacturacion';
 import { CampoArchivo } from '@/app/registro/components/CampoArchivo';
+import { FormularioDeposito, DepositoFormValues } from '@/app/registro/components/FormularioDeposito';
 import { confirmarInscripcionesAction, ConfirmacionInscripcionResult } from './actions';
 
 // ---- helpers ----
@@ -116,12 +117,15 @@ interface Props {
   facturacionDefaults?: FacturacionDefaults;
 }
 
+const emptyDeposito: DepositoFormValues = { bancoSucursal: '', ciudad: '', referencia: '', monto: '', fechaDeposito: '', notas: '' };
+
 export default function CheckoutClient({ actividades, estados, facturacionDefaults }: Props) {
+  const total = actividades.reduce((s, a) => s + (a.costo ?? 0), 0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmacion, setConfirmacion] = useState<ConfirmacionInscripcionResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [deposito, setDeposito] = useState<DepositoFormValues>({ ...emptyDeposito, monto: total.toFixed(2) });
 
-  const total = actividades.reduce((s, a) => s + (a.costo ?? 0), 0);
   const tieneCosto = total > 0;
   const idsActividades = actividades.map((a) => a.idActividad);
 
@@ -197,49 +201,15 @@ export default function CheckoutClient({ actividades, estados, facturacionDefaul
                 </p>
               </div>
               <div className="px-6 py-5 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="bancoSucursal" className="text-sm font-medium text-slate-700">Banco / Sucursal</label>
-                    <input id="bancoSucursal" name="bancoSucursal" type="text" maxLength={100}
-                      placeholder="Ej. BBVA Sucursal Centro" className={inputCls} />
-                    {errors.bancoSucursal && <p className="text-xs text-red-500">{errors.bancoSucursal}</p>}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="ciudad" className="text-sm font-medium text-slate-700">Ciudad</label>
-                    <input id="ciudad" name="ciudad" type="text" maxLength={100}
-                      placeholder="Ej. Guadalajara" className={inputCls} />
-                    {errors.ciudad && <p className="text-xs text-red-500">{errors.ciudad}</p>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="referencia" className="text-sm font-medium text-slate-700">
-                    Referencia / Folio <span className="text-red-500">*</span>
-                  </label>
-                  <input id="referencia" name="referencia" type="text" maxLength={50} required
-                    placeholder="Número de referencia del comprobante" className={inputCls} />
-                  {errors.referencia && <p className="text-xs text-red-500">{errors.referencia}</p>}
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="monto" className="text-sm font-medium text-slate-700">
-                      Monto depositado ($) <span className="text-red-500">*</span>
-                    </label>
-                    <input id="monto" name="monto" type="number" step="0.01" min="0.01" required
-                      placeholder="0.00" defaultValue={total} className={inputCls} />
-                    {errors.monto && <p className="text-xs text-red-500">{errors.monto}</p>}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="fechaDeposito" className="text-sm font-medium text-slate-700">
-                      Fecha del depósito <span className="text-red-500">*</span>
-                    </label>
-                    <input id="fechaDeposito" name="fechaDeposito" type="date" required className={inputCls} />
-                    {errors.fechaDeposito && <p className="text-xs text-red-500">{errors.fechaDeposito}</p>}
-                  </div>
-                </div>
-
-                <CampoArchivo name="comprobante" error={errors.comprobante} />
+                <FormularioDeposito
+                  variant="light"
+                  values={deposito}
+                  onChange={(field, val) => setDeposito((prev) => ({ ...prev, [field]: val }))}
+                  errors={errors}
+                  showFileUpload
+                  fileInputName="comprobante"
+                  fileError={errors?.comprobante}
+                />
               </div>
             </section>
           )}

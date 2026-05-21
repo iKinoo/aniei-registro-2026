@@ -102,6 +102,7 @@ export async function confirmarInscripcionesAction(
       referencia: formData.get('referencia') as string,
       monto: formData.get('monto') as string,
       fechaDeposito: formData.get('fechaDeposito') as string,
+      notas: formData.get('notas') as string,
     };
     const parsedDeposito = depositoSchema.safeParse(rawDeposito);
     if (!parsedDeposito.success) {
@@ -134,6 +135,7 @@ export async function confirmarInscripcionesAction(
       archivoMime: file.type,
       archivoTamanio: file.size,
       proposito: 'ACTIVIDADES',
+      notas: parsedDeposito.data.notas || null,
     });
     await getDepositoRepository().crear(deposito);
   }
