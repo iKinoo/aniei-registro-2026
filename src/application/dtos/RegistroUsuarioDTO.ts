@@ -13,6 +13,7 @@ export interface DepositoDTO {
   referencia: string;
   monto: number;
   fechaDeposito: Date;
+  notas?: string | null;
 }
 
 export interface FacturacionDTO {

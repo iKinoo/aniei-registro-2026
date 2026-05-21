@@ -21,6 +21,7 @@ export const depositoSchema = z.object({
   referencia: z.string().min(1, 'La referencia es requerida').max(50),
   monto: z.coerce.number().positive('El monto debe ser mayor a 0'),
   fechaDeposito: z.coerce.date({ error: 'Ingrese una fecha de depósito válida' }),
+  notas: z.string().max(500).optional().or(z.literal('')),
 });
 
 export const facturacionSchema = z.object({

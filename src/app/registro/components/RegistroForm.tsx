@@ -20,6 +20,7 @@ export interface DatosGeneralesWizard {
 export interface DepositoWizard {
   bancoSucursal: string; ciudad: string;
   referencia: string; monto: string; fechaDeposito: string;
+  notas: string;
 }
 
 export interface FacturacionWizard {
@@ -47,7 +48,7 @@ const emptyDatos: DatosGeneralesWizard = {
 };
 
 const emptyDeposito: DepositoWizard = {
-  bancoSucursal: '', ciudad: '', referencia: '', monto: '', fechaDeposito: '',
+  bancoSucursal: '', ciudad: '', referencia: '', monto: '', fechaDeposito: '', notas: '',
 };
 
 const emptyFacturacion: FacturacionWizard = {

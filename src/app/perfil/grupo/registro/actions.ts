@@ -5,12 +5,14 @@ import { prisma } from '@/infrastructure/database/client';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import {
   getUsuarioRepository,
+  getDepositoRepository,
   getStorageService,
   getEmailService,
   getPdfService,
   getAccesoRepository,
 } from '@/infrastructure/config/container';
 import { z } from 'zod';
+import { depositoSchema } from '@/shared/validation/registro.schema';
 
 const miembroRapidoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(125),
@@ -19,6 +21,7 @@ const miembroRapidoSchema = z.object({
 
 const grupoRapidoFormSchema = z.object({
   miembros: z.array(miembroRapidoSchema).min(1, 'Agregue al menos un miembro al grupo'),
+  deposito: depositoSchema,
 });
 
 export interface GrupoRapidoActionState {
@@ -88,9 +91,19 @@ export async function registrarGrupoRapidoAction(
       apellido: apellidos[i] as string
     }));
 
+    const rawDeposito = {
+      bancoSucursal: formData.get('bancoSucursal') as string,
+      ciudad: formData.get('ciudad') as string,
+      referencia: formData.get('referencia') as string,
+      monto: formData.get('monto') as string,
+      fechaDeposito: formData.get('fechaDeposito') as string,
+      notas: formData.get('notas') as string,
+    };
+
     // 4. Validar con Zod
     const parseResult = grupoRapidoFormSchema.safeParse({
       miembros: miembrosList,
+      deposito: rawDeposito,
     });
 
     if (!parseResult.success) {
@@ -116,6 +129,7 @@ export async function registrarGrupoRapidoAction(
     // 7. Ejecutar caso de uso
     const useCase = new RegistrarGrupoRapido(
       getUsuarioRepository(),
+      getDepositoRepository(),
       getStorageService(),
       getEmailService(),
       getPdfService(),
@@ -124,6 +138,14 @@ export async function registrarGrupoRapidoAction(
     const resultado = await useCase.execute({
       responsableId: acceso.folio_registro,
       miembros: parseResult.data.miembros,
+      deposito: {
+        bancoSucursal: parseResult.data.deposito.bancoSucursal || null,
+        ciudad: parseResult.data.deposito.ciudad || null,
+        referencia: parseResult.data.deposito.referencia,
+        monto: parseResult.data.deposito.monto,
+        fechaDeposito: parseResult.data.deposito.fechaDeposito,
+        notas: parseResult.data.deposito.notas || null,
+      },
       archivo: {
         nombre: file.name,
         mime: file.type,

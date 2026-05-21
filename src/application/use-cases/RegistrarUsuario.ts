@@ -92,6 +92,7 @@ export class RegistrarUsuario {
       archivoNombre: dto.archivo.nombre,
       archivoMime: dto.archivo.mime,
       archivoTamanio: dto.archivo.tamanio,
+      notas: dto.deposito.notas ?? null,
     });
     await this.depositoRepo.crear(deposito);
 

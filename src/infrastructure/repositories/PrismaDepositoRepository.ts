@@ -19,4 +19,12 @@ export class PrismaDepositoRepository implements IDepositoRepository {
     });
     return found ? DepositoMapper.toDomain(found) : null;
   }
+
+  async buscarTodosPorUsuario(folioRegistro: string): Promise<Deposito[]> {
+    const rows = await this.prisma.depositos.findMany({
+      where: { folio_registro: folioRegistro },
+      orderBy: { fecha_registro: 'desc' },
+    });
+    return rows.map((r) => DepositoMapper.toDomain(r));
+  }
 }

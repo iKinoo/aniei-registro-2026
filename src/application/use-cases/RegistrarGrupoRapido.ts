@@ -1,15 +1,19 @@
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { RegistrarGrupoRapidoDTO } from '@/application/dtos/RegistrarGrupoRapidoDTO';
 import { ResultadoRegistroGrupo } from '@/application/dtos/ResultadoRegistroGrupo';
+import { Deposito } from '@/core/entities/Deposito';
+import { Monto } from '@/core/value-objects/Monto';
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import bcrypt from 'bcryptjs';
 
 export class RegistrarGrupoRapido {
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
+    private readonly depositoRepo: IDepositoRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
@@ -31,7 +35,24 @@ export class RegistrarGrupoRapido {
     // 4. Subir comprobante (un solo archivo por el grupo)
     const ext = dto.archivo.nombre.split('.').pop() || 'bin';
     const archivoRuta = `comprobantes_grupo/${token}.${ext}`;
-    await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
+    const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
+
+    // 4.5 Crear depósito del responsable con los datos del formulario
+    const deposito = Deposito.create({
+      folioRegistro: dto.responsableId,
+      bancoSucursal: dto.deposito.bancoSucursal ?? null,
+      ciudad: dto.deposito.ciudad ?? null,
+      referencia: dto.deposito.referencia,
+      monto: Monto.create(dto.deposito.monto),
+      fechaDeposito: dto.deposito.fechaDeposito,
+      archivoUrl: urlComprobante,
+      archivoNombre: dto.archivo.nombre,
+      archivoMime: dto.archivo.mime,
+      archivoTamanio: dto.archivo.tamanio,
+      proposito: 'GRUPO_RAPIDO',
+      notas: dto.deposito.notas ?? null,
+    });
+    await this.depositoRepo.crear(deposito);
 
     // 5. Preparar los datos de los miembros (Mapeo)
     const passwordGenerico = await bcrypt.hash(crypto.randomUUID(), 10);
