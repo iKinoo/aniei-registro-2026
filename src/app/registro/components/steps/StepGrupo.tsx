@@ -5,6 +5,7 @@ import { MiembroWizard } from '../RegistroForm';
 interface Props {
   grupoActivo: boolean;
   miembros: MiembroWizard[];
+  costoMiembro: number;
   onToggleGrupo: () => void;
   onMiembrosChange: (m: MiembroWizard[]) => void;
   onBack: () => void;
@@ -13,7 +14,7 @@ interface Props {
 
 const inputCls = 'w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all';
 
-export function StepGrupo({ grupoActivo, miembros, onToggleGrupo, onMiembrosChange, onBack, onNext }: Props) {
+export function StepGrupo({ grupoActivo, miembros, costoMiembro, onToggleGrupo, onMiembrosChange, onBack, onNext }: Props) {
   function addMiembro() { onMiembrosChange([...miembros, { nombre: '', apellido: '' }]); }
   function removeMiembro(i: number) { onMiembrosChange(miembros.filter((_, idx) => idx !== i)); }
   function updateMiembro(i: number, field: keyof MiembroWizard, value: string) {
@@ -31,7 +32,7 @@ export function StepGrupo({ grupoActivo, miembros, onToggleGrupo, onMiembrosChan
             </h2>
             <p className="text-slate-500 text-sm mt-0.5">
               Agrega miembros adicionales al congreso general.
-              Cada miembro suma <strong className="text-slate-700">$2,000 MXN</strong> al total.
+              Cada miembro suma <strong className="text-slate-700">${costoMiembro.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN</strong> al total.
             </p>
           </div>
           <button
@@ -91,7 +92,7 @@ export function StepGrupo({ grupoActivo, miembros, onToggleGrupo, onMiembrosChan
             <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
               <span className="text-violet-700 text-sm">{miembros.length} miembro{miembros.length > 1 ? 's' : ''} en el grupo</span>
               <span className="text-violet-900 font-bold text-sm">
-                +${(2000 * miembros.length).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
+                +${(costoMiembro * miembros.length).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
               </span>
             </div>
           )}

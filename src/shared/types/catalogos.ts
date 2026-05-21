@@ -19,6 +19,15 @@ export interface Titulo {
   descripcion: string;
 }
 
+export interface PrecioInscripcion {
+  id: number;
+  fechaLimite: Date;
+  costo: number;
+  costoMiembro: number;
+  orden: number;
+  activo: boolean;
+}
+
 export interface TipoActividad {
   idTipoActividad: number;
   clave: string | null;

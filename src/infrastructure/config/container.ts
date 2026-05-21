@@ -7,8 +7,9 @@ import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAcce
 import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
+import { PrismaPrecioInscripcionRepository } from '@/infrastructure/repositories/PrismaPrecioInscripcionRepository';
 import { NodemailerEmailService } from '@/infrastructure/services/email/NodemailerEmailService';
-import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
+import { PuppeteerPdfService } from '@/infrastructure/services/pdf/PuppeteerPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
@@ -21,6 +22,7 @@ import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
+import { IPrecioInscripcionRepository } from '@/application/ports/IPrecioInscripcionRepository';
 import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
@@ -69,7 +71,7 @@ export function getEmailService(): IEmailService {
 }
 
 export function getPdfService(): IPdfService {
-  return new ReactPdfService();
+  return new PuppeteerPdfService();
 }
 
 export function getStorageService(): IStorageService {
@@ -87,4 +89,8 @@ export function getAdminQueryService(): IAdminQueryService {
 
 export function getAuthService(): IAuthService {
   return new AuthJsAuthService();
+}
+
+export function getPrecioInscripcionRepository(): IPrecioInscripcionRepository {
+  return new PrismaPrecioInscripcionRepository(prisma);
 }

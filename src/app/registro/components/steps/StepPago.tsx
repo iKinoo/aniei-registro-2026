@@ -7,7 +7,7 @@ import { estadosToOptions } from '../SelectCatalogo';
 
 interface Props {
   total: number;
-  desglose: { base: number; nMiembros: number };
+  desglose: { base: number; nMiembros: number; costoMiembro: number };
   deposito: DepositoWizard;
   facturacion: FacturacionWizard;
   estados: Estado[];
@@ -107,7 +107,7 @@ export function StepPago({
           {desglose.nMiembros > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">+{desglose.nMiembros} miembro{desglose.nMiembros > 1 ? 's' : ''} de grupo</span>
-              <span className="text-violet-600 font-medium">+${(desglose.base * desglose.nMiembros).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              <span className="text-violet-600 font-medium">+${(desglose.costoMiembro * desglose.nMiembros).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
             </div>
           )}
           <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center">
