@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
-import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, PrecioInscripcion } from '@/shared/types/catalogos';
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
 import { StepGrupo } from './steps/StepGrupo';
 import { StepPago } from './steps/StepPago';
-
-const COSTO_BASE = 2000;
 
 export interface MiembroWizard { nombre: string; apellido: string; }
 
@@ -32,6 +30,8 @@ export interface FacturacionWizard {
 
 interface RegistroFormProps {
   catalogos: { titulos: Titulo[]; estados: Estado[]; instituciones: Institucion[] };
+  precios: PrecioInscripcion[];
+  precioVigente: PrecioInscripcion | null;
 }
 
 const STEPS = [
@@ -57,10 +57,20 @@ const emptyFacturacion: FacturacionWizard = {
 
 const initialState: RegistroActionState = { success: false };
 
-export function RegistroForm({ catalogos }: RegistroFormProps) {
+function formatMXN(amount: number) {
+  return amount.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+}
+
+function formatDate(date: Date) {
+  return new Date(date).toLocaleDateString('es-MX', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+export function RegistroForm({ catalogos, precios, precioVigente }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
   const [step, setStep] = useState(1);
-  const [maxStep, setMaxStep] = useState(1); // highest step reached
+  const [maxStep, setMaxStep] = useState(1);
   const [datos, setDatos] = useState<DatosGeneralesWizard>(emptyDatos);
   const [grupoActivo, setGrupoActivo] = useState(false);
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
@@ -68,10 +78,15 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
   const [montoTouched, setMontoTouched] = useState(false);
 
+  const costoBase = precioVigente?.costo ?? 0;
+  const costoMiembro = precioVigente?.costoMiembro ?? 0;
   const nMiembros = grupoActivo ? miembros.length : 0;
-  const total = COSTO_BASE * (1 + nMiembros);
+  const total = costoBase + costoMiembro * nMiembros;
 
-  // Auto-sync monto when total changes (unless user manually edited it)
+  const preciosFuturos = precios
+    .filter((p) => p.activo && new Date(p.fechaLimite) > new Date())
+    .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime());
+
   useEffect(() => {
     if (!montoTouched) {
       setDeposito((prev) => ({ ...prev, monto: total.toFixed(2) }));
@@ -132,7 +147,50 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
         <p className="text-slate-500 mt-2 text-base">Completa los pasos para inscribirte al congreso</p>
       </div>
 
-      {/* Progress stepper — icons are clickable to go back */}
+      {/* Price info banner */}
+      <div className="max-w-2xl mx-auto px-4 mb-6">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-semibold text-amber-800">Información de costos de inscripción</span>
+          </div>
+
+          {precioVigente ? (
+            <div className="grid gap-2 text-sm">
+              <div className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2 border border-amber-100">
+                <span className="text-slate-600">Costo actual (desde {formatDate(precioVigente.fechaLimite)})</span>
+                <span className="font-bold text-slate-900">${formatMXN(precioVigente.costo)} MXN</span>
+              </div>
+              {precioVigente.costoMiembro > 0 && (
+                <div className="flex items-center justify-between px-3">
+                  <span className="text-slate-500 text-xs">Costo adicional por miembro de grupo</span>
+                  <span className="font-medium text-slate-700 text-xs">${formatMXN(precioVigente.costoMiembro)} MXN</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-amber-700">No hay un precio vigente configurado.</p>
+          )}
+
+          {preciosFuturos.length > 0 && (
+            <div className="border-t border-amber-200 pt-3">
+              <p className="text-xs font-medium text-amber-700 mb-2">Próximos cambios de precio:</p>
+              <div className="space-y-1.5">
+                {preciosFuturos.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between text-xs px-1">
+                    <span className="text-slate-500">A partir del {formatDate(p.fechaLimite)}</span>
+                    <span className="font-semibold text-slate-700">${formatMXN(p.costo)} MXN</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Progress stepper */}
       <div className="max-w-2xl mx-auto px-4 mb-8">
         <div className="flex items-center justify-between relative">
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200" />
@@ -187,7 +245,6 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
       {/* Form */}
       <div className="max-w-2xl mx-auto px-4 pb-16">
         <form action={formAction}>
-          {/* All hidden fields carrying wizard state to server action */}
           <input type="hidden" name="nombre" value={datos.nombre} />
           <input type="hidden" name="apellido" value={datos.apellido} />
           <input type="hidden" name="correo" value={datos.correo} />
@@ -200,7 +257,6 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           <input type="hidden" name="idTitulo" value={datos.idTitulo} />
           <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
           <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
-          {/* Deposito hidden (StepPago renders real inputs directly) */}
           <input type="hidden" name="numMiembros" value={grupoActivo ? miembros.length : 0} />
           {grupoActivo && miembros.map((m, i) => (
             <span key={i}>
@@ -210,7 +266,6 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           ))}
           <input type="hidden" name="requiereFacturacion" value={facturacion.activa ? 'true' : 'false'} />
 
-          {/* Step panels — always mounted, shown/hidden with CSS */}
           <div className={step === 1 ? 'block' : 'hidden'}>
             <StepDatosGenerales
               catalogos={catalogos}
@@ -224,6 +279,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
             <StepGrupo
               grupoActivo={grupoActivo}
               miembros={miembros}
+              costoMiembro={costoMiembro}
               onToggleGrupo={() => { setGrupoActivo((v) => !v); if (grupoActivo) setMiembros([]); }}
               onMiembrosChange={setMiembros}
               onBack={() => goTo(1)}
@@ -233,7 +289,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           <div className={step === 3 ? 'block' : 'hidden'}>
             <StepPago
               total={total}
-              desglose={{ base: COSTO_BASE, nMiembros }}
+              desglose={{ base: costoBase, nMiembros, costoMiembro }}
               deposito={deposito}
               facturacion={facturacion}
               estados={catalogos.estados}

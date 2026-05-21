@@ -209,3 +209,12 @@ model grupos_registro {
   responsable                usuarios   @relation("GrupoResponsable", fields: [folio_registro_responsable], references: [folio_registro], onDelete: Cascade)
   miembros                   usuarios[] @relation("GrupoMiembros")
 }
+
+model precios_inscripcion {
+  id            Int      @id @default(autoincrement())
+  fecha_limite  DateTime @db.Timestamp(6)
+  costo         Decimal  @db.Decimal(10, 2)
+  costo_miembro Decimal  @default(0) @db.Decimal(10, 2)
+  orden         Int      @default(1)
+  activo        Boolean  @default(true)
+}

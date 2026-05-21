@@ -1,21 +1,28 @@
-import { getTiposActividadAction } from './actions';
+import { getTiposActividadAction, obtenerPreciosAction } from './actions';
+import PreciosClient from './PreciosClient';
 
 export const metadata = {
   title: 'Configuración - CPanel',
 };
 
 export default async function ConfiguracionPage() {
-  const result = await getTiposActividadAction();
-  const tiposActividad = result.success ? result.data : [];
+  const [tiposResult, preciosResult] = await Promise.all([
+    getTiposActividadAction(),
+    obtenerPreciosAction(),
+  ]);
+  const tiposActividad = tiposResult.success ? tiposResult.data : [];
+  const precios = preciosResult.success ? preciosResult.data : [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="mb-2">
         <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Visualiza los catálogos y parámetros del sistema. (Solo consulta)
+          Administra los parámetros del sistema.
         </p>
       </div>
+
+      <PreciosClient initialPrecios={precios} />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50">
