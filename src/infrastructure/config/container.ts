@@ -9,7 +9,7 @@ import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositor
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
 import { PrismaPrecioInscripcionRepository } from '@/infrastructure/repositories/PrismaPrecioInscripcionRepository';
 import { NodemailerEmailService } from '@/infrastructure/services/email/NodemailerEmailService';
-import { PuppeteerPdfService } from '@/infrastructure/services/pdf/PuppeteerPdfService';
+import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
@@ -71,7 +71,7 @@ export function getEmailService(): IEmailService {
 }
 
 export function getPdfService(): IPdfService {
-  return new PuppeteerPdfService();
+  return new ReactPdfService();
 }
 
 export function getStorageService(): IStorageService {
