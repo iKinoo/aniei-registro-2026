@@ -1,11 +1,11 @@
 'use client';
 
-import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
 import { DatosGeneralesWizard } from '../RegistroForm';
-import { cargosToOptions, estadosToOptions, institucionesToOptions, tiposUsuarioToOptions } from '../SelectCatalogo';
+import { titulosToOptions, estadosToOptions, institucionesToOptions } from '../SelectCatalogo';
 
 interface Props {
-  catalogos: { cargos: Cargo[]; estados: Estado[]; instituciones: Institucion[]; tiposUsuario: TipoUsuario[] };
+  catalogos: { titulos: Titulo[]; estados: Estado[]; instituciones: Institucion[] };
   datos: DatosGeneralesWizard;
   errors?: Record<string, string>;
   onChange: (d: DatosGeneralesWizard) => void;
@@ -78,31 +78,27 @@ export function StepDatosGenerales({ catalogos, datos, errors, onChange, onNext 
         </Field>
       </div>
 
-      <Field label="Facultad / Dependencia">
-        <input id="s1-dep" className={inputCls} placeholder="Ej. Facultad de Ingeniería" maxLength={128} value={datos.dependencia} onChange={(e) => set('dependencia', e.target.value)} />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Cargo" required error={errors?.idCargo}>
-          <select id="s1-cargo" className={selectCls} value={datos.idCargo} onChange={(e) => set('idCargo', e.target.value)}>
-            <option value="">Seleccione...</option>
-            {cargosToOptions(catalogos.cargos).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </Field>
-        <Field label="Tipo de participante" required error={errors?.idTipoUsuario}>
-          <select id="s1-tipo" className={selectCls} value={datos.idTipoUsuario} onChange={(e) => set('idTipoUsuario', e.target.value)}>
-            <option value="">Seleccione...</option>
-            {tiposUsuarioToOptions(catalogos.tiposUsuario).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </Field>
-      </div>
-
       <Field label="Institución" required error={errors?.idInstitucion}>
         <select id="s1-inst" className={selectCls} value={datos.idInstitucion} onChange={(e) => set('idInstitucion', e.target.value)}>
           <option value="">Seleccione...</option>
           {institucionesToOptions(catalogos.instituciones).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </Field>
+
+      <Field label="Facultad / Dependencia">
+        <input id="s1-dep" className={inputCls} placeholder="Ej. Facultad de Ingeniería" maxLength={128} value={datos.dependencia} onChange={(e) => set('dependencia', e.target.value)} />
+      </Field>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Título" required error={errors?.idTitulo}>
+          <select id="s1-titulo" className={selectCls} value={datos.idTitulo} onChange={(e) => set('idTitulo', e.target.value)}>
+            <option value="">Seleccione...</option>
+            {titulosToOptions(catalogos.titulos).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
+      </div>
+
+      
 
       <Field label="Estado" required error={errors?.idEntidadFederativa}>
         <select id="s1-estado" className={selectCls} value={datos.idEntidadFederativa} onChange={(e) => set('idEntidadFederativa', e.target.value)}>

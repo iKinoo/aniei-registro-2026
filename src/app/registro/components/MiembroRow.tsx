@@ -1,16 +1,12 @@
 'use client';
 
-import { TipoUsuario } from '@/shared/types/catalogos';
-import { tiposUsuarioToOptions } from './SelectCatalogo';
-
 interface MiembroRowProps {
   index: number;
-  tiposUsuario: TipoUsuario[];
   onRemove: (index: number) => void;
   errors?: Record<string, string>;
 }
 
-export function MiembroRow({ index, tiposUsuario, onRemove, errors }: MiembroRowProps) {
+export function MiembroRow({ index, onRemove, errors }: MiembroRowProps) {
   const prefix = `miembro_${index}`;
 
   return (
@@ -87,21 +83,6 @@ export function MiembroRow({ index, tiposUsuario, onRemove, errors }: MiembroRow
             id={`${prefix}_carrera`} name={`${prefix}_carrera`} type="text" maxLength={128}
             className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor={`${prefix}_idTipoUsuario`} className="text-xs font-medium text-gray-600">
-            Tipo de participante <span className="text-red-500">*</span>
-          </label>
-          <select
-            id={`${prefix}_idTipoUsuario`} name={`${prefix}_idTipoUsuario`} required defaultValue=""
-            className="rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="" disabled>Seleccione...</option>
-            {tiposUsuarioToOptions(tiposUsuario).map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
         </div>
       </div>
     </div>

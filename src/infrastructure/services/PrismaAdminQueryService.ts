@@ -29,7 +29,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
         where: whereClause,
         include: {
           instituciones: true,
-          tipo_usuario: true,
+          titulos: true,
           depositos: {
             where: { proposito: 'EVENTO_PRINCIPAL' },
             orderBy: { fecha_registro: 'desc' },
@@ -51,7 +51,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
         correo: user.correo,
         telefono: user.telefono || null,
         institucion: user.instituciones?.nombre || 'Desconocida',
-        tipoUsuario: user.tipo_usuario?.descripcion || 'Desconocido',
+        tipoUsuario: user.titulos?.descripcion || 'Desconocido',
         fechaRegistro: user.fecha_registro || new Date(),
         deposito: dep
           ? {

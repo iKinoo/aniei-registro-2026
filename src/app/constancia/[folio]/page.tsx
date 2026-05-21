@@ -32,13 +32,13 @@ export default async function ConstanciaPage({
 
     // Obtener datos de catálogos
     const catalogoRepo = getCatalogoRepository();
-    const [instituciones, tiposUsuario] = await Promise.all([
+    const [instituciones, titulos] = await Promise.all([
       catalogoRepo.obtenerInstituciones(),
-      catalogoRepo.obtenerTiposUsuario(),
+      catalogoRepo.obtenerTitulos(),
     ]);
 
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
-    const tipoUsuario = tiposUsuario.find((t) => t.idTipoUsuario === usuario.idTipoUsuario);
+    const titulo = titulos.find((t) => t.idTitulo === usuario.idTitulo);
 
     const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
       year: 'numeric', month: 'long', day: 'numeric',
@@ -64,7 +64,7 @@ export default async function ConstanciaPage({
             </div>
             <div className="flex justify-between border-b py-2">
               <span className="font-medium text-gray-600">Tipo:</span>
-              <span>{tipoUsuario?.descripcion ?? 'N/A'}</span>
+              <span>{titulo?.descripcion ?? 'N/A'}</span>
             </div>
             <div className="flex justify-between py-2">
               <span className="font-medium text-gray-600">Fecha:</span>

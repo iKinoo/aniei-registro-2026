@@ -16,6 +16,7 @@ const completarRegistroSchema = z.object({
   extension: z.string().max(10).optional().or(z.literal('')),
   genero: z.enum(['M', 'F', 'O'], { message: 'Seleccione un género' }),
   carrera: z.string().max(128).optional().or(z.literal('')),
+  idTitulo: z.coerce.number().int().positive('Seleccione un título'),
 });
 
 export interface CompletarActionState {
@@ -89,6 +90,7 @@ export async function completarRegistroAction(
           extension: validatedData.extension || null,
           genero: validatedData.genero,
           carrera: validatedData.carrera || null,
+          id_titulo: validatedData.idTitulo,
         },
       });
 

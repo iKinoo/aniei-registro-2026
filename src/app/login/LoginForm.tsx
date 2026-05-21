@@ -53,7 +53,7 @@ export function LoginForm() {
       </button>
 
       <a
-        href="/registro"
+        href="/"
         className="w-full flex justify-center py-3.5 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-200 transition-all"
       >
         No estoy registrado

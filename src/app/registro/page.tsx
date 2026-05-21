@@ -4,17 +4,16 @@ import { RegistroForm } from './components/RegistroForm';
 export default async function RegistroPage() {
   const catalogoRepo = getCatalogoRepository();
 
-  const [cargos, estados, instituciones, tiposUsuario] = await Promise.all([
-    catalogoRepo.obtenerCargos(),
+  const [titulos, estados, instituciones] = await Promise.all([
+    catalogoRepo.obtenerTitulos(),
     catalogoRepo.obtenerEstados(),
     catalogoRepo.obtenerInstituciones(),
-    catalogoRepo.obtenerTiposUsuario(),
   ]);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <RegistroForm
-        catalogos={{ cargos, estados, instituciones, tiposUsuario }}
+        catalogos={{ titulos, estados, instituciones }}
       />
     </div>
   );

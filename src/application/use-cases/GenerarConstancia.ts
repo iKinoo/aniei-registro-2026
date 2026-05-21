@@ -17,13 +17,13 @@ export class GenerarConstancia {
       throw new Error(`Usuario con id ${folioRegistro} no encontrado`);
     }
 
-    const [instituciones, tiposUsuario] = await Promise.all([
+    const [instituciones, titulos] = await Promise.all([
       this.catalogoRepo.obtenerInstituciones(),
-      this.catalogoRepo.obtenerTiposUsuario(),
+      this.catalogoRepo.obtenerTitulos(),
     ]);
 
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
-    const tipoUsuario = tiposUsuario.find((t) => t.idTipoUsuario === usuario.idTipoUsuario);
+    const titulo = titulos.find((t) => t.idTitulo === usuario.idTitulo);
 
     const folio = usuario.folioRegistro?.toString() ?? `ANIEI-2026-${String(folioRegistro).padStart(4, '0')}`;
     const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
@@ -35,7 +35,7 @@ export class GenerarConstancia {
       apellido: usuario.apellido,
       folio,
       institucion: institucion?.nombre ?? 'N/A',
-      tipoUsuario: tipoUsuario?.descripcion ?? 'N/A',
+      tipoUsuario: titulo?.descripcion ?? 'N/A',
       fecha: fechaStr,
     });
 

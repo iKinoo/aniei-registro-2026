@@ -14,8 +14,7 @@ export interface UsuarioProps {
   genero: Genero;
   carrera?: string | null;
   dependencia?: string | null;
-  idCargo: number;
-  idTipoUsuario: number;
+  idTitulo: number;
   idInstitucion: number;
   idEntidadFederativa: number;
   verificado?: boolean;
@@ -32,8 +31,7 @@ export class Usuario {
   readonly genero: Genero;
   readonly carrera: string | null;
   readonly dependencia: string | null;
-  readonly idCargo: number;
-  readonly idTipoUsuario: number;
+  readonly idTitulo: number;
   readonly idInstitucion: number;
   readonly idEntidadFederativa: number;
   private _verificado: boolean;
@@ -49,8 +47,7 @@ export class Usuario {
     this.genero = props.genero;
     this.carrera = props.carrera ?? null;
     this.dependencia = props.dependencia ?? null;
-    this.idCargo = props.idCargo;
-    this.idTipoUsuario = props.idTipoUsuario;
+    this.idTitulo = props.idTitulo;
     this.idInstitucion = props.idInstitucion;
     this.idEntidadFederativa = props.idEntidadFederativa;
     this._verificado = props.verificado ?? false;

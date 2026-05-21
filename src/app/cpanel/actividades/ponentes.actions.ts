@@ -100,8 +100,7 @@ export interface RegistroPonenteInput {
   correo: string;
   idInstitucion?: number;
   telefono?: string;
-  idCargo?: number;
-  idTipoUsuario?: number;
+  idTitulo?: number;
 }
 
 export async function registrarPonenteAction(
@@ -139,8 +138,7 @@ export async function registrarPonenteAction(
       genero: Genero.OTRO,
       carrera: null,
       dependencia: null,
-      idCargo: datos.idCargo ?? 0,
-      idTipoUsuario: datos.idTipoUsuario ?? 0,
+      idTitulo: datos.idTitulo ?? 0,
       idInstitucion: datos.idInstitucion ?? 0,
       idEntidadFederativa: 0,
     });

@@ -16,8 +16,6 @@ export interface IUsuarioRepository {
     institucionId: number;
     dependenciaId: string;
     estadoId: number;
-    tipoUsuarioAlumnoId: number;
-    cargoAlumnoId: number;
     miembros: Array<{
       nombre: string;
       apellido: string;

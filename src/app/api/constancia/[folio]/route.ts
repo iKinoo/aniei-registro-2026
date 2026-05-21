@@ -18,13 +18,13 @@ export async function GET(
     }
 
     const catalogoRepo = getCatalogoRepository();
-    const [instituciones, tiposUsuario] = await Promise.all([
+    const [instituciones, titulos] = await Promise.all([
       catalogoRepo.obtenerInstituciones(),
-      catalogoRepo.obtenerTiposUsuario(),
+      catalogoRepo.obtenerTitulos(),
     ]);
 
     const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
-    const tipoUsuario = tiposUsuario.find((t) => t.idTipoUsuario === usuario.idTipoUsuario);
+    const titulo = titulos.find((t) => t.idTitulo === usuario.idTitulo);
 
     const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
       year: 'numeric', month: 'long', day: 'numeric',
@@ -36,7 +36,7 @@ export async function GET(
       apellido: usuario.apellido,
       folio,
       institucion: institucion?.nombre ?? 'N/A',
-      tipoUsuario: tipoUsuario?.descripcion ?? 'N/A',
+      tipoUsuario: titulo?.descripcion ?? 'N/A',
       fecha: fechaStr,
     });
 

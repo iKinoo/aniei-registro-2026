@@ -8,10 +8,6 @@ import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import bcrypt from 'bcryptjs';
 
 export class RegistrarGrupoRapido {
-  // Configuración: El ID que corresponde al tipo "Alumno"
-  private readonly ID_TIPO_USUARIO_ALUMNO = 1;
-  private readonly ID_CARGO_ALUMNO = 1;
-
   constructor(
     private readonly usuarioRepo: IUsuarioRepository,
     private readonly storageService: IStorageService,
@@ -53,9 +49,7 @@ export class RegistrarGrupoRapido {
       responsableId: dto.responsableId,
       institucionId: responsable.idInstitucion,
       dependenciaId: responsable.dependencia || '',
-      estadoId: responsable.idEntidadFederativa, 
-      tipoUsuarioAlumnoId: this.ID_TIPO_USUARIO_ALUMNO,
-      cargoAlumnoId: this.ID_CARGO_ALUMNO,
+      estadoId: responsable.idEntidadFederativa,
       miembros: miembrosMapeados
     });
 

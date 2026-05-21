@@ -57,8 +57,7 @@ export class RegistrarUsuario {
       genero: dto.genero,
       carrera: dto.carrera,
       dependencia: dto.dependencia,
-      idCargo: dto.idCargo,
-      idTipoUsuario: dto.idTipoUsuario,
+      idTitulo: dto.idTitulo,
       idInstitucion: dto.idInstitucion,
       idEntidadFederativa: dto.idEntidadFederativa,
     });
@@ -119,12 +118,12 @@ export class RegistrarUsuario {
     }
 
     // 9. Obtener datos de catálogos para el PDF y correo
-    const [instituciones, tiposUsuario] = await Promise.all([
+    const [instituciones, titulos] = await Promise.all([
       this.catalogoRepo.obtenerInstituciones(),
-      this.catalogoRepo.obtenerTiposUsuario(),
+      this.catalogoRepo.obtenerTitulos(),
     ]);
     const institucion = instituciones.find((i) => i.idInstitucion === dto.idInstitucion);
-    const tipoUsuario = tiposUsuario.find((t) => t.idTipoUsuario === dto.idTipoUsuario);
+    const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
     const fechaStr = new Date().toLocaleDateString('es-MX', {
       year: 'numeric', month: 'long', day: 'numeric',
     });
@@ -135,7 +134,7 @@ export class RegistrarUsuario {
       apellido: dto.apellido,
       folio,
       institucion: institucion?.nombre ?? 'N/A',
-      tipoUsuario: tipoUsuario?.descripcion ?? 'N/A',
+      tipoUsuario: titulo?.descripcion ?? 'N/A',
       fecha: fechaStr,
     });
 

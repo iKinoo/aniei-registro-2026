@@ -1,6 +1,6 @@
 'use client';
 
-import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
 
 interface SelectCatalogoProps {
   name: string;
@@ -38,8 +38,8 @@ export function SelectCatalogo({ name, label, options, error, required, defaultV
 }
 
 // Helpers to convert catalog types to option format
-export function cargosToOptions(cargos: Cargo[]) {
-  return cargos.map((c) => ({ value: c.idCargo, label: c.descripcion }));
+export function titulosToOptions(titulos: Titulo[]) {
+  return titulos.map((t) => ({ value: t.idTitulo, label: t.descripcion }));
 }
 
 export function estadosToOptions(estados: Estado[]) {

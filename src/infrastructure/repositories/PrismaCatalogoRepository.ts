@@ -1,13 +1,13 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
-import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
 
 export class PrismaCatalogoRepository implements ICatalogoRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async obtenerCargos(): Promise<Cargo[]> {
-    const rows = await this.prisma.cargos.findMany({ orderBy: { descripcion: 'asc' } });
-    return rows.map((r) => ({ idCargo: r.id_cargo, descripcion: r.descripcion }));
+  async obtenerTitulos(): Promise<Titulo[]> {
+    const rows = await this.prisma.titulos.findMany({ orderBy: { descripcion: 'asc' } });
+    return rows.map((r) => ({ idTitulo: r.id_titulo, descripcion: r.descripcion }));
   }
 
   async obtenerEstados(): Promise<Estado[]> {

@@ -10,8 +10,7 @@ export const registroSchema = z.object({
   genero: z.enum(['M', 'F', 'O'], { message: 'Seleccione un género' }),
   carrera: z.string().max(128).optional().or(z.literal('')),
   dependencia: z.string().max(128).optional().or(z.literal('')),
-  idCargo: z.coerce.number().int().positive('Seleccione un cargo'),
-  idTipoUsuario: z.coerce.number().int().positive('Seleccione un tipo de usuario'),
+  idTitulo: z.coerce.number().int().positive('Seleccione un título'),
   idInstitucion: z.coerce.number().int().positive('Seleccione una institución'),
   idEntidadFederativa: z.coerce.number().int().positive('Seleccione un estado'),
 });

@@ -9,7 +9,6 @@ export interface MiembroInput {
   correo: string;
   genero: Genero;
   carrera?: string | null;
-  idTipoUsuario: number;
 }
 
 export class GrupoRegistro {
@@ -63,8 +62,7 @@ export class GrupoRegistro {
         correo: Email.create(m.correo),
         genero: m.genero,
         carrera: m.carrera,
-        idCargo: responsable.idCargo,
-        idTipoUsuario: m.idTipoUsuario, // NO se hereda
+        idTitulo: responsable.idTitulo,
         idInstitucion: responsable.idInstitucion, // Se hereda
         idEntidadFederativa: responsable.idEntidadFederativa, // Se hereda
       }),

@@ -28,8 +28,7 @@ export interface RegistroFormFields {
   genero?: string;
   carrera?: string;
   dependencia?: string;
-  idCargo?: string;
-  idTipoUsuario?: string;
+  idTitulo?: string;
   idInstitucion?: string;
   idEntidadFederativa?: string;
   bancoSucursal?: string;
@@ -73,8 +72,7 @@ export async function registrarUsuarioAction(
       genero: formData.get('genero') as string,
       carrera: formData.get('carrera') as string,
       dependencia: formData.get('dependencia') as string,
-      idCargo: formData.get('idCargo') as string,
-      idTipoUsuario: formData.get('idTipoUsuario') as string,
+      idTitulo: formData.get('idTitulo') as string,
       idInstitucion: formData.get('idInstitucion') as string,
       idEntidadFederativa: formData.get('idEntidadFederativa') as string,
     };
@@ -277,8 +275,7 @@ export async function registrarUsuarioAction(
       genero: formData.get('genero') as string,
       carrera: formData.get('carrera') as string,
       dependencia: formData.get('dependencia') as string,
-      idCargo: formData.get('idCargo') as string,
-      idTipoUsuario: formData.get('idTipoUsuario') as string,
+      idTitulo: formData.get('idTitulo') as string,
       idInstitucion: formData.get('idInstitucion') as string,
       idEntidadFederativa: formData.get('idEntidadFederativa') as string,
       bancoSucursal: formData.get('bancoSucursal') as string,

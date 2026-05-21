@@ -57,13 +57,13 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
   }
 
   // Load catalogs
-  const [dbCargos, dbEstados, dbInstituciones] = await Promise.all([
-    prisma.cargos.findMany({ orderBy: { descripcion: 'asc' } }),
+  const [dbTitulos, dbEstados, dbInstituciones] = await Promise.all([
+    prisma.titulos.findMany({ orderBy: { descripcion: 'asc' } }),
     prisma.estados.findMany({ orderBy: { nombre: 'asc' } }),
     prisma.instituciones.findMany({ orderBy: { nombre: 'asc' } }),
   ]);
 
-  const cargos = dbCargos.map(C => ({ idCargo: C.id_cargo, descripcion: C.descripcion }));
+  const titulos = dbTitulos.map(T => ({ idTitulo: T.id_titulo, descripcion: T.descripcion }));
   const estados = dbEstados.map(E => ({ idEntidadFederativa: E.id_entidad_federativa, nombre: E.nombre }));
   const instituciones = dbInstituciones.map(I => ({ 
     idInstitucion: I.id_institucion, 
@@ -71,7 +71,7 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
     abreviatura: I.abreviatura
   }));
 
-  const catalogos = { cargos, estados, instituciones };
+  const catalogos = { titulos, estados, instituciones };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

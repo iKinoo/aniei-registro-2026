@@ -61,8 +61,6 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     institucionId: number;
     dependenciaId: string; // Es string 128
     estadoId: number;      // id_entidad_federativa
-    tipoUsuarioAlumnoId: number;
-    cargoAlumnoId: number;
     miembros: Array<{
       nombre: string;
       apellido: string;
@@ -82,7 +80,7 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       const usuariosIds: string[] = [];
       const folios: string[] = [];
 
-      // 2. Insertar cada miembro
+      // 2. Insertar cada miembro (sin id_titulo, lo completarán individualmente)
       for (let i = 0; i < data.miembros.length; i++) {
         const m = data.miembros[i];
 
@@ -100,8 +98,6 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
             nombre: m.nombre,
             apellido: m.apellido,
             correo: m.correoDummy,
-            id_tipo_usuario: data.tipoUsuarioAlumnoId,
-            id_cargo: data.cargoAlumnoId,
             id_grupo_registro: grupo.id,
             id_institucion: data.institucionId,
             dependencia: data.dependenciaId,

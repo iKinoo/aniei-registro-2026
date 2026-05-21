@@ -1,8 +1,3 @@
-export interface Cargo {
-  idCargo: number;
-  descripcion: string;
-}
-
 export interface Estado {
   idEntidadFederativa: number;
   nombre: string;

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
-import { Cargo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
 import { StepGrupo } from './steps/StepGrupo';
 import { StepPago } from './steps/StepPago';
@@ -16,7 +16,7 @@ export interface DatosGeneralesWizard {
   nombre: string; apellido: string; correo: string;
   lada: string; telefono: string; extension: string;
   genero: string; carrera: string; dependencia: string;
-  idCargo: string; idTipoUsuario: string; idInstitucion: string; idEntidadFederativa: string;
+  idTitulo: string; idInstitucion: string; idEntidadFederativa: string;
 }
 
 export interface DepositoWizard {
@@ -31,7 +31,7 @@ export interface FacturacionWizard {
 }
 
 interface RegistroFormProps {
-  catalogos: { cargos: Cargo[]; estados: Estado[]; instituciones: Institucion[]; tiposUsuario: TipoUsuario[] };
+  catalogos: { titulos: Titulo[]; estados: Estado[]; instituciones: Institucion[] };
 }
 
 const STEPS = [
@@ -43,7 +43,7 @@ const STEPS = [
 const emptyDatos: DatosGeneralesWizard = {
   nombre: '', apellido: '', correo: '', lada: '', telefono: '',
   extension: '', genero: '', carrera: '', dependencia: '',
-  idCargo: '', idTipoUsuario: '', idInstitucion: '', idEntidadFederativa: '',
+  idTitulo: '', idInstitucion: '', idEntidadFederativa: '',
 };
 
 const emptyDeposito: DepositoWizard = {
@@ -197,8 +197,7 @@ export function RegistroForm({ catalogos }: RegistroFormProps) {
           <input type="hidden" name="genero" value={datos.genero} />
           <input type="hidden" name="carrera" value={datos.carrera} />
           <input type="hidden" name="dependencia" value={datos.dependencia} />
-          <input type="hidden" name="idCargo" value={datos.idCargo} />
-          <input type="hidden" name="idTipoUsuario" value={datos.idTipoUsuario} />
+          <input type="hidden" name="idTitulo" value={datos.idTitulo} />
           <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
           <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
           {/* Deposito hidden (StepPago renders real inputs directly) */}

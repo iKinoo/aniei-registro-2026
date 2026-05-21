@@ -37,8 +37,7 @@ export interface RegistroUsuarioDTO {
   genero: Genero;
   carrera?: string | null;
   dependencia?: string | null;
-  idCargo: number;
-  idTipoUsuario: number;
+  idTitulo: number;
   idInstitucion: number;
   idEntidadFederativa: number;
   deposito: DepositoDTO;

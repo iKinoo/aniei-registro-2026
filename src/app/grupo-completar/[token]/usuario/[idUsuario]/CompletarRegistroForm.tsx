@@ -2,14 +2,14 @@
 
 import { useActionState } from 'react';
 import { completarRegistroAction, CompletarActionState } from './actions';
-import { SelectCatalogo, cargosToOptions, estadosToOptions, institucionesToOptions } from '@/app/registro/components/SelectCatalogo';
-import { Cargo, Estado, Institucion } from '@/shared/types/catalogos';
+import { SelectCatalogo, titulosToOptions, estadosToOptions, institucionesToOptions } from '@/app/registro/components/SelectCatalogo';
+import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
 
 interface Props {
   token: string;
   folioRegistro: string;
   catalogos: {
-    cargos: Cargo[];
+    titulos: Titulo[];
     estados: Estado[];
     instituciones: Institucion[];
   };
@@ -19,8 +19,6 @@ interface Props {
     dependencia: string | null;
     id_institucion: number | null;
     id_entidad_federativa: number | null;
-    id_cargo: number | null;
-    id_tipo_usuario: number | null;
   };
 }
 
@@ -106,23 +104,25 @@ export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
+          <SelectCatalogo
+            name="idTitulo"
+            label="Título"
+            options={titulosToOptions(catalogos.titulos)}
+            required
+            error={state.errors?.idTitulo}
+            defaultValue={state.fields?.idTitulo}
+          />
         </div>
       </div>
 
       <div className="space-y-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
         <legend className="px-2 text-sm font-semibold text-gray-600">Datos pre-registrados (Heredados)</legend>
-        <p className="px-2 text-xs text-gray-500 mb-4">Estos datos fueron proporcionados por el responsable de tu grupo y no pueden ser modificados. Todos los miembros de tu grupo están bajo el perfil de Alumno.</p>
+        <p className="px-2 text-xs text-gray-500 mb-4">Estos datos fueron proporcionados por el responsable de tu grupo y no pueden ser modificados.</p>
         
         <div className="grid gap-4 sm:grid-cols-2 px-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</label>
             <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">{usuario.nombre} {usuario.apellido}</div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Cargo</label>
-            <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
-              {catalogos.cargos.find(c => c.idCargo === usuario.id_cargo)?.descripcion || 'Alumno'}
-            </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Institución</label>

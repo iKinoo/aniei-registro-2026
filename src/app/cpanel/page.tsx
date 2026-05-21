@@ -135,7 +135,7 @@ export default function AdminPanel() {
                   <th className="px-6 py-4 font-semibold">Usuario</th>
                   <th className="px-6 py-4 font-semibold">Institución</th>
                   <th className="px-6 py-4 font-semibold">Detalle Depósito</th>
-                  <th className="px-6 py-4 font-semibold">Tipo</th>
+                  <th className="px-6 py-4 font-semibold">Título</th>
                   <th className="px-6 py-4 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
