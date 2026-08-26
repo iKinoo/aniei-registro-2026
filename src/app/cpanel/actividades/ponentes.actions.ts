@@ -2,6 +2,7 @@
 
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/infrastructure/database/client';
+import { requireAdmin } from '@/shared/auth/requireAdmin';
 import {
   getPonentesRepository,
   getUsuarioRepository,
@@ -27,6 +28,7 @@ export interface UsuarioBusquedaResult {
 export async function buscarUsuariosAction(query: string): Promise<{ success: true; data: UsuarioBusquedaResult[] } | { success: false; error: string }> {
   if (!query || query.trim().length < 2) return { success: true, data: [] };
   try {
+    await requireAdmin();
     const q = query.trim();
     const rows = await prisma.usuarios.findMany({
       where: {
@@ -62,6 +64,7 @@ export async function vincularPonenteAction(
   rol: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
     await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
     return { success: true };
   } catch (e) {
@@ -74,6 +77,7 @@ export async function desvincularPonenteAction(
   folioRegistro: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
     await getPonentesRepository().desvincular(idActividad, folioRegistro);
     return { success: true };
   } catch (e) {
@@ -85,6 +89,7 @@ export async function obtenerPonentesPorActividadAction(
   idActividad: number,
 ): Promise<{ success: true; data: PonenteDTO[] } | { success: false; error: string }> {
   try {
+    await requireAdmin();
     const data = await getPonentesRepository().obtenerPorActividad(idActividad);
     return { success: true, data };
   } catch (e) {
@@ -109,6 +114,7 @@ export async function registrarPonenteAction(
   rol: string,
 ): Promise<{ success: true; folioRegistro: string } | { success: false; error: string }> {
   try {
+    await requireAdmin();
     // 1. Verificar correo duplicado
     const correoVO = Email.create(datos.correo);
     const usuarioRepo = getUsuarioRepository();
@@ -146,8 +152,9 @@ export async function registrarPonenteAction(
     const usuarioPersistido = await usuarioRepo.crear(usuario);
     const folioRegistro = usuarioPersistido.folioRegistro!;
 
-    // 4. Generar credenciales
-    const generatedPassword = Math.random().toString(36).slice(-8);
+    // 4. Generar credenciales (CSPRNG)
+    const { generateSecurePassword } = await import('@/shared/security/password');
+    const generatedPassword = generateSecurePassword(12, false);
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
     await getAccesoRepository().crear(
       datos.correo,

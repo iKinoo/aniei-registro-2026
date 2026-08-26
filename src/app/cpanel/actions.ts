@@ -4,9 +4,11 @@ import { getAdminQueryService, getUsuarioRepository, getCatalogoRepository, getE
 import { EnviarConfirmacion } from '@/application/use-cases/EnviarConfirmacion';
 import { ObtenerUsuariosForAdmin } from '@/application/use-cases/ObtenerUsuariosForAdmin';
 import { ObtenerAccesoArchivo } from '@/application/use-cases/ObtenerAccesoArchivo';
+import { requireAdmin } from '@/shared/auth/requireAdmin';
 
 export async function getUsuariosAdminAction(page: number, limit: number, search?: string) {
   try {
+    await requireAdmin();
     const adminService = getAdminQueryService();
     const obtenerUsuariosAdmin = new ObtenerUsuariosForAdmin(adminService);
 
@@ -20,6 +22,7 @@ export async function getUsuariosAdminAction(page: number, limit: number, search
 
 export async function reenviarConstanciaAction(folioRegistro: string) {
   try {
+    await requireAdmin();
     const enviarConfirmacion = new EnviarConfirmacion(
       getEmailService(),
       getUsuarioRepository(),
@@ -38,6 +41,7 @@ export async function reenviarConstanciaAction(folioRegistro: string) {
 
 export async function obtenerUrlArchivoAction(ruta: string): Promise<{ success: true; url: string } | { success: false; error: string }> {
   try {
+    await requireAdmin();
     const obtenerAccesoArchivo = new ObtenerAccesoArchivo(getStorageService(), getAuthService(), getAccesoRepository());
     const signedUrl = await obtenerAccesoArchivo.execute(ruta);
     return { success: true, url: signedUrl };

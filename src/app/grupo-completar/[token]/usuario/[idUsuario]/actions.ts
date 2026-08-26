@@ -70,8 +70,9 @@ export async function completarRegistroAction(
       return { fields, errors: { _form: 'No se encontró el acceso para este usuario.' } };
     }
 
-    // Passwords & Update
-    const rawPassword = Math.random().toString(36).slice(-8);
+    // Passwords & Update (CSPRNG)
+    const { generateSecurePassword } = await import('@/shared/security/password');
+    const rawPassword = generateSecurePassword(12, false);
     const passwordHash = await bcrypt.hash(rawPassword, 10);
 
     const emailService = getEmailService();

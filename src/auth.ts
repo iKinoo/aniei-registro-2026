@@ -39,7 +39,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user.id_acceso.toString(),
           email: user.email,
           name: user.nombre,
-          role: user.rol,
+          role: (user.rol ?? "USER").toUpperCase(),
         };
       },
     }),

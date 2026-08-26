@@ -84,15 +84,6 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       for (let i = 0; i < data.miembros.length; i++) {
         const m = data.miembros[i];
 
-        const newAcceso = await tx.accesos.create({
-          data: {
-            email: m.correoDummy,
-            nombre: `${m.nombre} ${m.apellido}`,
-            password: m.passwordHash,
-            rol: 'USER',
-          },
-        });
-
         const newUsuario = await tx.usuarios.create({
           data: {
             nombre: m.nombre,
@@ -105,10 +96,14 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
           },
         });
 
-        // Relacionar acceso con usuario
-        await tx.accesos.update({
-          where: { id_acceso: newAcceso.id_acceso },
-          data: { folio_registro: newUsuario.folio_registro },
+        await tx.accesos.create({
+          data: {
+            email: m.correoDummy,
+            nombre: `${m.nombre} ${m.apellido}`,
+            password: m.passwordHash,
+            rol: 'USER',
+            folio_registro: newUsuario.folio_registro,
+          },
         });
 
         usuariosIds.push(newUsuario.folio_registro);

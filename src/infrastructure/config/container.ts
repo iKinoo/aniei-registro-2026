@@ -24,6 +24,8 @@ import { IInscripcionActividadRepository } from '@/application/ports/IInscripcio
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
 import { IPrecioInscripcionRepository } from '@/application/ports/IPrecioInscripcionRepository';
 import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
+import { PrismaTransactionManager } from '@/infrastructure/database/PrismaTransactionManager';
+import type { ITransactionManager } from '@/application/ports/ITransactionManager';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { IStorageService } from '@/application/ports/IStorageService';
@@ -93,4 +95,8 @@ export function getAuthService(): IAuthService {
 
 export function getPrecioInscripcionRepository(): IPrecioInscripcionRepository {
   return new PrismaPrecioInscripcionRepository(prisma);
+}
+
+export function getTransactionManager(): ITransactionManager {
+  return new PrismaTransactionManager();
 }

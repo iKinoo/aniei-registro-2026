@@ -26,7 +26,7 @@ export class PrismaAccesoRepository implements IAccesoRepository {
       data: {
         email,
         password: passwordHash,
-        rol,
+        rol: rol as any,
         folio_registro: folioRegistro ?? null,
         nombre: nombre ?? null,
       },

@@ -9,11 +9,15 @@ export const authConfig = {
     signIn: "/login",
   },
   callbacks: {
-    authorized: () => true,
+    authorized: async ({ auth }) => {
+      // Proxy maneja la redirección; authorized permite pasar al proxy.
+      // Si hay sesión, está autorizado a nivel framework; RBAC específico está en proxy y requireAdmin().
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = ((user as any).role as string)?.toUpperCase() ?? "USER";
       }
       return token;
     },

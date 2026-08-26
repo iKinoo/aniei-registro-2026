@@ -2,12 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { getActividadRepository, getPrecioInscripcionRepository } from '@/infrastructure/config/container';
+import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { GestionarPrecios } from '@/application/use-cases/GestionarPrecios';
 import { ActualizarPrecioDTO } from '@/application/ports/IPrecioInscripcionRepository';
 
 export async function getTiposActividadAction() {
   try {
+    await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository());
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
@@ -19,6 +21,7 @@ export async function getTiposActividadAction() {
 
 export async function obtenerPreciosAction() {
   try {
+    await requireAdmin();
     const useCase = new GestionarPrecios(getPrecioInscripcionRepository());
     const data = await useCase.obtenerPrecios();
     return { success: true as const, data };
@@ -30,6 +33,7 @@ export async function obtenerPreciosAction() {
 
 export async function guardarPrecioAction(id: number, data: ActualizarPrecioDTO) {
   try {
+    await requireAdmin();
     const useCase = new GestionarPrecios(getPrecioInscripcionRepository());
     const precio = await useCase.guardarPrecio(id, data);
     revalidatePath('/cpanel/configuracion');
@@ -43,6 +47,7 @@ export async function guardarPrecioAction(id: number, data: ActualizarPrecioDTO)
 
 export async function eliminarPrecioAction(id: number) {
   try {
+    await requireAdmin();
     const useCase = new GestionarPrecios(getPrecioInscripcionRepository());
     await useCase.eliminarPrecio(id);
     revalidatePath('/cpanel/configuracion');

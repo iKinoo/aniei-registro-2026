@@ -7,15 +7,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Rol {
+  USER
+  ADMIN
+}
+
 model accesos {
   id_acceso      Int       @id @default(autoincrement())
   folio_registro String?   @db.VarChar(15)
   email          String    @unique @db.VarChar(100)
-  rol            String?   @default("USER") @db.VarChar(20)
+  rol            Rol       @default(USER)
   nombre         String?   @db.VarChar(150)
   auth_id        String?   @unique @db.Uuid
   password       String?   @db.VarChar(255)
   usuarios       usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([folio_registro])
 }
 
 model actividad_ponentes {
@@ -45,18 +52,23 @@ model actividades {
   asistencia_actividades  asistencia_actividades[]
   equipos                 equipos[]
   inscripcion_actividades inscripcion_actividades[]
+
+  @@index([id_tipo_actividad])
+  @@index([id_institucion_sede])
 }
 
 
 model asistencia_actividades {
   id_asistencia      Int          @id @default(autoincrement())
-  folio_registro     String?      @db.VarChar(15)
+  folio_registro     String       @db.VarChar(15)
   id_actividad       Int?
-  fecha_hora_marcaje DateTime?    @default(now()) @db.Timestamp(6)
+  fecha_hora_marcaje DateTime     @default(now()) @db.Timestamp(6)
   actividades        actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios           usuarios?    @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+  usuarios           usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([folio_registro, id_actividad])
+  @@index([folio_registro])
+  @@index([id_actividad])
 }
 
 model cargos {
@@ -72,29 +84,34 @@ model titulos {
 
 model depositos {
   id_deposito     Int       @id @default(autoincrement())
-  folio_registro  String?   @db.VarChar(15)
-  proposito       String?   @default("EVENTO_PRINCIPAL") @db.VarChar(50)
+  folio_registro  String    @db.VarChar(15)
+  proposito       String    @default("EVENTO_PRINCIPAL") @db.VarChar(50)
   banco_sucursal  String?   @db.VarChar(100)
   ciudad          String?   @db.VarChar(100)
   referencia      String    @db.VarChar(50)
   monto           Decimal   @db.Decimal(10, 2)
   fecha_deposito  DateTime  @db.Timestamp(6)
-  fecha_registro  DateTime? @default(now()) @db.Timestamp(6)
+  fecha_registro  DateTime  @default(now()) @db.Timestamp(6)
   archivo_url     String    @db.VarChar(500)
   archivo_nombre  String    @db.VarChar(255)
   archivo_mime    String    @db.VarChar(100)
   archivo_tamanio Int
   notas           String?   @db.VarChar(500)
-  usuarios        usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+  usuarios        usuarios  @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([folio_registro])
 }
 
 model equipo_integrantes {
   id_integrante    Int      @id @default(autoincrement())
   id_equipo        Int
   folio_registro   String   @db.VarChar(15)
-  es_representante Boolean? @default(false)
+  es_representante Boolean  @default(false)
   equipos          equipos  @relation(fields: [id_equipo], references: [id_equipo], onDelete: Cascade, onUpdate: NoAction)
   usuarios         usuarios @relation(fields: [folio_registro], references: [folio_registro], onUpdate: NoAction)
+
+  @@index([id_equipo])
+  @@index([folio_registro])
 }
 
 model equipos {
@@ -117,7 +134,7 @@ model estados {
 
 model facturaciones {
   id_facturacion            Int       @id @default(autoincrement())
-  folio_registro            String?   @db.VarChar(15)
+  folio_registro            String    @db.VarChar(15)
   razon_social              String    @db.VarChar(150)
   rfc                       String    @db.VarChar(20)
   calle                     String?   @db.VarChar(100)
@@ -128,19 +145,23 @@ model facturaciones {
   codigo_postal             String?   @db.VarChar(10)
   id_entidad_federativa_rfc Int?
   estados                   estados?  @relation(fields: [id_entidad_federativa_rfc], references: [id_entidad_federativa], onUpdate: NoAction)
-  usuarios                  usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+  usuarios                  usuarios  @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([folio_registro])
 }
 
 model inscripcion_actividades {
   id_inscripcion    Int          @id @default(autoincrement())
-  folio_registro    String?      @db.VarChar(15)
+  folio_registro    String       @db.VarChar(15)
   id_actividad      Int?
-  fecha_inscripcion DateTime?    @default(now()) @db.Timestamp(6)
+  fecha_inscripcion DateTime     @default(now()) @db.Timestamp(6)
   url_constancia    String?      @db.VarChar(500)
   actividades       actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios          usuarios?    @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+  usuarios          usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([folio_registro, id_actividad])
+  @@index([folio_registro])
+  @@index([id_actividad])
 }
 
 model instituciones {
@@ -184,9 +205,13 @@ model usuarios {
   id_tipo_usuario         Int?
   id_institucion          Int?
   id_entidad_federativa   Int?
-  verificado              Boolean?                  @default(false)
-  fecha_registro          DateTime?                 @default(now()) @db.Timestamp(6)
+  verificado              Boolean                   @default(false)
+  fecha_registro          DateTime                  @default(now()) @db.Timestamp(6)
   id_grupo_registro       Int?
+
+  @@index([id_institucion])
+  @@index([id_grupo_registro])
+  @@index([id_entidad_federativa])
   accesos                 accesos[]
   actividad_ponentes      actividad_ponentes[]
   asistencia_actividades  asistencia_actividades[]

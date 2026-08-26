@@ -7,7 +7,7 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const isLoggedIn = !!req.auth?.user?.email;
   const { pathname } = req.nextUrl;
-  const role = (req.auth?.user as any)?.role as string | undefined;
+  const role = ((req.auth?.user as any)?.role as string | undefined)?.toUpperCase();
 
   const isAuthRoute = pathname.startsWith('/login');
   const isCpanelRoute = pathname.startsWith('/cpanel');
@@ -60,11 +60,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes, already handled by auth.js usually or should be unblocked for next-auth)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - _next/static, _next/image, favicon.ico
+     * - api/auth (NextAuth handlers) y archivos estáticos.
+     * Se incluye /api/* para que el proxy proteja handlers personalizados;
+     * solo se excluye /api/auth que es manejado por NextAuth sin RBAC adicional.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

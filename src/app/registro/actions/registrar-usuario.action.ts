@@ -6,6 +6,7 @@ import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import { Genero } from '@/core/enums/Genero';
 import { signIn } from '@/auth';
+import { mapPrismaError } from '@/infrastructure/errors/prismaErrorMapper';
 import {
   getUsuarioRepository,
   getDepositoRepository,
@@ -174,6 +175,15 @@ export async function registrarUsuarioAction(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    const t0 = Date.now();
+    const logPhase = (phase: string, start: number) => {
+      const ms = Date.now() - start;
+      console.log(`[registro] ${phase} ${ms}ms`);
+      return Date.now();
+    };
+    let tPhase = t0;
+    console.log(`[registro] start correo=${rawData.correo} file=${file.name} ${file.size} bytes`);
+
     // Ejecutar caso de uso principal
     const useCase = new RegistrarUsuario(
       getUsuarioRepository(),
@@ -224,6 +234,8 @@ export async function registrarUsuarioAction(
             }
           : null,
     });
+    tPhase = logPhase('useCase.execute', tPhase);
+    console.log(`[registro] success folio=${resultado.folio} total=${Date.now() - t0}ms`);
 
     // Registro grupal: si hay miembros, usar RegistrarGrupoRapido con el mismo comprobante
     if (miembros.length > 0) {
@@ -277,6 +289,22 @@ export async function registrarUsuarioAction(
       correo: resultado.correo,
     };
   } catch (error) {
+    // Diagnóstico detallado para 5.8s success:false
+    const anyErr = error as { code?: string; cause?: { code?: string; message?: string }; meta?: unknown; stack?: string };
+    const prismaMapped = mapPrismaError(error, (formData.get('correo') as string) || undefined);
+    if (prismaMapped) {
+      console.error('[registro] prismaMapped', { code: (prismaMapped as { code?: string }).code, message: prismaMapped.message, meta: anyErr.meta });
+      // Re-lanzar mapeado para que el handler de abajo lo clasifique
+      error = prismaMapped;
+    } else {
+      console.error('[registro] Error en registro:', {
+        message: error instanceof Error ? error.message : String(error),
+        code: anyErr.code ?? anyErr.cause?.code,
+        cause: anyErr.cause,
+        meta: anyErr.meta,
+        stack: error instanceof Error ? error.stack?.slice(0, 800) : undefined,
+      });
+    }
     const savedFieldsOnError: RegistroFormFields = {
       nombre: formData.get('nombre') as string,
       apellido: formData.get('apellido') as string,
@@ -312,11 +340,33 @@ export async function registrarUsuarioAction(
       if (domainError.code === 'CORREO_DUPLICADO') {
         return { success: false, errors: { correo: domainError.message }, fields: savedFieldsOnError };
       }
+      if (domainError.code === 'FK_INVALIDA') {
+        return { success: false, errors: { _form: `Catálogo inválido: ${domainError.message}` }, fields: savedFieldsOnError };
+      }
+      if (domainError.code === 'TX_TIMEOUT' || domainError.code === 'TX_CONFLICTO') {
+        return { success: false, errors: { _form: `${domainError.message}. Por favor intente de nuevo.` }, fields: savedFieldsOnError };
+      }
+      if (domainError.code === 'P2002') {
+        return { success: false, errors: { correo: domainError.message }, fields: savedFieldsOnError };
+      }
     }
     if (error instanceof Error && error.message.includes('RFC')) {
       return { success: false, errors: { 'facturacion.rfc': error.message }, fields: savedFieldsOnError };
     }
-    console.error('Error en registro:', error);
-    return { success: false, errors: { _form: 'Ocurrió un error inesperado. Intente de nuevo.' }, fields: savedFieldsOnError };
+    if (error instanceof Error && error.message.includes('Error al subir archivo a storage')) {
+      return { success: false, errors: { comprobante: error.message }, fields: savedFieldsOnError };
+    }
+    if (error instanceof Error && error.message.includes('Archivo')) {
+      return { success: false, errors: { comprobante: error.message }, fields: savedFieldsOnError };
+    }
+    // No segundo console.error — ya logueado arriba
+    const isDev = process.env.NODE_ENV !== 'production';
+    return {
+      success: false,
+      errors: {
+        _form: isDev && error instanceof Error ? `Error: ${error.message} (ver logs server)` : 'Ocurrió un error inesperado. Intente de nuevo.',
+      },
+      fields: savedFieldsOnError,
+    };
   }
 }
