@@ -137,7 +137,7 @@ export default function PreciosClient({ initialPrecios }: Props) {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-slate-600">
                   Aplica a partir de <span className="text-red-500">*</span>
@@ -161,22 +161,6 @@ export default function PreciosClient({ initialPrecios }: Props) {
                     min="0.01"
                     value={precio.costo}
                     onChange={(e) => updateField(precio.id, 'costo', parseFloat(e.target.value) || 0)}
-                    className="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-slate-600">
-                  Costo por miembro extra
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={precio.costoMiembro}
-                    onChange={(e) => updateField(precio.id, 'costoMiembro', parseFloat(e.target.value) || 0)}
                     className="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
                   />
                 </div>

@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/database/client';
-import { HistorialDepositos, DepositoHistorialItem } from '@/app/components/HistorialDepositos';
+import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
+import { HistorialDepositosUsuario } from '@/app/components/HistorialDepositosUsuario';
 import AutoLogout from './AutoLogout';
 import styles from './page.module.css';
 
@@ -183,7 +184,7 @@ export default async function PerfilPage() {
             <span className={styles.actividadesBadge}>{depositos.length}</span>
           </div>
           <div className="mb-8">
-            <HistorialDepositos depositos={depositos} />
+            <HistorialDepositosUsuario depositos={depositos} />
           </div>
 
           {/* Acciones */}

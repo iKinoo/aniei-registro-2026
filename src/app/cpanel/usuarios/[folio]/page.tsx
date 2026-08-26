@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/database/client';
-import { HistorialDepositos, DepositoHistorialItem } from '@/app/components/HistorialDepositos';
+import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
+import { HistorialDepositosAdmin } from '@/app/components/HistorialDepositosAdmin';
 import Link from 'next/link';
 
 export const metadata = { title: 'Detalle de Usuario | CPanel ANIEI 2026' };
@@ -112,7 +113,7 @@ export default async function UsuarioDetallePage({ params }: { params: Promise<{
             {depositos.length}
           </span>
         </h2>
-        <HistorialDepositos depositos={depositos} isAdmin />
+        <HistorialDepositosAdmin depositos={depositos} />
       </div>
     </div>
   );
