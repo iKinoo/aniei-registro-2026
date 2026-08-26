@@ -20,6 +20,7 @@ interface ModalRegistroProps {
   onClose: () => void;
 }
 
+
 function ModalRegistroPonente({ idActividad, rol, onSuccess, onClose }: ModalRegistroProps) {
   const [form, setForm] = useState({ nombre: '', apellido: '', correo: '' });
   const [error, setError] = useState('');

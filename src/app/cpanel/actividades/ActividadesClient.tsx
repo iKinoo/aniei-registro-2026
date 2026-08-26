@@ -1,16 +1,11 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ActividadDTO, CrearActividadDTO, PonenteDTO } from '@/application/dtos/ActividadDTO';
+import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { TipoActividad, Institucion } from '@/shared/types/catalogos';
-import { crearActividadAction, actualizarActividadAction, getActividadesAction } from './actions';
-import { SeccionPonentes } from './SeccionPonentes';
-
-// ---------- helpers ----------
-function toDatetimeLocal(iso: string) {
-  return iso ? iso.slice(0, 16) : '';
-}
+import { getActividadesAction } from './actions';
+import { ActividadModal } from './ActividadModal';
 
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleString('es-MX', {
@@ -18,7 +13,6 @@ function formatFecha(iso: string) {
   });
 }
 
-// ---------- SVG icons ----------
 const PlusIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -27,11 +21,6 @@ const PlusIcon = () => (
 const EditIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-  </svg>
-);
-const XIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
 const CalendarIcon = () => (
@@ -46,61 +35,6 @@ const EyeIcon = () => (
   </svg>
 );
 
-// ---------- empty form ----------
-const emptyForm = (): FormState => ({
-  nombre: '',
-  cupoMaximo: 0,
-  fechaInicio: '',
-  fechaFin: '',
-  idTipoActividad: undefined,
-  idInstitucionSede: undefined,
-  idSala: undefined,
-  tieneCosto: false,
-  montoCosto: '',
-});
-
-interface FormState {
-  nombre: string;
-  cupoMaximo: number;
-  fechaInicio: string;
-  fechaFin: string;
-  idTipoActividad?: number;
-  idInstitucionSede?: number;
-  idSala?: number;
-  tieneCosto: boolean;
-  montoCosto: string;
-}
-
-function formToDTO(f: FormState, _esTaller: boolean): CrearActividadDTO {
-  return {
-    nombre: f.nombre,
-    cupoMaximo: f.cupoMaximo || 0,
-    fechaInicio: f.fechaInicio,
-    fechaFin: f.fechaFin,
-    idTipoActividad: f.idTipoActividad,
-    idInstitucionSede: f.idInstitucionSede,
-    idSala: f.idSala,
-    ...(f.tieneCosto && f.montoCosto && {
-      costo: parseFloat(f.montoCosto),
-    }),
-  };
-}
-
-function actividadToForm(a: ActividadDTO): FormState {
-  return {
-    nombre: a.nombre,
-    cupoMaximo: a.cupoMaximo,
-    fechaInicio: toDatetimeLocal(a.fechaInicio),
-    fechaFin: toDatetimeLocal(a.fechaFin),
-    idTipoActividad: a.idTipoActividad ?? undefined,
-    idInstitucionSede: a.idInstitucionSede ?? undefined,
-    idSala: a.idSala ?? undefined,
-    tieneCosto: (a.costo ?? 0) > 0,
-    montoCosto: a.costo != null && a.costo > 0 ? String(a.costo) : '',
-  };
-}
-
-// ---------- badge de tipo ----------
 const TIPO_COLORS: Record<string, string> = {
   'conferencia': 'bg-blue-100 text-blue-700',
   'taller': 'bg-amber-100 text-amber-700',
@@ -118,24 +52,6 @@ function TipoBadge({ tipo }: { tipo: ActividadDTO['tipoActividad'] }) {
   );
 }
 
-// ---------- Field components ----------
-function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-slate-700">
-        {label} {required && <span className="text-rose-500">*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const inputCls = "w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition";
-const textareaCls = inputCls + " resize-none";
-
-// ============================================================
-// Main component
-// ============================================================
 interface Props {
   initialActividades: ActividadDTO[];
   tiposActividad: TipoActividad[];
@@ -144,12 +60,8 @@ interface Props {
 
 export default function ActividadesClient({ initialActividades, tiposActividad, instituciones }: Props) {
   const [actividades, setActividades] = useState<ActividadDTO[]>(initialActividades);
+  const [editingActividad, setEditingActividad] = useState<ActividadDTO | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
-  const [ponentesEdicion, setPonenteEdicion] = useState<PonenteDTO[]>([]);
-  const [error, setError] = useState('');
-  const [isPending, startTransition] = useTransition();
 
   const refresh = useCallback(async () => {
     const res = await getActividadesAction();
@@ -157,52 +69,24 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   }, []);
 
   function openNew() {
-    setEditingId(null);
-    setForm(emptyForm());
-    setPonenteEdicion([]);
-    setError('');
+    setEditingActividad(null);
     setIsOpen(true);
   }
 
   function openEdit(a: ActividadDTO) {
-    setEditingId(a.idActividad);
-    setForm(actividadToForm(a));
-    setPonenteEdicion(a.ponentes ?? []);
-    setError('');
+    setEditingActividad(a);
     setIsOpen(true);
   }
 
   function closeModal() {
     setIsOpen(false);
-    setError('');
-  }
-
-  function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    startTransition(async () => {
-      const dto = formToDTO(form, false);
-      const res = editingId !== null
-        ? await actualizarActividadAction(editingId, dto)
-        : await crearActividadAction(dto);
-      if (!res.success) {
-        setError(res.error);
-        return;
-      }
-      await refresh();
-      closeModal();
-    });
+    setEditingActividad(null);
   }
 
   return (
     <div className="p-8 font-sans min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Actividades</h1>
@@ -217,7 +101,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
           </button>
         </div>
 
-        {/* Stats chips */}
         <div className="flex gap-3 flex-wrap">
           <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
             <p className="text-xs text-slate-500 uppercase tracking-wide">Total</p>
@@ -234,7 +117,6 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
           })}
         </div>
 
-        {/* Table */}
         <div className="rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -243,7 +125,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                   <th className="px-6 py-4 font-semibold">Actividad</th>
                   <th className="px-6 py-4 font-semibold">Tipo</th>
                   <th className="px-6 py-4 font-semibold">Sede</th>
-                  <th className="px-6 py-4 font-semibold">Fechas</th>
+                  <th className="px-6 py-4 font-semibold">Fecha</th>
                   <th className="px-6 py-4 font-semibold text-center">Cupo</th>
                   <th className="px-6 py-4 font-semibold text-center">Costo</th>
                   <th className="px-6 py-4 font-semibold text-right">Acciones</th>
@@ -282,10 +164,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col gap-0.5 text-xs text-slate-600">
-                          <span>⬆ {formatFecha(a.fechaInicio)}</span>
-                          <span>⬇ {formatFecha(a.fechaFin)}</span>
-                        </div>
+                        <span className="text-xs text-slate-600">{formatFecha(a.fechaInicio)}</span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {a.cupoMaximo === 0 ? (
@@ -344,205 +223,14 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
         </div>
       </div>
 
-      {/* ===== MODAL ===== */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  {editingId !== null ? 'Editar Actividad' : 'Nueva Actividad'}
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {editingId !== null ? 'Modifica los campos que necesites.' : 'Completa los datos para crear una actividad.'}
-                </p>
-              </div>
-              <button
-                id="btn-cerrar-modal"
-                onClick={closeModal}
-                className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-              >
-                <XIcon />
-              </button>
-            </div>
-
-            {/* Modal body */}
-            <form id="form-actividad" onSubmit={handleSubmit} className="overflow-y-auto px-6 py-6 space-y-6">
-
-              {/* Basic info */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Información General</h3>
-                <FormField label="Nombre" required>
-                  <input
-                    id="input-nombre"
-                    type="text"
-                    className={inputCls}
-                    placeholder="Ej. Conferencia Magistral de IA"
-                    value={form.nombre}
-                    onChange={(e) => setField('nombre', e.target.value)}
-                    required
-                  />
-                </FormField>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Tipo de Actividad">
-                    <select
-                      id="select-tipo"
-                      className={inputCls}
-                      value={form.idTipoActividad ?? ''}
-                      onChange={(e) => setField('idTipoActividad', e.target.value ? Number(e.target.value) : undefined)}
-                    >
-                      <option value="">— Sin tipo —</option>
-                      {tiposActividad.map((t) => (
-                        <option key={t.idTipoActividad} value={t.idTipoActividad}>{t.descripcion}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField label="Cupo Máximo">
-                    <input
-                      id="input-cupo"
-                      type="number"
-                      min={0}
-                      className={inputCls}
-                      placeholder="0 = ilimitado"
-                      value={form.cupoMaximo}
-                      onChange={(e) => setField('cupoMaximo', Number(e.target.value))}
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Venue */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Sede</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Institución Sede">
-                    <select
-                      id="select-institucion"
-                      className={inputCls}
-                      value={form.idInstitucionSede ?? ''}
-                      onChange={(e) => setField('idInstitucionSede', e.target.value ? Number(e.target.value) : undefined)}
-                    >
-                      <option value="">— Sin sede —</option>
-                      {instituciones.map((i) => (
-                        <option key={i.idInstitucion} value={i.idInstitucion}>
-                          {i.abreviatura ? `${i.abreviatura} - ${i.nombre}` : i.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField label="Sala / Auditorio">
-                    <input
-                      id="input-sala"
-                      type="number"
-                      min={0}
-                      className={inputCls}
-                      placeholder="Número de sala"
-                      value={form.idSala ?? ''}
-                      onChange={(e) => setField('idSala', e.target.value ? Number(e.target.value) : undefined)}
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Fechas y Horario</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Fecha de Inicio" required>
-                    <input
-                      id="input-fecha-inicio"
-                      type="datetime-local"
-                      className={inputCls}
-                      value={form.fechaInicio}
-                      onChange={(e) => setField('fechaInicio', e.target.value)}
-                      required
-                    />
-                  </FormField>
-                  <FormField label="Fecha de Fin" required>
-                    <input
-                      id="input-fecha-fin"
-                      type="datetime-local"
-                      className={inputCls}
-                      value={form.fechaFin}
-                      onChange={(e) => setField('fechaFin', e.target.value)}
-                      required
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Costo (optional) */}
-              <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    id="check-costo"
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    checked={form.tieneCosto}
-                    onChange={(e) => setField('tieneCosto', e.target.checked)}
-                  />
-                  <span className="text-sm font-semibold text-slate-700">Esta actividad tiene costo de inscripción</span>
-                </label>
-                {form.tieneCosto && (
-                  <div className="grid grid-cols-1 gap-4 mt-2">
-                    <FormField label="Monto (MXN)" required>
-                      <input
-                        id="input-monto"
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        className={inputCls}
-                        placeholder="0.00"
-                        value={form.montoCosto}
-                        onChange={(e) => setField('montoCosto', e.target.value)}
-                        required={form.tieneCosto}
-                      />
-                    </FormField>
-                  </div>
-                )}
-              </div>
-
-              {/* Ponentes */}
-              <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/30 p-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ponentes</h3>
-                <SeccionPonentes
-                  idActividad={editingId}
-                  ponentesIniciales={ponentesEdicion}
-                  onChange={setPonenteEdicion}
-                />
-              </div>
-
-              {error && (
-                <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 text-rose-700 text-sm px-4 py-3 rounded-xl">
-                  <span className="mt-0.5">⚠</span>
-                  <span>{error}</span>
-                </div>
-              )}
-            </form>
-
-            {/* Modal footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                id="btn-guardar"
-                type="submit"
-                form="form-actividad"
-                disabled={isPending}
-                className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              >
-                {isPending ? 'Guardando...' : editingId !== null ? 'Actualizar' : 'Crear Actividad'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ActividadModal
+          editingActividad={editingActividad}
+          tiposActividad={tiposActividad}
+          instituciones={instituciones}
+          onSuccess={refresh}
+          onClose={closeModal}
+        />
       )}
     </div>
   );

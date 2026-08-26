@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction } from './actions';
+import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction, eliminarUsuarioAction } from './actions';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { useRouter } from 'next/navigation';
 
 // Icon components
 const SearchIcon = () => (
@@ -30,7 +32,20 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+const EditIcon = () => (
+  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
 export default function AdminPanel() {
+  const router = useRouter();
   const [usuarios, setUsuarios] = useState<UsuarioForAdminDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -41,6 +56,8 @@ export default function AdminPanel() {
   const [totalPages, setTotalPages] = useState(1);
   const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
   const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; folio: string; nombre: string }>({ isOpen: false, folio: '', nombre: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -97,6 +114,20 @@ export default function AdminPanel() {
       setTimeout(() => {
         setFileErrors(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
       }, 4000);
+    }
+  };
+
+  const handleEliminarUsuario = async () => {
+    if (!deleteDialog.folio) return;
+    setIsDeleting(true);
+    const result = await eliminarUsuarioAction(deleteDialog.folio);
+    setIsDeleting(false);
+    
+    if (result.success) {
+      setDeleteDialog({ isOpen: false, folio: '', nombre: '' });
+      fetchData();
+    } else {
+      alert(result.error);
     }
   };
 
@@ -220,6 +251,18 @@ export default function AdminPanel() {
                           Ver depósitos
                         </a>
                         <button
+                          onClick={() => router.push(`/cpanel/usuarios/${user.folioRegistro}/editar`)}
+                          className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                        >
+                          <EditIcon /> Editar
+                        </button>
+                        <button
+                          onClick={() => setDeleteDialog({ isOpen: true, folio: user.folioRegistro, nombre: user.nombreCompleto })}
+                          className="inline-flex items-center justify-center px-3 py-1.5 border border-red-200 shadow-sm text-xs font-medium rounded-lg text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                        >
+                          <TrashIcon /> Eliminar
+                        </button>
+                        <button
                           onClick={() => handleResend(user.folioRegistro)}
                           className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                         >
@@ -279,6 +322,18 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        title="Eliminar usuario"
+        message={`¿Estás seguro de que deseas eliminar al usuario "${deleteDialog.nombre}"? Esta acción no se puede deshacer y eliminará todos sus datos, incluyendo depósitos e inscripciones.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleEliminarUsuario}
+        onCancel={() => setDeleteDialog({ isOpen: false, folio: '', nombre: '' })}
+      />
     </div>
   );
 }

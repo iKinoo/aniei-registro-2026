@@ -7,7 +7,8 @@ import {
   getPdfService,
   getStorageService,
   getUsuarioRepository,
-  getEmailService
+  getEmailService,
+  getCatalogoRepository
 } from '@/infrastructure/config/container';
 import { GenerarConstanciaPonenteUseCase } from '@/application/use-cases/GenerarConstanciaPonenteUseCase';
 import { EnviarConstanciaPonenteUseCase } from '@/application/use-cases/EnviarConstanciaPonenteUseCase';
@@ -37,13 +38,18 @@ export async function getDetalleActividadAction(idActividadStr: string) {
     const repoInscripciones = getInscripcionActividadRepository();
     const inscritos = await repoInscripciones.obtenerPorActividad(idActividad);
 
+    const catalogoRepo = getCatalogoRepository();
+    const instituciones = await catalogoRepo.obtenerInstituciones();
+
     return { 
       success: true as const, 
       data: {
         actividad,
         nombreTipo,
         ponentes,
-        inscritos
+        inscritos,
+        tiposActividad: tipos,
+        instituciones,
       } 
     };
   } catch (error) {

@@ -126,13 +126,16 @@ export async function registrarPonenteAction(
     // 2. Obtener institución name para correo
     const catalogoRepo = getCatalogoRepository();
     let nombreActividad = '';
-    try {
-      const act = await prisma.actividades.findUnique({
-        where: { id_actividad: idActividad },
-        select: { nombre: true },
-      });
-      nombreActividad = act?.nombre ?? '';
-    } catch { /* best-effort */ }
+    const actividadExiste = idActividad > 0;
+    if (actividadExiste) {
+      try {
+        const act = await prisma.actividades.findUnique({
+          where: { id_actividad: idActividad },
+          select: { nombre: true },
+        });
+        nombreActividad = act?.nombre ?? '';
+      } catch { /* best-effort */ }
+    }
 
     // 3. Crear entidad Usuario (sin deposito ni facturación)
     // Se usan valores por defecto para campos requeridos no provistos en el registro simplificado
@@ -167,8 +170,10 @@ export async function registrarPonenteAction(
     // 5. Asignar folio
     const folio = folioRegistro;
 
-    // 6. Vincular como ponente de la actividad
-    await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
+    // 6. Vincular como ponente de la actividad (solo si la actividad ya existe)
+    if (actividadExiste) {
+      await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
+    }
 
     // 7. Enviar correo de notificación (best-effort)
     try {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ActividadDTO, PonenteDTO, InscritoDTO } from '@/application/dtos/ActividadDTO';
+import { TipoActividad, Institucion } from '@/shared/types/catalogos';
 import { 
   generarConstanciaPonenteAction, 
   enviarConstanciaPonenteAction,
@@ -11,25 +12,39 @@ import {
   enviarConstanciaParticipanteAction,
   generarConstanciaParticipanteBatchAction
 } from './actions';
+import { ActividadModal } from '../ActividadModal';
 
 interface Props {
   actividad: ActividadDTO;
   nombreTipo: string;
   ponentes: PonenteDTO[];
   inscritos: InscritoDTO[];
+  tiposActividad: TipoActividad[];
+  instituciones: Institucion[];
 }
 
-export default function DetalleActividadClient({ actividad, nombreTipo, ponentes, inscritos }: Props) {
+const EditIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+
+export default function DetalleActividadClient({ actividad, nombreTipo, ponentes, inscritos, tiposActividad, instituciones }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [loadingGenerar, setLoadingGenerar] = useState<string | null>(null);
   const [loadingSend, setLoadingSend] = useState<string | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const manejaConstanciasParticipantes = actividad.tipoActividad?.generaConstanciaParticipante ?? false;
   const [selectedInscritos, setSelectedInscritos] = useState<Set<string>>(
     new Set(manejaConstanciasParticipantes ? inscritos.map(i => i.folioRegistro) : [])
   );
   const [loadingBatch, setLoadingBatch] = useState(false);
+
+  const refreshPage = useCallback(() => {
+    startTransition(() => router.refresh());
+  }, [router]);
 
   const toggleSeleccionInscrito = (id: string) => {
     const next = new Set(selectedInscritos);
@@ -129,10 +144,16 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           <Link href="/cpanel/actividades" className="text-slate-400 hover:text-slate-600 transition-colors">
             ← Volver
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{actividad.nombre}</h1>
             <p className="text-slate-500 mt-1">{nombreTipo}</p>
           </div>
+          <button
+            onClick={() => setIsEditOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <EditIcon /> Editar
+          </button>
         </div>
 
         {/* General Info */}
@@ -141,8 +162,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
             <div>
               <p><strong className="text-slate-800">Título para constancia:</strong> {actividad.nombre}</p>
-              <p><strong className="text-slate-800">Fecha de inicio:</strong> {formatFecha(actividad.fechaInicio)}</p>
-              <p><strong className="text-slate-800">Fecha de fin:</strong> {formatFecha(actividad.fechaFin)}</p>
+              <p><strong className="text-slate-800">Fecha:</strong> {formatFecha(actividad.fechaInicio)}</p>
             </div>
             <div>
               <p>
@@ -318,6 +338,16 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
         </div>
 
       </div>
+
+      {isEditOpen && (
+        <ActividadModal
+          editingActividad={actividad}
+          tiposActividad={tiposActividad}
+          instituciones={instituciones}
+          onSuccess={refreshPage}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
     </div>
   );
 }

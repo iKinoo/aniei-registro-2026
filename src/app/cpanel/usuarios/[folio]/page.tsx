@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/infrastructure/database/client';
 import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
 import { HistorialDepositosAdmin } from '@/app/components/HistorialDepositosAdmin';
+import { UsuarioActions } from './UsuarioActions';
 import Link from 'next/link';
 
 export const metadata = { title: 'Detalle de Usuario | CPanel ANIEI 2026' };
@@ -77,9 +78,12 @@ export default async function UsuarioDetallePage({ params }: { params: Promise<{
             Folio: <span className="font-mono font-medium text-slate-700">{usuario.folio_registro}</span> · {usuario.correo}
           </p>
         </div>
-        <span className="inline-flex px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100">
-          {usuario.titulos?.descripcion || 'Sin título'}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100">
+            {usuario.titulos?.descripcion || 'Sin título'}
+          </span>
+          <UsuarioActions folio={usuario.folio_registro} nombreCompleto={`${usuario.nombre} ${usuario.apellido}`} />
+        </div>
       </div>
 
       {/* Info general */}
