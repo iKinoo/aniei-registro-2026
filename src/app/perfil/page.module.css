@@ -274,24 +274,6 @@
   background: #e0e7ff;
 }
 
-.logoutButton {
-  background-color: #ef4444;
-  color: white;
-  padding: 0.65rem 1.25rem;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
-}
-
-.logoutButton:hover {
-  background-color: #dc2626;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.3);
-}
-
 /* ---- Animation ---- */
 @keyframes slideUp {
   from {

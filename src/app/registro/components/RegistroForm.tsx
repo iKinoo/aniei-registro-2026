@@ -94,6 +94,57 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
     }
   }, [total, montoTouched]);
 
+  useEffect(() => {
+    if (!state.success && state.fields && (state.errors || state.success === false)) {
+      const f = state.fields;
+      setDatos({
+        nombre: f.nombre ?? '',
+        apellido: f.apellido ?? '',
+        correo: f.correo ?? '',
+        lada: f.lada ?? '',
+        telefono: f.telefono ?? '',
+        extension: f.extension ?? '',
+        genero: f.genero ?? '',
+        carrera: f.carrera ?? '',
+        dependencia: f.dependencia ?? '',
+        idTitulo: f.idTitulo ?? '',
+        idInstitucion: f.idInstitucion ?? '',
+        idEntidadFederativa: f.idEntidadFederativa ?? '',
+      });
+      setDeposito({
+        bancoSucursal: f.bancoSucursal ?? '',
+        ciudad: f.ciudad ?? '',
+        referencia: f.referencia ?? '',
+        monto: f.monto ?? '',
+        fechaDeposito: f.fechaDeposito ?? '',
+        notas: f.notas ?? '',
+      });
+      setFacturacion({
+        activa: f.requiereFacturacion ?? false,
+        razonSocial: f.razonSocial ?? '',
+        rfc: f.rfc ?? '',
+        calle: f.calle ?? '',
+        numExterior: f.numExterior ?? '',
+        numInterior: f.numInterior ?? '',
+        colonia: f.colonia ?? '',
+        municipio: f.municipio ?? '',
+        codigoPostal: f.codigoPostal ?? '',
+        idEntidadFederativaRfc: f.idEntidadFederativaRfc ?? '',
+      });
+      if (state.errors) {
+        const errKeys = Object.keys(state.errors).join(',');
+        if (errKeys.includes('facturacion')) {
+          setStep(3);
+          setFacturacion((prev) => ({ ...prev, activa: true }));
+        } else if (errKeys.includes('bancoSucursal') || errKeys.includes('ciudad') || errKeys.includes('referencia') || errKeys.includes('monto') || errKeys.includes('fechaDeposito') || errKeys.includes('comprobante')) {
+          setStep(3);
+        } else {
+          setStep(1);
+        }
+      }
+    }
+  }, [state]);
+
   function goTo(n: number) {
     setStep(n);
     setMaxStep((prev) => Math.max(prev, n));

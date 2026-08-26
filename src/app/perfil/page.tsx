@@ -4,6 +4,7 @@ import { prisma } from '@/infrastructure/database/client';
 import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
 import { HistorialDepositosUsuario } from '@/app/components/HistorialDepositosUsuario';
 import AutoLogout from './AutoLogout';
+import { CerrarSesionButton } from './CerrarSesionButton';
 import styles from './page.module.css';
 
 export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
@@ -197,9 +198,7 @@ export default async function PerfilPage() {
             <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
               Registro Grupal
             </a>
-            <a href="/api/auth/signout" className={styles.logoutButton}>
-              Cerrar Sesión
-            </a>
+            <CerrarSesionButton />
           </div>
         </div>
       </div>
