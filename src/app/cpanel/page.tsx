@@ -148,7 +148,7 @@ export default function AdminPanel() {
             <p className="text-slate-500 mt-1">Gestiona los registros, verifica depósitos y reenvía constancias.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <select
               value={filtroInstitucion ?? ''}
               onChange={(e) => {
@@ -172,7 +172,7 @@ export default function AdminPanel() {
                 <input
                   type="text"
                   placeholder="Buscar por nombre, correo..."
-                  className="pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder-slate-400 w-64 md:w-80 outline-none"
+                  className="pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder-slate-400 w-48 sm:w-64 md:w-80 outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
