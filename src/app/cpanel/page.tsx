@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction, eliminarUsuarioAction } from './actions';
+import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction, eliminarUsuarioAction, getInstitucionesAction } from './actions';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import { Institucion } from '@/shared/types/catalogos';
 import { useRouter } from 'next/navigation';
 
 // Icon components
@@ -47,9 +48,11 @@ const TrashIcon = () => (
 export default function AdminPanel() {
   const router = useRouter();
   const [usuarios, setUsuarios] = useState<UsuarioForAdminDTO[]>([]);
+  const [instituciones, setInstituciones] = useState<Institucion[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filtroInstitucion, setFiltroInstitucion] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
@@ -59,19 +62,23 @@ export default function AdminPanel() {
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; folio: string; nombre: string }>({ isOpen: false, folio: '', nombre: '' });
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Debounce search
+  useEffect(() => {
+    getInstitucionesAction().then((res) => {
+      if (res.success) setInstituciones(res.data);
+    });
+  }, []);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset to page 1 on new search
+      setPage(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Fetch data
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const result = await getUsuariosAdminAction(page, limit, debouncedSearch);
+    const result = await getUsuariosAdminAction(page, limit, debouncedSearch, filtroInstitucion);
     if (result.success && result.data) {
       setUsuarios(result.data.data);
       setTotal(result.data.total);
@@ -80,7 +87,7 @@ export default function AdminPanel() {
       console.error(result.error);
     }
     setLoading(false);
-  }, [page, limit, debouncedSearch]);
+  }, [page, limit, debouncedSearch, filtroInstitucion]);
 
   useEffect(() => {
     fetchData();
@@ -141,18 +148,35 @@ export default function AdminPanel() {
             <p className="text-slate-500 mt-1">Gestiona los registros, verifica depósitos y reenvía constancias.</p>
           </div>
 
-          <div className="flex items-center gap-4 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <SearchIcon />
+          <div className="flex items-center gap-3">
+            <select
+              value={filtroInstitucion ?? ''}
+              onChange={(e) => {
+                setFiltroInstitucion(e.target.value ? Number(e.target.value) : undefined);
+                setPage(1);
+              }}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            >
+              <option value="">Todas las instituciones</option>
+              {instituciones.map((i) => (
+                <option key={i.idInstitucion} value={i.idInstitucion}>
+                  {i.abreviatura ? `${i.abreviatura} - ${i.nombre}` : i.nombre}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-4 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <SearchIcon />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, correo..."
+                  className="pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder-slate-400 w-64 md:w-80 outline-none"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Buscar por nombre, correo..."
-                className="pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder-slate-400 w-64 md:w-80 outline-none"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
             </div>
           </div>
         </div>

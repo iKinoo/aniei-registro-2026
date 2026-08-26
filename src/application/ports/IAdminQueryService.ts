@@ -5,6 +5,7 @@ export interface IAdminQueryService {
   obtenerUsuariosForAdmin(
     page: number,
     limit: number,
-    search?: string
+    search?: string,
+    idInstitucion?: number
   ): Promise<PaginatedResult<UsuarioForAdminDTO>>;
 }

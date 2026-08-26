@@ -7,13 +7,23 @@ import { ObtenerAccesoArchivo } from '@/application/use-cases/ObtenerAccesoArchi
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { prisma } from '@/infrastructure/database/client';
 
-export async function getUsuariosAdminAction(page: number, limit: number, search?: string) {
+export async function getInstitucionesAction() {
+  try {
+    const data = await getCatalogoRepository().obtenerInstituciones();
+    return { success: true as const, data };
+  } catch (error) {
+    console.error('Error in getInstitucionesAction:', error);
+    return { success: false as const, error: 'Error al obtener instituciones' };
+  }
+}
+
+export async function getUsuariosAdminAction(page: number, limit: number, search?: string, idInstitucion?: number) {
   try {
     await requireAdmin();
     const adminService = getAdminQueryService();
     const obtenerUsuariosAdmin = new ObtenerUsuariosForAdmin(adminService);
 
-    const result = await obtenerUsuariosAdmin.execute(page, limit, search);
+    const result = await obtenerUsuariosAdmin.execute(page, limit, search, idInstitucion);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error in getUsuariosAdminAction:', error);

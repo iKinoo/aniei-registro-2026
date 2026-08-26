@@ -62,6 +62,11 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   const [actividades, setActividades] = useState<ActividadDTO[]>(initialActividades);
   const [editingActividad, setEditingActividad] = useState<ActividadDTO | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<number | undefined>(undefined);
+
+  const actividadesFiltradas = filtroTipo != null
+    ? actividades.filter((a) => a.idTipoActividad === filtroTipo)
+    : actividades;
 
   const refresh = useCallback(async () => {
     const res = await getActividadesAction();
@@ -101,7 +106,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
           </button>
         </div>
 
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-end">
           <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
             <p className="text-xs text-slate-500 uppercase tracking-wide">Total</p>
             <p className="text-2xl font-bold text-slate-900">{actividades.length}</p>
@@ -115,6 +120,18 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
               </div>
             );
           })}
+          <div className="ml-auto">
+            <select
+              value={filtroTipo ?? ''}
+              onChange={(e) => setFiltroTipo(e.target.value ? Number(e.target.value) : undefined)}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+            >
+              <option value="">Todos los tipos</option>
+              {tiposActividad.map((t) => (
+                <option key={t.idTipoActividad} value={t.idTipoActividad}>{t.descripcion}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
@@ -132,20 +149,26 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {actividades.length === 0 ? (
+                {actividadesFiltradas.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center gap-3">
                         <CalendarIcon />
-                        <span className="text-sm">No hay actividades registradas aún.</span>
-                        <button onClick={openNew} className="text-indigo-600 text-sm font-medium hover:underline">
-                          Crear la primera actividad →
-                        </button>
+                        <span className="text-sm">
+                          {actividades.length === 0
+                            ? 'No hay actividades registradas aún.'
+                            : 'No hay actividades con el filtro seleccionado.'}
+                        </span>
+                        {actividades.length === 0 && (
+                          <button onClick={openNew} className="text-indigo-600 text-sm font-medium hover:underline">
+                            Crear la primera actividad →
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  actividades.map((a) => (
+                  actividadesFiltradas.map((a) => (
                     <tr key={a.idActividad} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-0.5">

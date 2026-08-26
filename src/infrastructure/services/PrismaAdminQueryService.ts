@@ -9,18 +9,31 @@ export class PrismaAdminQueryService implements IAdminQueryService {
   async obtenerUsuariosForAdmin(
     page: number,
     limit: number,
-    search?: string
+    search?: string,
+    idInstitucion?: number
   ): Promise<PaginatedResult<UsuarioForAdminDTO>> {
     const skip = (page - 1) * limit;
 
-    const whereClause: any = search
-      ? {
+    const conditions: any[] = [];
+
+    if (search) {
+      conditions.push({
         OR: [
           { nombre: { contains: search, mode: 'insensitive' } },
           { apellido: { contains: search, mode: 'insensitive' } },
           { correo: { contains: search, mode: 'insensitive' } },
         ],
-      }
+      });
+    }
+
+    if (idInstitucion != null) {
+      conditions.push({ id_institucion: idInstitucion });
+    }
+
+    const whereClause: any = conditions.length > 0
+      ? conditions.length === 1
+        ? conditions[0]
+        : { AND: conditions }
       : {};
 
     const [total, usuarios] = await Promise.all([
