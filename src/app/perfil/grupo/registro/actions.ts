@@ -31,6 +31,7 @@ export interface GrupoRapidoActionState {
   data?: { emailPadre: string };
   errors?: Record<string, string>;
   error?: string;
+  fields?: Record<string, string>;
 }
 
 function validarArchivo(file: File): string | null {
@@ -75,21 +76,18 @@ export async function registrarGrupoRapidoAction(
       };
     }
 
-    // Extraer miembros con nueva estructura plana nombres[] apellidos[]
-    const nombres = formData.getAll('nombres[]');
-    const apellidos = formData.getAll('apellidos[]');
+    // 3. Extraer datos del formulario
+    const grupoActivo = formData.get('grupoActivo') === 'true';
+    const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
     
-    if (!nombres.length || nombres.length !== apellidos.length) {
-       return {
-        success: false,
-        error: 'Datos de los integrantes incompletos o mal formados.'
-       };
+    const miembros: { nombre: string; apellido: string }[] = [];
+    for (let i = 0; i < numMiembros; i++) {
+      const nombre = (formData.get(`miembro_${i}_nombre`) as string) ?? '';
+      const apellido = (formData.get(`miembro_${i}_apellido`) as string) ?? '';
+      if (nombre.trim() && apellido.trim()) {
+        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim() });
+      }
     }
-
-    const miembrosList = nombres.map((nombre, i) => ({
-      nombre: nombre as string,
-      apellido: apellidos[i] as string
-    }));
 
     const rawDeposito = {
       bancoSucursal: formData.get('bancoSucursal') as string,
@@ -100,26 +98,49 @@ export async function registrarGrupoRapidoAction(
       notas: formData.get('notas') as string,
     };
 
-    // 4. Validar con Zod
-    const parseResult = grupoRapidoFormSchema.safeParse({
-      miembros: miembrosList,
-      deposito: rawDeposito,
-    });
+    // Capturar campos para restaurar en caso de error
+    const savedFields: Record<string, string> = {
+      bancoSucursal: rawDeposito.bancoSucursal,
+      ciudad: rawDeposito.ciudad,
+      referencia: rawDeposito.referencia,
+      monto: rawDeposito.monto,
+      fechaDeposito: rawDeposito.fechaDeposito,
+      notas: rawDeposito.notas,
+    };
 
-    if (!parseResult.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parseResult.error.issues) {
-        const key = issue.path.join('.');
-        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+    // 4. Validar con Zod (solo si hay miembros)
+    if (grupoActivo && miembros.length > 0) {
+      const parseResult = grupoRapidoFormSchema.safeParse({
+        miembros,
+        deposito: rawDeposito,
+      });
+
+      if (!parseResult.success) {
+        const fieldErrors: Record<string, string> = {};
+        for (const issue of parseResult.error.issues) {
+          const key = issue.path.join('.');
+          if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+        }
+        return { success: false, errors: fieldErrors, error: 'Por favor corrija los errores en el formulario', fields: savedFields };
       }
-      return { success: false, errors: fieldErrors, error: 'Por favor corrija los errores en el formulario' };
+    } else if (!grupoActivo) {
+      // Si no hay grupo activo, solo validar depósito
+      const parseResult = depositoSchema.safeParse(rawDeposito);
+      if (!parseResult.success) {
+        const fieldErrors: Record<string, string> = {};
+        for (const issue of parseResult.error.issues) {
+          const key = issue.path.join('.');
+          if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+        }
+        return { success: false, errors: fieldErrors, error: 'Por favor corrija los errores en el formulario', fields: savedFields };
+      }
     }
 
     // 5. Validar archivo
     const file = formData.get('archivo') as File;
     const archivoError = validarArchivo(file);
     if (archivoError) {
-      return { success: false, errors: { archivo: archivoError }, error: archivoError };
+      return { success: false, errors: { archivo: archivoError }, error: archivoError, fields: savedFields };
     }
 
     // 6. Convertir archivo a Buffer
@@ -137,14 +158,14 @@ export async function registrarGrupoRapidoAction(
 
     const resultado = await useCase.execute({
       responsableId: acceso.folio_registro,
-      miembros: parseResult.data.miembros,
+      miembros: grupoActivo ? miembros : [],
       deposito: {
-        bancoSucursal: parseResult.data.deposito.bancoSucursal || null,
-        ciudad: parseResult.data.deposito.ciudad || null,
-        referencia: parseResult.data.deposito.referencia,
-        monto: parseResult.data.deposito.monto,
-        fechaDeposito: parseResult.data.deposito.fechaDeposito,
-        notas: parseResult.data.deposito.notas || null,
+        bancoSucursal: rawDeposito.bancoSucursal || null,
+        ciudad: rawDeposito.ciudad || null,
+        referencia: rawDeposito.referencia,
+        monto: parseFloat(rawDeposito.monto),
+        fechaDeposito: new Date(rawDeposito.fechaDeposito),
+        notas: rawDeposito.notas || null,
       },
       archivo: {
         nombre: file.name,
