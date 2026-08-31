@@ -13,7 +13,6 @@ import {
 import { Genero } from '@/core/enums/Genero';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
-import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 import { PonenteDTO } from '@/application/dtos/ActividadDTO';
 
 // ---------- Búsqueda de usuarios ----------
@@ -106,6 +105,7 @@ export interface RegistroPonenteInput {
   idInstitucion?: number;
   telefono?: string;
   idTitulo?: number;
+  idTipoParticipante?: number;
 }
 
 export async function registrarPonenteAction(
@@ -115,16 +115,9 @@ export async function registrarPonenteAction(
 ): Promise<{ success: true; folioRegistro: string } | { success: false; error: string }> {
   try {
     await requireAdmin();
-    // 1. Verificar correo duplicado
     const correoVO = Email.create(datos.correo);
     const usuarioRepo = getUsuarioRepository();
-    const existente = await usuarioRepo.buscarPorCorreo(correoVO);
-    if (existente) {
-      return { success: false, error: `El correo ${datos.correo} ya está registrado en el sistema.` };
-    }
 
-    // 2. Obtener institución name para correo
-    const catalogoRepo = getCatalogoRepository();
     let nombreActividad = '';
     const actividadExiste = idActividad > 0;
     if (actividadExiste) {
@@ -137,8 +130,6 @@ export async function registrarPonenteAction(
       } catch { /* best-effort */ }
     }
 
-    // 3. Crear entidad Usuario (sin deposito ni facturación)
-    // Se usan valores por defecto para campos requeridos no provistos en el registro simplificado
     const usuario = Usuario.create({
       nombre: datos.nombre,
       apellido: datos.apellido,
@@ -148,39 +139,38 @@ export async function registrarPonenteAction(
       carrera: null,
       dependencia: null,
       idTitulo: datos.idTitulo ?? 0,
-      idInstitucion: datos.idInstitucion ?? 0,
+      idTipoParticipante: datos.idTipoParticipante ?? 0,
+      idInstitucion: datos.idInstitucion ?? null,
       idEntidadFederativa: 0,
     });
 
     const usuarioPersistido = await usuarioRepo.crear(usuario);
     const folioRegistro = usuarioPersistido.folioRegistro!;
 
-    // 4. Generar credenciales (CSPRNG)
     const { generateSecurePassword } = await import('@/shared/security/password');
     const generatedPassword = generateSecurePassword(12, false);
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
-    await getAccesoRepository().crear(
-      datos.correo,
+
+    const accesoRepo = getAccesoRepository();
+    await accesoRepo.crear(
       passwordHash,
       'USER',
       folioRegistro,
       `${datos.nombre} ${datos.apellido}`,
+      datos.correo,
     );
 
-    // 5. Asignar folio
     const folio = folioRegistro;
 
-    // 6. Vincular como ponente de la actividad (solo si la actividad ya existe)
     if (actividadExiste) {
       await getPonentesRepository().vincular(idActividad, folioRegistro, rol || 'Ponente');
     }
 
-    // 7. Enviar correo de notificación (best-effort)
     try {
       await getEmailService().enviarNotificacionPonente(datos.correo, {
         nombre: datos.nombre,
         apellido: datos.apellido,
-        correo: datos.correo,
+        folio: folioRegistro,
         password: generatedPassword,
         nombreActividad,
         rol: rol || 'Ponente',

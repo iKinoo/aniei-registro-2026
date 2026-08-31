@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
-import { Titulo, Estado, Institucion, PrecioInscripcion } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, PrecioInscripcion, TipoParticipante } from '@/shared/types/catalogos';
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
 import { StepGrupo } from './steps/StepGrupo';
 import { StepPago } from './steps/StepPago';
 
-export interface MiembroWizard { nombre: string; apellido: string; }
+export interface MiembroWizard { nombre: string; apellido: string; correo: string; idTipoParticipante: number; }
 
 export interface DatosGeneralesWizard {
   nombre: string; apellido: string; correo: string;
   lada: string; telefono: string; extension: string;
   genero: string; carrera: string; dependencia: string;
-  idTitulo: string; idInstitucion: string; idEntidadFederativa: string;
+  idTitulo: string; idTipoParticipante: string;
+  idInstitucion: string; institucionExterna: string;
+  idEntidadFederativa: string;
+  noAfiliada: string;
 }
 
 export interface DepositoWizard {
@@ -32,7 +35,7 @@ export interface FacturacionWizard {
 interface RegistroFormProps {
   catalogos: { titulos: Titulo[]; estados: Estado[]; instituciones: Institucion[] };
   precios: PrecioInscripcion[];
-  precioVigente: PrecioInscripcion | null;
+  tiposParticipante: TipoParticipante[];
 }
 
 const STEPS = [
@@ -44,7 +47,8 @@ const STEPS = [
 const emptyDatos: DatosGeneralesWizard = {
   nombre: '', apellido: '', correo: '', lada: '', telefono: '',
   extension: '', genero: '', carrera: '', dependencia: '',
-  idTitulo: '', idInstitucion: '', idEntidadFederativa: '',
+  idTitulo: '', idTipoParticipante: '', idInstitucion: '', institucionExterna: '',
+  idEntidadFederativa: '', noAfiliada: 'false',
 };
 
 const emptyDeposito: DepositoWizard = {
@@ -68,7 +72,24 @@ function formatDate(date: Date) {
   });
 }
 
-export function RegistroForm({ catalogos, precios, precioVigente }: RegistroFormProps) {
+function obtenerPrecioVigente(
+  idTipoParticipante: number,
+  esAfiliada: boolean,
+  precios: PrecioInscripcion[]
+): PrecioInscripcion | null {
+  const ahora = new Date();
+  const preciosFiltrados = precios
+    .filter((p) =>
+      p.idTipoParticipante === idTipoParticipante &&
+      p.esAfiliada === esAfiliada &&
+      p.activo &&
+      new Date(p.fechaLimite) <= ahora
+    )
+    .sort((a, b) => new Date(b.fechaLimite).getTime() - new Date(a.fechaLimite).getTime());
+  return preciosFiltrados.length > 0 ? preciosFiltrados[0] : null;
+}
+
+export function RegistroForm({ catalogos, precios, tiposParticipante }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
   const [step, setStep] = useState(1);
   const [maxStep, setMaxStep] = useState(1);
@@ -79,13 +100,34 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
   const [montoTouched, setMontoTouched] = useState(false);
 
-  const costoBase = precioVigente?.costo ?? 0;
-  const costoMiembro = precioVigente?.costoMiembro ?? 0;
+  const idTipoParticipante = parseInt(datos.idTipoParticipante) || 0;
+  const esAfiliada = datos.noAfiliada !== 'true';
+
+  const precioLider = idTipoParticipante > 0
+    ? obtenerPrecioVigente(idTipoParticipante, esAfiliada, precios)
+    : null;
+
   const nMiembros = grupoActivo ? miembros.length : 0;
-  const total = costoBase + costoMiembro * nMiembros;
+
+  const alumnosCount = miembros.filter((m) => {
+    const tipo = tiposParticipante.find((t) => t.idTipoParticipante === m.idTipoParticipante);
+    return tipo?.clave === 'ALUMNO';
+  }).length;
+
+  const liderEsAcademico = tiposParticipante.find((t) => t.idTipoParticipante === idTipoParticipante)?.clave === 'ACADEMICO';
+  const liderGratis = liderEsAcademico && alumnosCount >= 15;
+
+  const costoLider = liderGratis ? 0 : (precioLider?.costo ?? 0);
+
+  const costoMiembros = miembros.reduce((sum, m) => {
+    const precioMiembro = obtenerPrecioVigente(m.idTipoParticipante, esAfiliada, precios);
+    return sum + (precioMiembro?.costo ?? 0);
+  }, 0);
+
+  const total = costoLider + costoMiembros;
 
   const preciosFuturos = precios
-    .filter((p) => p.activo && new Date(p.fechaLimite) > new Date())
+    .filter((p) => p.activo && p.idTipoParticipante === idTipoParticipante && p.esAfiliada === esAfiliada && new Date(p.fechaLimite) > new Date())
     .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime());
 
   useEffect(() => {
@@ -108,8 +150,11 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
         carrera: f.carrera ?? '',
         dependencia: f.dependencia ?? '',
         idTitulo: f.idTitulo ?? '',
+        idTipoParticipante: f.idTipoParticipante ?? '',
         idInstitucion: f.idInstitucion ?? '',
+        institucionExterna: f.institucionExterna ?? '',
         idEntidadFederativa: f.idEntidadFederativa ?? '',
+        noAfiliada: f.noAfiliada ?? 'false',
       });
       setDeposito({
         bancoSucursal: f.bancoSucursal ?? '',
@@ -209,21 +254,21 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
             <span className="text-sm font-semibold text-amber-800">Información de costos de inscripción</span>
           </div>
 
-          {precioVigente ? (
+          {precioLider ? (
             <div className="grid gap-2 text-sm">
               <div className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2 border border-amber-100">
-                <span className="text-slate-600">Costo actual (desde {formatDate(precioVigente.fechaLimite)})</span>
-                <span className="font-bold text-slate-900">${formatMXN(precioVigente.costo)} MXN</span>
+                <span className="text-slate-600">Tu costo actual</span>
+                <span className="font-bold text-slate-900">${formatMXN(precioLider.costo)} MXN</span>
               </div>
-              {precioVigente.costoMiembro > 0 && (
+              {liderGratis && (
                 <div className="flex items-center justify-between px-3">
-                  <span className="text-slate-500 text-xs">Costo adicional por miembro de grupo</span>
-                  <span className="font-medium text-slate-700 text-xs">${formatMXN(precioVigente.costoMiembro)} MXN</span>
+                  <span className="text-emerald-600 text-xs font-medium">¡Grupo de 15+ alumnos! Profesor responsable: GRATIS</span>
+                  <span className="font-bold text-emerald-600 text-xs">$0.00 MXN</span>
                 </div>
               )}
             </div>
           ) : (
-            <p className="text-sm text-amber-700">No hay un precio vigente configurado.</p>
+            <p className="text-sm text-amber-700">Selecciona tu tipo de participante e institución para ver el costo.</p>
           )}
 
           {preciosFuturos.length > 0 && (
@@ -242,55 +287,63 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
         </div>
       </div>
 
-      {/* Progress stepper */}
-      <div className="max-w-2xl mx-auto px-4 mb-8">
-        <div className="flex items-center justify-between relative">
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200" />
-          <div
-            className="absolute top-5 left-0 h-0.5 bg-indigo-500 transition-all duration-500"
-            style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
-          />
-          {STEPS.map((s) => {
-            const done = step > s.id;
-            const active = step === s.id;
-            const clickable = s.id < step;
-            return (
-              <div key={s.id} className="relative flex flex-col items-center gap-2 z-10">
-                <button
-                  type="button"
-                  onClick={() => clickable && goTo(s.id)}
-                  title={clickable ? `Volver a ${s.label}` : s.label}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 focus:outline-none
-                    ${done ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100 cursor-pointer' :
-                      active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 scale-110' :
-                      'bg-white border-slate-200 text-slate-400 cursor-default'}`}
-                >
-                  {done ? '✓' : s.icon}
-                </button>
-                <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-600' : done ? 'text-emerald-600' : 'text-slate-400'}`}>
-                  {s.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Total indicator */}
-      <div className="max-w-2xl mx-auto px-4 mb-4">
-        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-slate-500 text-sm">Total estimado</span>
-            {nMiembros > 0 && (
-              <span className="text-xs bg-violet-100 text-violet-600 border border-violet-200 rounded-full px-2 py-0.5">
-                +{nMiembros} miembro{nMiembros > 1 ? 's' : ''}
-              </span>
-            )}
+      {/* Sticky stepper + total */}
+      <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm py-4 shadow-sm">
+        {/* Progress stepper */}
+        <div className="max-w-2xl mx-auto px-4 mb-4">
+          <div className="flex items-center justify-between relative">
+            <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200" />
+            <div
+              className="absolute top-5 left-0 h-0.5 bg-indigo-500 transition-all duration-500"
+              style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
+            />
+            {STEPS.map((s) => {
+              const done = step > s.id;
+              const active = step === s.id;
+              const clickable = s.id < step;
+              return (
+                <div key={s.id} className="relative flex flex-col items-center gap-2 z-10">
+                  <button
+                    type="button"
+                    onClick={() => clickable && goTo(s.id)}
+                    title={clickable ? `Volver a ${s.label}` : s.label}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 focus:outline-none
+                      ${done ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100 cursor-pointer' :
+                        active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 scale-110' :
+                        'bg-white border-slate-200 text-slate-400 cursor-default'}`}
+                  >
+                    {done ? '✓' : s.icon}
+                  </button>
+                  <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-600' : done ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {s.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <span className="text-xl font-bold text-indigo-700">
-            ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-            <span className="text-xs font-normal text-slate-400 ml-1">MXN</span>
-          </span>
+        </div>
+
+        {/* Total indicator */}
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-slate-500 text-sm">Total estimado</span>
+              {nMiembros > 0 && (
+                <span className="text-xs bg-violet-100 text-violet-600 border border-violet-200 rounded-full px-2 py-0.5">
+                  +{nMiembros} miembro{nMiembros > 1 ? 's' : ''}
+                </span>
+              )}
+              {liderGratis && (
+                <span className="text-xs bg-emerald-100 text-emerald-600 border border-emerald-200 rounded-full px-2 py-0.5">
+                  Profesor GRATIS
+                </span>
+              )}
+            </div>
+            <span className="text-xl font-bold text-indigo-700">
+              ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              <span className="text-xs font-normal text-slate-400 ml-1">MXN</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -307,13 +360,18 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
           <input type="hidden" name="carrera" value={datos.carrera} />
           <input type="hidden" name="dependencia" value={datos.dependencia} />
           <input type="hidden" name="idTitulo" value={datos.idTitulo} />
+          <input type="hidden" name="idTipoParticipante" value={datos.idTipoParticipante} />
           <input type="hidden" name="idInstitucion" value={datos.idInstitucion} />
+          <input type="hidden" name="institucionExterna" value={datos.institucionExterna} />
+          <input type="hidden" name="noAfiliada" value={datos.noAfiliada} />
           <input type="hidden" name="idEntidadFederativa" value={datos.idEntidadFederativa} />
           <input type="hidden" name="numMiembros" value={grupoActivo ? miembros.length : 0} />
           {grupoActivo && miembros.map((m, i) => (
             <span key={i}>
               <input type="hidden" name={`miembro_${i}_nombre`} value={m.nombre} />
               <input type="hidden" name={`miembro_${i}_apellido`} value={m.apellido} />
+              <input type="hidden" name={`miembro_${i}_correo`} value={m.correo} />
+              <input type="hidden" name={`miembro_${i}_idTipoParticipante`} value={m.idTipoParticipante} />
             </span>
           ))}
           <input type="hidden" name="requiereFacturacion" value={facturacion.activa ? 'true' : 'false'} />
@@ -321,6 +379,7 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
           <div className={step === 1 ? 'block' : 'hidden'}>
             <StepDatosGenerales
               catalogos={catalogos}
+              tiposParticipante={tiposParticipante}
               datos={datos}
               errors={state.errors}
               onChange={setDatos}
@@ -331,7 +390,9 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
             <StepGrupo
               grupoActivo={grupoActivo}
               miembros={miembros}
-              costoMiembro={costoMiembro}
+              tiposParticipante={tiposParticipante}
+              esAfiliada={esAfiliada}
+              precios={precios}
               onToggleGrupo={() => { setGrupoActivo((v) => !v); if (grupoActivo) setMiembros([]); }}
               onMiembrosChange={setMiembros}
               onBack={() => goTo(1)}
@@ -341,7 +402,7 @@ export function RegistroForm({ catalogos, precios, precioVigente }: RegistroForm
           <div className={step === 3 ? 'block' : 'hidden'}>
             <StepPago
               total={total}
-              desglose={{ base: costoBase, nMiembros, costoMiembro }}
+              desglose={{ costoLider, costoMiembros, nMiembros, liderGratis }}
               deposito={deposito}
               facturacion={facturacion}
               estados={catalogos.estados}

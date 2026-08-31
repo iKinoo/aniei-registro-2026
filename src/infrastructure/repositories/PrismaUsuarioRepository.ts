@@ -24,7 +24,7 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
   }
 
   async buscarPorCorreo(correo: Email): Promise<Usuario | null> {
-    const found = await this.prisma.usuarios.findUnique({
+    const found = await this.prisma.usuarios.findFirst({
       where: { correo: correo.toString() },
     });
     return found ? UsuarioMapper.toDomain(found) : null;
@@ -58,18 +58,18 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
   async crearGrupoTransaccional(data: {
     token: string;
     responsableId: string;
-    institucionId: number;
-    dependenciaId: string; // Es string 128
-    estadoId: number;      // id_entidad_federativa
+    institucionId: number | null;
+    dependenciaId: string;
+    estadoId: number;
     miembros: Array<{
       nombre: string;
       apellido: string;
-      correoDummy: string;
+      correo: string;
       passwordHash: string;
+      idTipoParticipante: number;
     }>;
   }): Promise<{ usuariosIds: string[], folios: string[] }> {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Crear el grupo
       const grupo = await tx.grupos_registro.create({
         data: {
           token: data.token,
@@ -80,25 +80,24 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       const usuariosIds: string[] = [];
       const folios: string[] = [];
 
-      // 2. Insertar cada miembro (sin id_titulo, lo completarán individualmente)
-      for (let i = 0; i < data.miembros.length; i++) {
-        const m = data.miembros[i];
-
+      for (const m of data.miembros) {
         const newUsuario = await tx.usuarios.create({
           data: {
             nombre: m.nombre,
             apellido: m.apellido,
-            correo: m.correoDummy,
+            correo: m.correo,
             id_grupo_registro: grupo.id,
             id_institucion: data.institucionId,
             dependencia: data.dependenciaId,
             id_entidad_federativa: data.estadoId,
+            id_tipo_participante: m.idTipoParticipante,
+            verificado: true,
           },
         });
 
         await tx.accesos.create({
           data: {
-            email: m.correoDummy,
+            email: m.correo,
             nombre: `${m.nombre} ${m.apellido}`,
             password: m.passwordHash,
             rol: 'USER',

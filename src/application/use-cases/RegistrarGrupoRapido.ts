@@ -12,6 +12,7 @@ import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import type { IPasswordHasher } from '@/application/ports/IPasswordHasher';
 import type { IIdGenerator } from '@/application/ports/IIdGenerator';
 import { BcryptPasswordHasher } from '@/infrastructure/services/auth/BcryptPasswordHasher';
+import { generateSecurePassword } from '@/shared/security/password';
 
 export class RegistrarGrupoRapido {
   constructor(
@@ -38,7 +39,6 @@ export class RegistrarGrupoRapido {
     const archivoRuta = `comprobantes_grupo/${token}.${ext}`;
     const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
 
-    // Preparar deposito
     const depositoBase = {
       bancoSucursal: dto.deposito.bancoSucursal ?? null,
       ciudad: dto.deposito.ciudad ?? null,
@@ -53,13 +53,20 @@ export class RegistrarGrupoRapido {
       notas: dto.deposito.notas ?? null,
     };
 
+    const passwordsPlanas: string[] = [];
     const miembrosMapeados = await Promise.all(
-      dto.miembros.map(async (miembro, i) => ({
-        nombre: miembro.nombre,
-        apellido: miembro.apellido,
-        correoDummy: `grupo_${token}_${i}@temp.aniei.org`,
-        passwordHash: await this.passwordHasher.hash(this.idGenerator.uuid()),
-      }))
+      dto.miembros.map(async (miembro) => {
+        const passwordPlana = generateSecurePassword(12, false);
+        passwordsPlanas.push(passwordPlana);
+
+        return {
+          nombre: miembro.nombre,
+          apellido: miembro.apellido,
+          correo: miembro.correo,
+          passwordHash: await this.passwordHasher.hash(passwordPlana),
+          idTipoParticipante: responsable.idTipoParticipante ?? 0,
+        };
+      })
     );
 
     let folios: string[] = [];
@@ -69,7 +76,6 @@ export class RegistrarGrupoRapido {
       const dRepo = ctx?.depositoRepo ?? this.depositoRepo;
       const uRepo = ctx?.usuarioRepo ?? this.usuarioRepo;
 
-      // Crear depósito dentro de la transacción
       const deposito = Deposito.create({
         folioRegistro: dto.responsableId,
         ...depositoBase,
@@ -92,7 +98,6 @@ export class RegistrarGrupoRapido {
       if (this.txManager) {
         await this.txManager.run(async (ctx) => { await doTx(ctx); });
       } else {
-        // Fallback: crear deposito + grupo en una sola $transaction usando prisma directo
         const { prisma } = await import('@/infrastructure/database/client');
         await (prisma as any).$transaction(async (tx: any) => {
           const { PrismaDepositoRepository } = await import('@/infrastructure/repositories/PrismaDepositoRepository');
@@ -105,17 +110,26 @@ export class RegistrarGrupoRapido {
         });
       }
     } catch (e: unknown) {
-      // Compensar archivo
       try { await this.storageService.eliminar(archivoRuta); } catch {}
       throw e;
     }
 
-    const nombres = dto.miembros.map((m) => `${m.nombre} ${m.apellido}`);
-    const pdfBuffer = await this.pdfService.generarHojaRegistroGrupo({
-      token,
-      nombres,
-      responsableNombre: `${responsable.nombre} ${responsable.apellido}`,
-    });
+    const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+    for (let i = 0; i < dto.miembros.length; i++) {
+      const miembro = dto.miembros[i];
+      try {
+        await this.emailService.enviarConfirmacionRegistro(miembro.correo, {
+          nombre: miembro.nombre,
+          apellido: miembro.apellido,
+          folio: folios[i],
+          institucion: responsable.idInstitucion?.toString() ?? 'N/A',
+          fecha: fechaStr,
+          password: passwordsPlanas[i],
+        });
+      } catch (e) {
+        console.error(`Error al enviar correo a miembro ${miembro.correo}:`, e);
+      }
+    }
 
     await this.emailService.enviarConfirmacionGrupoRapido(
       responsable.correo.toString(),
@@ -125,7 +139,6 @@ export class RegistrarGrupoRapido {
         token,
         totalMiembros: dto.miembros.length,
       },
-      pdfBuffer
     );
 
     return {

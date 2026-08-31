@@ -8,10 +8,11 @@ export const metadata = { title: 'Editar Usuario | CPanel ANIEI 2026' };
 
 export default async function UsuarioEditarPage({ params }: { params: Promise<{ folio: string }> }) {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) redirect('/login');
 
-  const accesoAdmin = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
+  const accesoAdmin = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
     select: { rol: true },
   });
   if (accesoAdmin?.rol !== 'ADMIN') redirect('/cpanel');

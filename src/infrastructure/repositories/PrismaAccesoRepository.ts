@@ -5,15 +5,14 @@ import { Acceso } from '@/core/entities/Acceso';
 export class PrismaAccesoRepository implements IAccesoRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async buscarPorEmail(email: string): Promise<Acceso | null> {
-    const rawAcceso = await this.prisma.accesos.findUnique({
-      where: { email },
+  async buscarPorFolioRegistro(folioRegistro: string): Promise<Acceso | null> {
+    const rawAcceso = await this.prisma.accesos.findFirst({
+      where: { folio_registro: folioRegistro },
     });
-
     if (!rawAcceso) return null;
-
     return Acceso.create({
       idAcceso: rawAcceso.id_acceso,
+      folioRegistro: rawAcceso.folio_registro,
       email: rawAcceso.email,
       rol: rawAcceso.rol || 'USER',
       nombre: rawAcceso.nombre,
@@ -21,19 +20,25 @@ export class PrismaAccesoRepository implements IAccesoRepository {
     });
   }
 
-  async crear(email: string, passwordHash: string, rol: string, folioRegistro?: string, nombre?: string): Promise<Acceso> {
+  async crear(
+    passwordHash: string,
+    rol: string,
+    folioRegistro: string,
+    nombre?: string,
+    email?: string,
+  ): Promise<Acceso> {
     const rawAcceso = await this.prisma.accesos.create({
       data: {
-        email,
+        folio_registro: folioRegistro,
+        email: email ?? null,
         password: passwordHash,
         rol: rol as any,
-        folio_registro: folioRegistro ?? null,
         nombre: nombre ?? null,
       },
     });
-
     return Acceso.create({
       idAcceso: rawAcceso.id_acceso,
+      folioRegistro: rawAcceso.folio_registro,
       email: rawAcceso.email,
       rol: rawAcceso.rol || 'USER',
       nombre: rawAcceso.nombre,

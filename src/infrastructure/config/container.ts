@@ -8,6 +8,7 @@ import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaA
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
 import { PrismaPrecioInscripcionRepository } from '@/infrastructure/repositories/PrismaPrecioInscripcionRepository';
+import { PrismaTipoParticipanteRepository } from '@/infrastructure/repositories/PrismaTipoParticipanteRepository';
 import { NodemailerEmailService } from '@/infrastructure/services/email/NodemailerEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
@@ -23,6 +24,7 @@ import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
 import { IPrecioInscripcionRepository } from '@/application/ports/IPrecioInscripcionRepository';
+import { ITipoParticipanteRepository } from '@/application/ports/ITipoParticipanteRepository';
 import { PrismaAdminQueryService } from '@/infrastructure/services/PrismaAdminQueryService';
 import { PrismaTransactionManager } from '@/infrastructure/database/PrismaTransactionManager';
 import type { ITransactionManager } from '@/application/ports/ITransactionManager';
@@ -95,6 +97,10 @@ export function getAuthService(): IAuthService {
 
 export function getPrecioInscripcionRepository(): IPrecioInscripcionRepository {
   return new PrismaPrecioInscripcionRepository(prisma);
+}
+
+export function getTipoParticipanteRepository(): ITipoParticipanteRepository {
+  return new PrismaTipoParticipanteRepository(prisma);
 }
 
 export function getTransactionManager(): ITransactionManager {

@@ -1,11 +1,12 @@
 'use client';
 
-import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoParticipante } from '@/shared/types/catalogos';
 import { DatosGeneralesWizard } from '../RegistroForm';
 import { titulosToOptions, estadosToOptions, institucionesToOptions } from '../SelectCatalogo';
 
 interface Props {
   catalogos: { titulos: Titulo[]; estados: Estado[]; instituciones: Institucion[] };
+  tiposParticipante: TipoParticipante[];
   datos: DatosGeneralesWizard;
   errors?: Record<string, string>;
   onChange: (d: DatosGeneralesWizard) => void;
@@ -27,9 +28,16 @@ function Field({ label, required, error, children }: { label: string; required?:
   );
 }
 
-export function StepDatosGenerales({ catalogos, datos, errors, onChange, onNext }: Props) {
+export function StepDatosGenerales({ catalogos, tiposParticipante, datos, errors, onChange, onNext }: Props) {
   function set(key: keyof DatosGeneralesWizard, value: string) {
     onChange({ ...datos, [key]: value });
+  }
+
+  const noAfiliada = datos.noAfiliada === 'true';
+
+  function toggleNoAfiliada() {
+    const nuevoValor = noAfiliada ? 'false' : 'true';
+    onChange({ ...datos, noAfiliada: nuevoValor, idInstitucion: noAfiliada ? '' : '', institucionExterna: noAfiliada ? '' : '' });
   }
 
   return (
@@ -78,12 +86,38 @@ export function StepDatosGenerales({ catalogos, datos, errors, onChange, onNext 
         </Field>
       </div>
 
-      <Field label="Institución" required error={errors?.idInstitucion}>
-        <select id="s1-inst" className={selectCls} value={datos.idInstitucion} onChange={(e) => set('idInstitucion', e.target.value)}>
+      <Field label="Tipo de participante" required error={errors?.idTipoParticipante}>
+        <select id="s1-tipo-participante" className={selectCls} value={datos.idTipoParticipante} onChange={(e) => set('idTipoParticipante', e.target.value)}>
           <option value="">Seleccione...</option>
-          {institucionesToOptions(catalogos.instituciones).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {tiposParticipante.map((t) => (
+            <option key={t.idTipoParticipante} value={t.idTipoParticipante}>{t.descripcion}</option>
+          ))}
         </select>
       </Field>
+
+      <Field label="Institución" required={noAfiliada ? false : true} error={errors?.idInstitucion || errors?.institucionExterna}>
+        <div className="space-y-3">
+          <select id="s1-inst" className={selectCls} value={datos.idInstitucion} onChange={(e) => set('idInstitucion', e.target.value)} disabled={noAfiliada}>
+            <option value="">Seleccione...</option>
+            {institucionesToOptions(catalogos.instituciones).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={noAfiliada}
+              onChange={toggleNoAfiliada}
+              className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+            />
+            <span className="text-sm text-slate-600">Mi institución no está afiliada</span>
+          </label>
+        </div>
+      </Field>
+
+      {noAfiliada && (
+        <Field label="Nombre de la institución" required error={errors?.institucionExterna}>
+          <input id="s1-inst-ext" className={inputCls} placeholder="Ej. Universidad XYZ" maxLength={150} value={datos.institucionExterna} onChange={(e) => set('institucionExterna', e.target.value)} />
+        </Field>
+      )}
 
       <Field label="Facultad / Dependencia">
         <input id="s1-dep" className={inputCls} placeholder="Ej. Facultad de Ingeniería" maxLength={128} value={datos.dependencia} onChange={(e) => set('dependencia', e.target.value)} />
@@ -97,8 +131,6 @@ export function StepDatosGenerales({ catalogos, datos, errors, onChange, onNext 
           </select>
         </Field>
       </div>
-
-      
 
       <Field label="Estado" required error={errors?.idEntidadFederativa}>
         <select id="s1-estado" className={selectCls} value={datos.idEntidadFederativa} onChange={(e) => set('idEntidadFederativa', e.target.value)}>

@@ -10,11 +10,11 @@ export const metadata = { title: 'Detalle de Usuario | CPanel ANIEI 2026' };
 
 export default async function UsuarioDetallePage({ params }: { params: Promise<{ folio: string }> }) {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) redirect('/login');
 
-  // Verificar que sea admin
-  const accesoAdmin = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
+  const accesoAdmin = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
     select: { rol: true },
   });
   if (accesoAdmin?.rol !== 'ADMIN') redirect('/cpanel');

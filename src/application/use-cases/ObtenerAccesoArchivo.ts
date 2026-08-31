@@ -15,7 +15,7 @@ export class ObtenerAccesoArchivo {
       throw new Error('Unauthorized: Sesión inválida');
     }
 
-    const acceso = await this.accesoRepo.buscarPorEmail(session.email);
+    const acceso = await this.accesoRepo.buscarPorFolioRegistro(session.folioRegistro);
     if (!acceso || !acceso.isAdmin()) {
       throw new Error('Unauthorized: Se requieren los permisos de administrador para realizar esta accion');
     }

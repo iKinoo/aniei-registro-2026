@@ -5,26 +5,24 @@ import { LoginCpanelUseCase } from '@/application/use-cases/LoginCpanelUseCase';
 import { redirect } from 'next/navigation';
 
 export async function loginAction(prevState: any, formData: FormData) {
-  const email = formData.get('email')?.toString() || '';
+  const folioRegistro = formData.get('folioRegistro')?.toString() || '';
   const password = formData.get('password')?.toString() || '';
 
-  if (!email || !password) {
-    return { error: 'El correo y la contraseña son requeridos.', success: false };
+  if (!folioRegistro || !password) {
+    return { error: 'El folio y la contraseña son requeridos.', success: false };
   }
 
   const authService = getAuthService();
   const useCase = new LoginCpanelUseCase(authService);
   
-  const result = await useCase.execute({ email, password });
+  const result = await useCase.execute({ folioRegistro, password });
 
   if (!result.success) {
     return { error: result.error, success: false };
   }
 
-  // En Server Actions, `auth()` no tiene las cookies actualizadas inmediatamente tras el signIn.
-  // Por lo tanto, buscamos el rol directamente desde la base de datos para la redirección inicial.
   const accesoRepo = getAccesoRepository();
-  const acceso = await accesoRepo.buscarPorEmail(email);
+  const acceso = await accesoRepo.buscarPorFolioRegistro(folioRegistro);
   const role = acceso?.rol || 'USER';
 
   if (role === 'ADMIN') {

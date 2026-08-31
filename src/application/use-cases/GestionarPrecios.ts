@@ -8,16 +8,13 @@ export class GestionarPrecios {
     return this.precioRepo.obtenerTodos();
   }
 
-  async obtenerPrecioVigente(): Promise<PrecioInscripcion | null> {
-    return this.precioRepo.obtenerVigente();
+  async obtenerPrecioVigente(idTipoParticipante: number, esAfiliada: boolean): Promise<PrecioInscripcion | null> {
+    return this.precioRepo.obtenerVigente(idTipoParticipante, esAfiliada);
   }
 
   async guardarPrecio(id: number, data: ActualizarPrecioDTO): Promise<PrecioInscripcion> {
     if (data.costo !== undefined && data.costo <= 0) {
       throw new Error('El costo debe ser mayor a 0.');
-    }
-    if (data.costoMiembro !== undefined && data.costoMiembro < 0) {
-      throw new Error('El costo por miembro no puede ser negativo.');
     }
     return this.precioRepo.actualizar(id, data);
   }
@@ -25,13 +22,6 @@ export class GestionarPrecios {
   async crearPrecio(data: CrearPrecioDTO): Promise<PrecioInscripcion> {
     if (data.costo <= 0) {
       throw new Error('El costo debe ser mayor a 0.');
-    }
-    if (data.costoMiembro !== undefined && data.costoMiembro < 0) {
-      throw new Error('El costo por miembro no puede ser negativo.');
-    }
-    const actuales = await this.precioRepo.obtenerTodos();
-    if (actuales.length >= 3) {
-      throw new Error('Solo se permiten 3 niveles de precio.');
     }
     return this.precioRepo.crear(data);
   }

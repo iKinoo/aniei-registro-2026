@@ -8,7 +8,6 @@ import { getEmailService } from '@/infrastructure/config/container';
 import { redirect } from 'next/navigation';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
-// Reusing part of the validation
 const completarRegistroSchema = z.object({
   correo: z.string().email('Formato de correo inválido'),
   telefono: z.string().max(20).optional().or(z.literal('')),
@@ -38,7 +37,6 @@ export async function completarRegistroAction(
   try {
     const validatedData = completarRegistroSchema.parse(fields);
 
-    // Verify token and user are valid and exist and have a dummy email
     const grupo = await prisma.grupos_registro.findUnique({
       where: { token },
       include: { miembros: { where: { folio_registro: folioRegistro } } },
@@ -49,18 +47,6 @@ export async function completarRegistroAction(
     }
 
     const usuario = grupo.miembros[0];
-    if (!usuario.correo.includes('@temp.aniei.org')) {
-      return { fields, errors: { _form: 'Este registro ya fue completado.' } };
-    }
-
-    // Verify new email uniqueness
-    const emailExistente = await prisma.usuarios.findUnique({
-      where: { correo: validatedData.correo }
-    });
-
-    if (emailExistente) {
-      return { fields, errors: { correo: 'El correo ya está registrado.' } };
-    }
 
     const acceso = await prisma.accesos.findFirst({
       where: { folio_registro: folioRegistro }
@@ -70,13 +56,11 @@ export async function completarRegistroAction(
       return { fields, errors: { _form: 'No se encontró el acceso para este usuario.' } };
     }
 
-    // Passwords & Update (CSPRNG)
     const { generateSecurePassword } = await import('@/shared/security/password');
     const rawPassword = generateSecurePassword(12, false);
     const passwordHash = await bcrypt.hash(rawPassword, 10);
 
     const emailService = getEmailService();
-    // Get institucion to mention in email
     const institucion = await prisma.instituciones.findUnique({
       where: { id_institucion: usuario.id_institucion || undefined }
     });
@@ -104,7 +88,6 @@ export async function completarRegistroAction(
       });
     });
 
-    // Send confirmation email with credentials
     const fechaStr = new Date().toLocaleDateString('es-MX', {
       year: 'numeric', month: 'long', day: 'numeric',
     });
@@ -118,16 +101,15 @@ export async function completarRegistroAction(
       password: rawPassword,
     });
 
-    // Auto logic to sign in
     await signIn('credentials', {
-      email: validatedData.correo,
+      folioRegistro: acceso.folio_registro,
       password: rawPassword,
       redirect: false
     });
 
   } catch (error) {
     if (isRedirectError(error)) {
-      throw error; // Let Next.js handle redirect
+      throw error;
     }
     if (error instanceof z.ZodError) {
       const errorMap: Record<string, string> = {};
@@ -140,7 +122,6 @@ export async function completarRegistroAction(
     }
 
     if (error?.toString().includes("CredentialsSignin")) {
-      // In case auto login fails due to something weird, just return success true
       return { success: true, autoLogFailed: true, correo: fields.correo };
     }
 

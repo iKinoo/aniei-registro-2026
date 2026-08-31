@@ -4,16 +4,18 @@ import { PrecioInscripcion } from '@/shared/types/catalogos';
 
 const toPrecioInscripcion = (row: {
   id: number;
+  id_tipo_participante: number;
+  es_afiliada: boolean;
   fecha_limite: Date;
   costo: unknown;
-  costo_miembro: unknown;
   orden: number;
   activo: boolean;
 }): PrecioInscripcion => ({
   id: row.id,
+  idTipoParticipante: row.id_tipo_participante,
+  esAfiliada: row.es_afiliada,
   fechaLimite: row.fecha_limite,
   costo: Number(row.costo),
-  costoMiembro: Number(row.costo_miembro),
   orden: row.orden,
   activo: row.activo,
 });
@@ -23,15 +25,17 @@ export class PrismaPrecioInscripcionRepository implements IPrecioInscripcionRepo
 
   async obtenerTodos(): Promise<PrecioInscripcion[]> {
     const rows = await this.prisma.precios_inscripcion.findMany({
-      orderBy: { orden: 'asc' },
+      orderBy: [{ id_tipo_participante: 'asc' }, { orden: 'asc' }],
     });
     return rows.map(toPrecioInscripcion);
   }
 
-  async obtenerVigente(): Promise<PrecioInscripcion | null> {
+  async obtenerVigente(idTipoParticipante: number, esAfiliada: boolean): Promise<PrecioInscripcion | null> {
     const ahora = new Date();
     const rows = await this.prisma.precios_inscripcion.findMany({
       where: {
+        id_tipo_participante: idTipoParticipante,
+        es_afiliada: esAfiliada,
         activo: true,
         fecha_limite: { lte: ahora },
       },
@@ -49,9 +53,10 @@ export class PrismaPrecioInscripcionRepository implements IPrecioInscripcionRepo
   async crear(data: CrearPrecioDTO): Promise<PrecioInscripcion> {
     const row = await this.prisma.precios_inscripcion.create({
       data: {
+        id_tipo_participante: data.idTipoParticipante,
+        es_afiliada: data.esAfiliada,
         fecha_limite: data.fechaLimite,
         costo: data.costo,
-        costo_miembro: data.costoMiembro ?? 0,
         orden: data.orden,
         activo: data.activo,
       },
@@ -63,9 +68,10 @@ export class PrismaPrecioInscripcionRepository implements IPrecioInscripcionRepo
     const row = await this.prisma.precios_inscripcion.update({
       where: { id },
       data: {
+        ...(data.idTipoParticipante !== undefined && { id_tipo_participante: data.idTipoParticipante }),
+        ...(data.esAfiliada !== undefined && { es_afiliada: data.esAfiliada }),
         ...(data.fechaLimite !== undefined && { fecha_limite: data.fechaLimite }),
         ...(data.costo !== undefined && { costo: data.costo }),
-        ...(data.costoMiembro !== undefined && { costo_miembro: data.costoMiembro }),
         ...(data.orden !== undefined && { orden: data.orden }),
         ...(data.activo !== undefined && { activo: data.activo }),
       },

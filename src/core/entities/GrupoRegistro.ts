@@ -14,7 +14,7 @@ export interface MiembroInput {
 export class GrupoRegistro {
   private readonly _responsable: Usuario;
   private readonly _miembros: Usuario[];
-  readonly idInstitucionCompartida: number;
+  readonly idInstitucionCompartida: number | null;
   readonly idEntidadFederativaCompartida: number;
   private readonly _responsableYaRegistrado: boolean;
 
@@ -39,7 +39,6 @@ export class GrupoRegistro {
       throw GrupoRegistroError.GRUPO_VACIO();
     }
 
-    // Verificar correos duplicados entre miembros
     const correos = new Set<string>();
     for (const m of miembrosInput) {
       const correoLower = m.correo.toLowerCase().trim();
@@ -49,12 +48,10 @@ export class GrupoRegistro {
       correos.add(correoLower);
     }
 
-    // Verificar que el correo del responsable no esté entre los miembros
     if (correos.has(responsable.correo.toString())) {
       throw GrupoRegistroError.MIEMBRO_CORREO_DUPLICADO(responsable.correo.toString());
     }
 
-    // Crear entidades de miembros heredando institución y estado del responsable
     const miembros = miembrosInput.map((m) =>
       Usuario.create({
         nombre: m.nombre,
@@ -63,8 +60,9 @@ export class GrupoRegistro {
         genero: m.genero,
         carrera: m.carrera,
         idTitulo: responsable.idTitulo,
-        idInstitucion: responsable.idInstitucion, // Se hereda
-        idEntidadFederativa: responsable.idEntidadFederativa, // Se hereda
+        idTipoParticipante: responsable.idTipoParticipante,
+        idInstitucion: responsable.idInstitucion,
+        idEntidadFederativa: responsable.idEntidadFederativa,
       }),
     );
 

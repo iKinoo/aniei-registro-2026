@@ -1,4 +1,4 @@
-import { getTiposActividadAction, obtenerPreciosAction } from './actions';
+import { getTiposActividadAction, obtenerPreciosAction, obtenerTiposParticipanteAction } from './actions';
 import PreciosClient from './PreciosClient';
 
 export const dynamic = 'force-dynamic';
@@ -8,12 +8,14 @@ export const metadata = {
 };
 
 export default async function ConfiguracionPage() {
-  const [tiposResult, preciosResult] = await Promise.all([
+  const [tiposResult, preciosResult, tiposParticipanteResult] = await Promise.all([
     getTiposActividadAction(),
     obtenerPreciosAction(),
+    obtenerTiposParticipanteAction(),
   ]);
   const tiposActividad = tiposResult.success ? tiposResult.data : [];
   const precios = preciosResult.success ? preciosResult.data : [];
+  const tiposParticipante = tiposParticipanteResult.success ? tiposParticipanteResult.data : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -24,7 +26,7 @@ export default async function ConfiguracionPage() {
         </p>
       </div>
 
-      <PreciosClient initialPrecios={precios} />
+      <PreciosClient initialPrecios={precios} initialTiposParticipante={tiposParticipante} />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50">

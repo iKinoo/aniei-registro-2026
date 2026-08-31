@@ -11,9 +11,18 @@ export const registroSchema = z.object({
   carrera: z.string().max(128).optional().or(z.literal('')),
   dependencia: z.string().max(128).optional().or(z.literal('')),
   idTitulo: z.coerce.number().int().positive('Seleccione un título'),
-  idInstitucion: z.coerce.number().int().positive('Seleccione una institución'),
+  idTipoParticipante: z.coerce.number().int().positive('Seleccione un tipo de participante'),
+  idInstitucion: z.coerce.number().int().positive().optional(),
+  institucionExterna: z.string().max(150).optional().or(z.literal('')),
+  noAfiliada: z.string().transform((val) => val === 'true'),
   idEntidadFederativa: z.coerce.number().int().positive('Seleccione un estado'),
-});
+}).refine(
+  (data) => data.noAfiliada || data.idInstitucion,
+  { message: 'Seleccione una institución', path: ['idInstitucion'] }
+).refine(
+  (data) => !data.noAfiliada || (data.institucionExterna && data.institucionExterna.trim().length > 0),
+  { message: 'Ingrese el nombre de su institución', path: ['institucionExterna'] }
+);
 
 export const depositoSchema = z.object({
   bancoSucursal: z.string().max(100).optional().or(z.literal('')),
@@ -43,7 +52,7 @@ export const facturacionSchema = z.object({
 export type RegistroFormData = z.infer<typeof registroSchema>;
 export type DepositoFormData = z.infer<typeof depositoSchema>;
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
 
 export function validarArchivo(file: File): string | null {

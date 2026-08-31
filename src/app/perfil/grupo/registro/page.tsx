@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/infrastructure/database/client';
-import { getCatalogoRepository, getPrecioInscripcionRepository } from '@/infrastructure/config/container';
+import { getCatalogoRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { GrupoRapidoForm } from './GrupoRapidoForm';
 
 export const metadata = {
@@ -11,10 +11,11 @@ export const metadata = {
 
 export default async function GrupoRegistroPage() {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) redirect('/login');
 
-  const acceso = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
+  const acceso = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
     select: { folio_registro: true },
   });
 
@@ -35,6 +36,7 @@ export default async function GrupoRegistroPage() {
       carrera: true,
       dependencia: true,
       id_titulo: true,
+      id_tipo_participante: true,
       id_institucion: true,
       id_entidad_federativa: true,
     },
@@ -46,13 +48,14 @@ export default async function GrupoRegistroPage() {
 
   const catalogoRepo = getCatalogoRepository();
   const precioRepo = getPrecioInscripcionRepository();
+  const tipoParticipanteRepo = getTipoParticipanteRepository();
 
-  const [titulos, estados, instituciones, precios, precioVigente] = await Promise.all([
+  const [titulos, estados, instituciones, precios, tiposParticipante] = await Promise.all([
     catalogoRepo.obtenerTitulos(),
     catalogoRepo.obtenerEstados(),
     catalogoRepo.obtenerInstituciones(),
     precioRepo.obtenerTodos(),
-    precioRepo.obtenerVigente(),
+    tipoParticipanteRepo.obtenerTodos(),
   ]);
 
   return (
@@ -61,7 +64,7 @@ export default async function GrupoRegistroPage() {
         responsable={usuario}
         catalogos={{ titulos, estados, instituciones }}
         precios={precios}
-        precioVigente={precioVigente}
+        tiposParticipante={tiposParticipante}
       />
     </div>
   );

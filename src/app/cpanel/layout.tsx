@@ -9,7 +9,7 @@ export default async function CpanelLayout({ children }: { children: React.React
   let acceso = null;
   if (session) {
     const accesoRepo = getAccesoRepository();
-    acceso = await accesoRepo.buscarPorEmail(session.email);
+    acceso = await accesoRepo.buscarPorFolioRegistro(session.folioRegistro);
   }
 
   return (

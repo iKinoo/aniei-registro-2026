@@ -10,7 +10,8 @@ export const metadata = { title: 'Checkout de Actividades | ANIEI 2026' };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ ids?: string }> }) {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) redirect('/login');
 
   const params = await searchParams;
   const ids = (params.ids ?? '')
@@ -20,9 +21,8 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (ids.length === 0) redirect('/actividades');
 
-  // Obtener folio_registro del acceso actual
-  const acceso = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
+  const acceso = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
     select: { folio_registro: true },
   });
 

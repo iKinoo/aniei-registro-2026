@@ -6,7 +6,6 @@ import { getActividadRepository, getInscripcionActividadRepository } from '@/inf
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 
-/** Tipos de actividad excluidos del flujo general (son casos especiales) */
 function esActividadEspecial(tipo: ActividadDTO['tipoActividad']): boolean {
   if (!tipo) return false;
   const clave = (tipo.clave ?? '').toLowerCase();
@@ -29,10 +28,11 @@ export async function getActividadesDisponiblesAction() {
 export async function getInscripcionesUsuarioAction() {
   try {
     const session = await auth();
-    if (!session?.user?.email) return { success: true as const, data: [] as number[] };
+    const folioRegistro = (session?.user as any)?.folioRegistro;
+    if (!folioRegistro) return { success: true as const, data: [] as number[] };
 
-    const acceso = await prisma.accesos.findUnique({
-      where: { email: session.user.email },
+    const acceso = await prisma.accesos.findFirst({
+      where: { folio_registro: folioRegistro },
       select: { folio_registro: true },
     });
     if (!acceso?.folio_registro) return { success: true as const, data: [] as number[] };

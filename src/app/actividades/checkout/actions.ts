@@ -47,8 +47,8 @@ export async function getActividadesPorIdsAction(ids: number[]) {
         abreviatura: r.instituciones.abreviatura ?? null,
       } : null,
       costo: r.costo ? Number(r.costo) : 0,
-      cupoOcupado: 0, // No necesario en el checkout (ya se validó en selección)
-      ponentes: [],   // No necesario en el checkout
+      cupoOcupado: 0,
+      ponentes: [],
     }));
     return { success: true as const, data };
   } catch {
@@ -81,20 +81,19 @@ export async function confirmarInscripcionesAction(
   tieneCosto: boolean,
 ): Promise<{ success: false; errors: Record<string, string> } | ConfirmacionInscripcionResult> {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) redirect('/login');
 
-  const correo = session.user.email;
-
-  const acceso = await prisma.accesos.findUnique({
-    where: { email: correo },
-    select: { folio_registro: true, nombre: true, usuarios: { select: { folio_registro: true, nombre: true, apellido: true } } },
+  const acceso = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
+    select: { folio_registro: true, nombre: true, email: true, usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } } },
   });
   if (!acceso?.folio_registro) redirect('/login');
 
-  const folioRegistro = acceso.folio_registro;
+  const folioUsuario = acceso.folio_registro;
+  const correo = acceso.email ?? acceso.usuarios?.correo ?? '';
   const errors: Record<string, string> = {};
 
-  // 1. Validar y guardar depósito si hay costo
   if (tieneCosto) {
     const rawDeposito = {
       bancoSucursal: formData.get('bancoSucursal') as string,
@@ -124,7 +123,7 @@ export async function confirmarInscripcionesAction(
     const urlComprobante = await storageService.subir(archivoRuta, buffer, file.type);
 
     const deposito = Deposito.create({
-      folioRegistro,
+      folioRegistro: folioUsuario,
       bancoSucursal: parsedDeposito.data.bancoSucursal || null,
       ciudad: parsedDeposito.data.ciudad || null,
       referencia: parsedDeposito.data.referencia,
@@ -140,7 +139,6 @@ export async function confirmarInscripcionesAction(
     await getDepositoRepository().crear(deposito);
   }
 
-  // 2. Guardar facturación si aplica
   const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
   if (requiereFacturacion) {
     const rawFact = {
@@ -162,7 +160,7 @@ export async function confirmarInscripcionesAction(
       return { success: false, errors };
     }
     const facturacion = Facturacion.create({
-      folioRegistro,
+      folioRegistro: folioUsuario,
       razonSocial: parsedFact.data.razonSocial,
       rfc: parsedFact.data.rfc,
       calle: parsedFact.data.calle || null,
@@ -176,10 +174,8 @@ export async function confirmarInscripcionesAction(
     await getFacturacionRepository().crear(facturacion);
   }
 
-  // 3. Crear inscripciones con validación atómica de cupo
-  const { ok, sinCupo } = await getInscripcionActividadRepository().crearMuchasConValidacion(folioRegistro, idsActividades);
+  const { ok, sinCupo } = await getInscripcionActividadRepository().crearMuchasConValidacion(folioUsuario, idsActividades);
 
-  // Si alguna actividad no pudo inscribirse por cupo lleno, informar al usuario
   if (sinCupo.length > 0) {
     const actividadesRechazadas = await prisma.actividades.findMany({
       where: { id_actividad: { in: sinCupo } },
@@ -194,7 +190,6 @@ export async function confirmarInscripcionesAction(
     };
   }
 
-  // Si ninguna actividad fue aceptada (todas rechazadas), retornar error
   if (ok.length === 0) {
     return {
       success: false,
@@ -202,7 +197,6 @@ export async function confirmarInscripcionesAction(
     };
   }
 
-  // 4. Preparar datos para correo y pantalla de confirmación
   const actividadesRows = await prisma.actividades.findMany({
     where: { id_actividad: { in: idsActividades } },
 
@@ -232,7 +226,6 @@ export async function confirmarInscripcionesAction(
   const [primerNombre, ...resto] = nombreCompleto.split(' ');
   const apellido = resto.join(' ');
 
-  // 5. Enviar correo de confirmación (best-effort, no bloquea la respuesta)
   try {
     await getEmailService().enviarConfirmacionActividades(correo, {
       nombre: primerNombre,

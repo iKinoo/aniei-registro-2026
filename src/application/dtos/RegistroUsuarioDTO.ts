@@ -39,7 +39,9 @@ export interface RegistroUsuarioDTO {
   carrera?: string | null;
   dependencia?: string | null;
   idTitulo: number;
-  idInstitucion: number;
+  idTipoParticipante: number;
+  idInstitucion: number | null;
+  institucionExterna?: string | null;
   idEntidadFederativa: number;
   deposito: DepositoDTO;
   archivo: ArchivoDTO;

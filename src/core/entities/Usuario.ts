@@ -15,7 +15,9 @@ export interface UsuarioProps {
   carrera?: string | null;
   dependencia?: string | null;
   idTitulo: number;
-  idInstitucion: number;
+  idTipoParticipante: number;
+  idInstitucion?: number | null;
+  institucionExterna?: string | null;
   idEntidadFederativa: number;
   verificado?: boolean;
   fechaRegistro?: Date;
@@ -32,7 +34,9 @@ export class Usuario {
   readonly carrera: string | null;
   readonly dependencia: string | null;
   readonly idTitulo: number;
-  readonly idInstitucion: number;
+  readonly idTipoParticipante: number;
+  readonly idInstitucion: number | null;
+  readonly institucionExterna: string | null;
   readonly idEntidadFederativa: number;
   private _verificado: boolean;
   readonly fechaRegistro: Date;
@@ -48,7 +52,9 @@ export class Usuario {
     this.carrera = props.carrera ?? null;
     this.dependencia = props.dependencia ?? null;
     this.idTitulo = props.idTitulo;
-    this.idInstitucion = props.idInstitucion;
+    this.idTipoParticipante = props.idTipoParticipante;
+    this.idInstitucion = props.idInstitucion ?? null;
+    this.institucionExterna = props.institucionExterna ?? null;
     this.idEntidadFederativa = props.idEntidadFederativa;
     this._verificado = props.verificado ?? false;
     this.fechaRegistro = props.fechaRegistro ?? new Date();
@@ -67,6 +73,7 @@ export class Usuario {
       apellido: props.apellido.trim(),
       carrera: props.carrera?.trim() || null,
       dependencia: props.dependencia?.trim() || null,
+      institucionExterna: props.institucionExterna?.trim() || null,
     });
   }
 

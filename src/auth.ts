@@ -10,19 +10,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        folioRegistro: { label: "Folio de Registro", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.folioRegistro || !credentials?.password) {
           return null;
         }
 
-        const email = credentials.email as string;
+        const folioRegistro = credentials.folioRegistro as string;
         const password = credentials.password as string;
 
-        const user = await prisma.accesos.findUnique({
-          where: { email },
+        const user = await prisma.accesos.findFirst({
+          where: { folio_registro: folioRegistro },
         });
 
         if (!user || !user.password) {
@@ -37,7 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         return {
           id: user.id_acceso.toString(),
-          email: user.email,
+          folioRegistro: user.folio_registro,
           name: user.nombre,
           role: (user.rol ?? "USER").toUpperCase(),
         };

@@ -14,8 +14,8 @@ enum Rol {
 
 model accesos {
   id_acceso      Int       @id @default(autoincrement())
-  folio_registro String?   @db.VarChar(15)
-  email          String    @unique @db.VarChar(100)
+  folio_registro String    @db.VarChar(15)
+  email          String?   @db.VarChar(100)
   rol            Rol       @default(USER)
   nombre         String?   @db.VarChar(150)
   auth_id        String?   @unique @db.Uuid
@@ -194,7 +194,7 @@ model usuarios {
   codigo_barras           String?                   @unique @db.VarChar(50)
   nombre                  String                    @db.VarChar(125)
   apellido                String                    @db.VarChar(256)
-  correo                  String                    @unique @db.VarChar(100)
+  correo                  String                    @db.VarChar(100)
   telefono                String?                   @db.VarChar(20)
   lada                    String?                   @db.VarChar(10)
   extension               String?                   @db.VarChar(10)
@@ -203,8 +203,10 @@ model usuarios {
   dependencia             String?                   @db.VarChar(128)
   id_titulo               Int?
   id_tipo_usuario         Int?
+  id_tipo_participante    Int?
   id_institucion          Int?
   id_entidad_federativa   Int?
+  institucion_externa     String?                   @db.VarChar(150)
   verificado              Boolean                   @default(false)
   fecha_registro          DateTime                  @default(now()) @db.Timestamp(6)
   id_grupo_registro       Int?
@@ -212,6 +214,7 @@ model usuarios {
   @@index([id_institucion])
   @@index([id_grupo_registro])
   @@index([id_entidad_federativa])
+  @@index([id_tipo_participante])
   accesos                 accesos[]
   actividad_ponentes      actividad_ponentes[]
   asistencia_actividades  asistencia_actividades[]
@@ -223,6 +226,7 @@ model usuarios {
   estados                 estados?                  @relation(fields: [id_entidad_federativa], references: [id_entidad_federativa], onUpdate: NoAction)
   grupo_registro          grupos_registro?          @relation("GrupoMiembros", fields: [id_grupo_registro], references: [id])
   instituciones           instituciones?            @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
+  tipo_participante       tipo_participante?        @relation(fields: [id_tipo_participante], references: [id_tipo_participante], onUpdate: NoAction)
   tipo_usuario            tipo_usuario?             @relation(fields: [id_tipo_usuario], references: [id_tipo_usuario], onUpdate: NoAction)
   titulos                 titulos?                  @relation(fields: [id_titulo], references: [id_titulo], onUpdate: NoAction)
 }
@@ -236,11 +240,24 @@ model grupos_registro {
   miembros                   usuarios[] @relation("GrupoMiembros")
 }
 
+model tipo_participante {
+  id_tipo_participante Int     @id @default(autoincrement())
+  descripcion          String  @db.VarChar(50)
+  clave                String? @db.VarChar(20)
+  orden                Int     @default(0)
+  usuarios             usuarios[]
+  precios_inscripcion  precios_inscripcion[]
+}
+
 model precios_inscripcion {
-  id            Int      @id @default(autoincrement())
-  fecha_limite  DateTime @db.Timestamp(6)
-  costo         Decimal  @db.Decimal(10, 2)
-  costo_miembro Decimal  @default(0) @db.Decimal(10, 2)
-  orden         Int      @default(1)
-  activo        Boolean  @default(true)
+  id                   Int               @id @default(autoincrement())
+  id_tipo_participante Int
+  es_afiliada          Boolean           @default(true)
+  fecha_limite         DateTime          @db.Timestamp(6)
+  costo                Decimal           @db.Decimal(10, 2)
+  orden                Int               @default(1)
+  activo               Boolean           @default(true)
+  tipo_participante    tipo_participante @relation(fields: [id_tipo_participante], references: [id_tipo_participante], onUpdate: NoAction)
+
+  @@index([id_tipo_participante])
 }

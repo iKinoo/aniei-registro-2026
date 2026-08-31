@@ -30,7 +30,10 @@ export interface RegistroFormFields {
   carrera?: string;
   dependencia?: string;
   idTitulo?: string;
+  idTipoParticipante?: string;
   idInstitucion?: string;
+  institucionExterna?: string;
+  noAfiliada?: string;
   idEntidadFederativa?: string;
   bancoSucursal?: string;
   ciudad?: string;
@@ -63,7 +66,6 @@ export async function registrarUsuarioAction(
   formData: FormData,
 ): Promise<RegistroActionState> {
   try {
-    // Extraer campos del formulario
     const rawData = {
       nombre: formData.get('nombre') as string,
       apellido: formData.get('apellido') as string,
@@ -75,7 +77,10 @@ export async function registrarUsuarioAction(
       carrera: formData.get('carrera') as string,
       dependencia: formData.get('dependencia') as string,
       idTitulo: formData.get('idTitulo') as string,
+      idTipoParticipante: formData.get('idTipoParticipante') as string,
       idInstitucion: formData.get('idInstitucion') as string,
+      institucionExterna: formData.get('institucionExterna') as string,
+      noAfiliada: formData.get('noAfiliada') as string,
       idEntidadFederativa: formData.get('idEntidadFederativa') as string,
     };
 
@@ -90,18 +95,18 @@ export async function registrarUsuarioAction(
 
     const requiereFacturacion = formData.get('requiereFacturacion') === 'true';
 
-    // Extraer miembros del grupo
     const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
-    const miembros: { nombre: string; apellido: string }[] = [];
+    const miembros: { nombre: string; apellido: string; correo: string; idTipoParticipante: number }[] = [];
     for (let i = 0; i < numMiembros; i++) {
       const nombre = (formData.get(`miembro_${i}_nombre`) as string) ?? '';
       const apellido = (formData.get(`miembro_${i}_apellido`) as string) ?? '';
-      if (nombre.trim() && apellido.trim()) {
-        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim() });
+      const correo = (formData.get(`miembro_${i}_correo`) as string) ?? '';
+      const idTipoParticipante = parseInt((formData.get(`miembro_${i}_idTipoParticipante`) as string) ?? '0', 10) || 0;
+      if (nombre.trim() && apellido.trim() && correo.trim()) {
+        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim(), correo: correo.trim(), idTipoParticipante });
       }
     }
 
-    // Capturar todos los campos para restaurarlos en caso de error
     const savedFields: RegistroFormFields = {
       ...rawData,
       ...rawDeposito,
@@ -117,7 +122,6 @@ export async function registrarUsuarioAction(
       idEntidadFederativaRfc: formData.get('idEntidadFederativaRfc') as string,
     };
 
-    // Validar campos personales/institucionales con Zod
     const parsed = registroSchema.safeParse(rawData);
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -128,7 +132,6 @@ export async function registrarUsuarioAction(
       return { success: false, errors: fieldErrors, fields: savedFields };
     }
 
-    // Validar datos del depósito
     const parsedDeposito = depositoSchema.safeParse(rawDeposito);
     if (!parsedDeposito.success) {
       const fieldErrors: Record<string, string> = {};
@@ -139,7 +142,6 @@ export async function registrarUsuarioAction(
       return { success: false, errors: fieldErrors, fields: savedFields };
     }
 
-    // Validar datos de facturación (solo si el usuario la activó)
     let parsedFacturacion: ReturnType<typeof facturacionSchema.safeParse> | null = null;
     if (requiereFacturacion) {
       const rawFacturacion = {
@@ -164,14 +166,12 @@ export async function registrarUsuarioAction(
       }
     }
 
-    // Validar archivo
     const file = formData.get('comprobante') as File;
     const archivoError = validarArchivo(file);
     if (archivoError) {
       return { success: false, errors: { comprobante: archivoError }, fields: savedFields };
     }
 
-    // Convertir archivo a Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -184,7 +184,6 @@ export async function registrarUsuarioAction(
     let tPhase = t0;
     console.log(`[registro] start correo=${rawData.correo} file=${file.name} ${file.size} bytes`);
 
-    // Ejecutar caso de uso principal
     const useCase = new RegistrarUsuario(
       getUsuarioRepository(),
       getDepositoRepository(),
@@ -197,6 +196,9 @@ export async function registrarUsuarioAction(
       getInscripcionActividadRepository(),
     );
 
+    const idInstitucion = parsed.data.noAfiliada !== true ? (parsed.data.idInstitucion ?? null) : null;
+    const institucionExterna = parsed.data.noAfiliada === true ? (parsed.data.institucionExterna || null) : null;
+
     const resultado = await useCase.execute({
       ...parsed.data,
       telefono: parsed.data.telefono || null,
@@ -205,6 +207,9 @@ export async function registrarUsuarioAction(
       genero: parsed.data.genero as Genero,
       carrera: parsed.data.carrera || null,
       dependencia: parsed.data.dependencia || null,
+      idTipoParticipante: parsed.data.idTipoParticipante,
+      idInstitucion,
+      institucionExterna,
       deposito: {
         bancoSucursal: parsedDeposito.data.bancoSucursal || null,
         ciudad: parsedDeposito.data.ciudad || null,
@@ -237,7 +242,6 @@ export async function registrarUsuarioAction(
     tPhase = logPhase('useCase.execute', tPhase);
     console.log(`[registro] success folio=${resultado.folio} total=${Date.now() - t0}ms`);
 
-    // Registro grupal: si hay miembros, usar RegistrarGrupoRapido con el mismo comprobante
     if (miembros.length > 0) {
       try {
         const grupoUseCase = new RegistrarGrupoRapido(
@@ -249,7 +253,7 @@ export async function registrarUsuarioAction(
         );
         await grupoUseCase.execute({
           responsableId: resultado.folio,
-          miembros,
+          miembros: miembros.map((m) => ({ nombre: m.nombre, apellido: m.apellido, correo: m.correo })),
           deposito: {
             bancoSucursal: parsedDeposito.data.bancoSucursal || null,
             ciudad: parsedDeposito.data.ciudad || null,
@@ -266,13 +270,10 @@ export async function registrarUsuarioAction(
           },
         });
       } catch (grupoError) {
-        // El registro grupal falló pero el usuario principal ya está registrado
-        // Se loggea pero no se revierte el registro principal
         console.error('Error en registro grupal (usuario principal registrado correctamente):', grupoError);
       }
     }
 
-    // Auto-login: iniciar sesión con las credenciales generadas
     try {
       await signIn('credentials', {
         email: resultado.correo,
@@ -280,7 +281,6 @@ export async function registrarUsuarioAction(
         redirect: false,
       });
     } catch (_) {
-      // Si el auto-login falla por NEXT_REDIRECT, ignorar — la cookie ya fue seteada
     }
 
     return {
@@ -289,12 +289,10 @@ export async function registrarUsuarioAction(
       correo: resultado.correo,
     };
   } catch (error) {
-    // Diagnóstico detallado para 5.8s success:false
     const anyErr = error as { code?: string; cause?: { code?: string; message?: string }; meta?: unknown; stack?: string };
     const prismaMapped = mapPrismaError(error, (formData.get('correo') as string) || undefined);
     if (prismaMapped) {
       console.error('[registro] prismaMapped', { code: (prismaMapped as { code?: string }).code, message: prismaMapped.message, meta: anyErr.meta });
-      // Re-lanzar mapeado para que el handler de abajo lo clasifique
       error = prismaMapped;
     } else {
       console.error('[registro] Error en registro:', {
@@ -316,7 +314,10 @@ export async function registrarUsuarioAction(
       carrera: formData.get('carrera') as string,
       dependencia: formData.get('dependencia') as string,
       idTitulo: formData.get('idTitulo') as string,
+      idTipoParticipante: formData.get('idTipoParticipante') as string,
       idInstitucion: formData.get('idInstitucion') as string,
+      institucionExterna: formData.get('institucionExterna') as string,
+      noAfiliada: formData.get('noAfiliada') as string,
       idEntidadFederativa: formData.get('idEntidadFederativa') as string,
       bancoSucursal: formData.get('bancoSucursal') as string,
       ciudad: formData.get('ciudad') as string,
@@ -359,7 +360,6 @@ export async function registrarUsuarioAction(
     if (error instanceof Error && error.message.includes('Archivo')) {
       return { success: false, errors: { comprobante: error.message }, fields: savedFieldsOnError };
     }
-    // No segundo console.error — ya logueado arriba
     const isDev = process.env.NODE_ENV !== 'production';
     return {
       success: false,

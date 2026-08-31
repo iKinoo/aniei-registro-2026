@@ -1,4 +1,4 @@
 export interface AuthSessionDTO {
-  email: string;
+  folioRegistro: string;
   authId: string | null;
 }

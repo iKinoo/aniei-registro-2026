@@ -1,16 +1,17 @@
-import { getCatalogoRepository, getPrecioInscripcionRepository } from '@/infrastructure/config/container';
+import { getCatalogoRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { RegistroForm } from './components/RegistroForm';
 
 export default async function RegistroPage() {
   const catalogoRepo = getCatalogoRepository();
   const precioRepo = getPrecioInscripcionRepository();
+  const tipoParticipanteRepo = getTipoParticipanteRepository();
 
-  const [titulos, estados, instituciones, precios, precioVigente] = await Promise.all([
+  const [titulos, estados, instituciones, precios, tiposParticipante] = await Promise.all([
     catalogoRepo.obtenerTitulos(),
     catalogoRepo.obtenerEstados(),
     catalogoRepo.obtenerInstituciones(),
     precioRepo.obtenerTodos(),
-    precioRepo.obtenerVigente(),
+    tipoParticipanteRepo.obtenerTodos(),
   ]);
 
   return (
@@ -18,7 +19,7 @@ export default async function RegistroPage() {
       <RegistroForm
         catalogos={{ titulos, estados, instituciones }}
         precios={precios}
-        precioVigente={precioVigente}
+        tiposParticipante={tiposParticipante}
       />
     </div>
   );

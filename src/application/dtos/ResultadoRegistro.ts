@@ -3,7 +3,5 @@ export interface ResultadoRegistro {
   folio: string;
   urlConstancia: string;
   correo: string;
-  /** Contraseña en texto plano, solo para auto-login inmediato. No exponer al cliente. */
   passwordPlana: string;
 }
-

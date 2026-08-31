@@ -9,18 +9,19 @@ export interface IUsuarioRepository {
   buscarPorId(id: string): Promise<Usuario | null>;
   buscarPorFolio(folio: FolioRegistro): Promise<Usuario | null>;
   verificar(id: string): Promise<void>;
-  
+
   crearGrupoTransaccional(data: {
     token: string;
     responsableId: string;
-    institucionId: number;
+    institucionId: number | null;
     dependenciaId: string;
     estadoId: number;
     miembros: Array<{
       nombre: string;
       apellido: string;
-      correoDummy: string;
+      correo: string;
       passwordHash: string;
+      idTipoParticipante: number;
     }>;
   }): Promise<{ usuariosIds: string[], folios: string[] }>;
 }

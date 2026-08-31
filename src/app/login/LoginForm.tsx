@@ -16,15 +16,15 @@ export function LoginForm() {
       
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="email">
-            Correo Electrónico
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="folioRegistro">
+            Folio de Registro
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
+            id="folioRegistro"
+            name="folioRegistro"
+            type="text"
             required
-            placeholder="tu-correo@ejemplo.com"
+            placeholder="ANI26-0001"
             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm text-slate-900 shadow-sm"
           />
         </div>

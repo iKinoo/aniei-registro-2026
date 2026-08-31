@@ -50,8 +50,8 @@ export function renderConfirmacionHTML(datos: ConfirmacionTemplateData): string 
             <td style="font-weight:bold;color:#1a1a2e;" colspan="2">Credenciales de Acceso</td>
           </tr>
           <tr style="border-bottom:1px solid #eee;">
-            <td style="font-weight:bold;color:#555;">Usuario/Email:</td>
-            <td style="color:#333;">(Tu correo registrado)</td>
+            <td style="font-weight:bold;color:#555;">Folio de Registro:</td>
+            <td style="color:#1a1a2e;font-weight:bold;font-size:16px;">${datos.folio}</td>
           </tr>
           <tr>
             <td style="font-weight:bold;color:#555;">Contraseña:</td>

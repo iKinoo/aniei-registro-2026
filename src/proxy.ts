@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth?.user?.email;
+  const isLoggedIn = !!(req.auth?.user as any)?.folioRegistro;
   const { pathname } = req.nextUrl;
   const role = ((req.auth?.user as any)?.role as string | undefined)?.toUpperCase();
 
@@ -25,7 +25,6 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Si está logueado, no puede volver a registrarse manualmente
   if (isRegistroRoute && isLoggedIn) {
     if (role === 'ADMIN') {
       return NextResponse.redirect(new URL('/cpanel', req.nextUrl));
@@ -33,7 +32,6 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/perfil', req.nextUrl));
   }
 
-  // Rutas de cpanel solo para administradores
   if (isCpanelRoute) {
     if (!isLoggedIn) {
       return NextResponse.redirect(new URL('/login', req.nextUrl));
@@ -43,12 +41,10 @@ export default auth((req) => {
     }
   }
 
-  // Rutas de perfil para registrados (USER o ADMIN)
   if (isPerfilRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
-  // Rutas de actividades para usuarios autenticados (USER o ADMIN)
   if (isActividadesRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
@@ -58,13 +54,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static, _next/image, favicon.ico
-     * - api/auth (NextAuth handlers) y archivos estáticos.
-     * Se incluye /api/* para que el proxy proteja handlers personalizados;
-     * solo se excluye /api/auth que es manejado por NextAuth sin RBAC adicional.
-     */
     '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

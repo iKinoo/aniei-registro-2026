@@ -8,12 +8,13 @@ import { parseFileReference } from '@/application/ports/IStorageService';
 export async function obtenerUrlComprobanteAction(ruta: string): Promise<{ success: true; url: string } | { success: false; error: string }> {
   try {
     const session = await auth();
-    if (!session?.user?.email) {
+    const folioRegistro = (session?.user as any)?.folioRegistro;
+    if (!folioRegistro) {
       return { success: false, error: 'Sesión inválida' };
     }
 
-    const acceso = await prisma.accesos.findUnique({
-      where: { email: session.user.email },
+    const acceso = await prisma.accesos.findFirst({
+      where: { folio_registro: folioRegistro },
       select: { folio_registro: true, rol: true },
     });
 

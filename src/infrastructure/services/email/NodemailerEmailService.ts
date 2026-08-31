@@ -135,18 +135,14 @@ export class NodemailerEmailService implements IEmailService {
   async enviarConfirmacionGrupoRapido(
     destinatario: string,
     datos: ConfirmacionGrupoRapidoData,
-    pdfBuffer: Buffer
   ): Promise<void> {
     const html = `
       <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
         <h2 style="color: #2b6cb0;">Confirmación de Registro Grupal - ANIEI 2026</h2>
         <p>Hola <strong>${datos.nombreResponsable} ${datos.apellidoResponsable}</strong>,</p>
-        <p>Tu registro grupal ha sido procesado con éxito. Se han pre-registrado <strong>${datos.totalMiembros}</strong> miembros.</p>
+        <p>Tu registro grupal ha sido procesado con éxito. Se han registrado <strong>${datos.totalMiembros}</strong> miembros.</p>
         <br/>
-        <p>A continuación encontrarás adjunto un archivo PDF con la lista de tus miembros y un <strong>Código QR</strong>.</p>
-        <p>Por favor, comparte este PDF o el Código QR con los integrantes de tu grupo. Cada integrante deberá escanear el código para acceder a su pase de registro, completar su información personal, correo y así generar su folio de entrada y contraseña.</p>
-        <br/>
-        <p>Enlace de emergencia para completar registro: <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://aniei-registro-2026.vercel.app/'}/grupo-completar/${datos.token}">Enlace aquí</a></p>
+        <p>Cada miembro ha recibido un correo electrónico con sus credenciales de acceso (folio y contraseña) para ingresar al sistema.</p>
         <br/>
         <p>¡Gracias por sumarte al Congreso de la ANIEI 2026!</p>
       </div>
@@ -157,10 +153,6 @@ export class NodemailerEmailService implements IEmailService {
       to: destinatario,
       subject: `Confirmación de Registro Grupal Rápido — ANIEI 2026`,
       html,
-      attachments: [{
-        filename: `registro-grupal-${datos.token}.pdf`,
-        content: pdfBuffer,
-      }],
     });
   }
 }

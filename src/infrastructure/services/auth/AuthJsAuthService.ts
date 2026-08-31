@@ -7,7 +7,7 @@ export class AuthJsAuthService implements IAuthService {
   async signIn(credentials: SignInCredentials): Promise<{ success: boolean; error?: string }> {
     try {
       await signIn('credentials', {
-        email: credentials.email,
+        folioRegistro: credentials.folioRegistro,
         password: credentials.password || '',
         redirect: false,
       });
@@ -21,9 +21,7 @@ export class AuthJsAuthService implements IAuthService {
             return { success: false, error: 'Ocurrió un error inesperado al iniciar sesión.' };
         }
       }
-      
-      // En Next.js 14 y NextAuth v5, `signIn` en el servidor suele lanzar un error de tipo "NEXT_REDIRECT" incluso si se desactiva el redireccionamiento en algunas versiones beta. 
-      // Si la cookie ya fue seteada, la validación fue exitosa. 
+
       if (error && typeof error === 'object' && 'digest' in error && (error.digest as string).startsWith('NEXT_REDIRECT')) {
         return { success: true };
       }
@@ -36,7 +34,6 @@ export class AuthJsAuthService implements IAuthService {
     try {
       await signOut({ redirect: false });
     } catch (error: any) {
-      // Ignorar si es un error de redirección programado
       if (error && typeof error === 'object' && 'digest' in error && (error.digest as string).startsWith('NEXT_REDIRECT')) {
         return;
       }
@@ -46,13 +43,13 @@ export class AuthJsAuthService implements IAuthService {
 
   async getCurrentSession(): Promise<AuthSessionDTO | null> {
     const session = await auth();
-    
-    if (!session || !session.user || !session.user.email) {
+
+    if (!session || !session.user || !(session.user as any).folioRegistro) {
       return null;
     }
 
     return {
-      email: session.user.email,
+      folioRegistro: (session.user as any).folioRegistro,
       authId: session.user.id || null,
     };
   }

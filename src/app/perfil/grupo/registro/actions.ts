@@ -17,6 +17,7 @@ import { depositoSchema } from '@/shared/validation/registro.schema';
 const miembroRapidoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(125),
   apellido: z.string().min(1, 'El apellido es requerido').max(256),
+  correo: z.email('Formato de correo inválido').max(100),
 });
 
 const grupoRapidoFormSchema = z.object({
@@ -28,7 +29,7 @@ export interface GrupoRapidoActionState {
   success: boolean;
   totalRegistrados?: number;
   folios?: string[];
-  data?: { emailPadre: string };
+  data?: { folioPadre: string };
   errors?: Record<string, string>;
   error?: string;
   fields?: Record<string, string>;
@@ -38,7 +39,7 @@ function validarArchivo(file: File): string | null {
   if (!file) return 'Seleccione un archivo';
   if (file.size === 0) return 'El archivo no puede estar vacío';
   
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) return 'El archivo debe pesar menos de 5MB';
   
   const allowedMimes = ['image/png', 'image/jpeg', 'application/pdf'];
@@ -54,18 +55,17 @@ export async function registrarGrupoRapidoAction(
   formData: FormData,
 ): Promise<GrupoRapidoActionState> {
   try {
-    // 1. Verificar sesión
     const session = await auth();
-    if (!session?.user?.email) {
+    const folioRegistro = (session?.user as any)?.folioRegistro;
+    if (!folioRegistro) {
       return {
         success: false,
         error: 'No hay una sesión activa',
       };
     }
 
-    // 2. Encontrar al responsable (usuario logueado)
-    const acceso = await prisma.accesos.findUnique({
-      where: { email: session.user.email },
+    const acceso = await prisma.accesos.findFirst({
+      where: { folio_registro: folioRegistro },
       select: { folio_registro: true },
     });
 
@@ -76,16 +76,16 @@ export async function registrarGrupoRapidoAction(
       };
     }
 
-    // 3. Extraer datos del formulario
     const grupoActivo = formData.get('grupoActivo') === 'true';
     const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
     
-    const miembros: { nombre: string; apellido: string }[] = [];
+    const miembros: { nombre: string; apellido: string; correo: string }[] = [];
     for (let i = 0; i < numMiembros; i++) {
       const nombre = (formData.get(`miembro_${i}_nombre`) as string) ?? '';
       const apellido = (formData.get(`miembro_${i}_apellido`) as string) ?? '';
-      if (nombre.trim() && apellido.trim()) {
-        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim() });
+      const correo = (formData.get(`miembro_${i}_correo`) as string) ?? '';
+      if (nombre.trim() && apellido.trim() && correo.trim()) {
+        miembros.push({ nombre: nombre.trim(), apellido: apellido.trim(), correo: correo.trim() });
       }
     }
 
@@ -98,7 +98,6 @@ export async function registrarGrupoRapidoAction(
       notas: formData.get('notas') as string,
     };
 
-    // Capturar campos para restaurar en caso de error
     const savedFields: Record<string, string> = {
       bancoSucursal: rawDeposito.bancoSucursal,
       ciudad: rawDeposito.ciudad,
@@ -108,7 +107,6 @@ export async function registrarGrupoRapidoAction(
       notas: rawDeposito.notas,
     };
 
-    // 4. Validar con Zod (solo si hay miembros)
     if (grupoActivo && miembros.length > 0) {
       const parseResult = grupoRapidoFormSchema.safeParse({
         miembros,
@@ -124,7 +122,6 @@ export async function registrarGrupoRapidoAction(
         return { success: false, errors: fieldErrors, error: 'Por favor corrija los errores en el formulario', fields: savedFields };
       }
     } else if (!grupoActivo) {
-      // Si no hay grupo activo, solo validar depósito
       const parseResult = depositoSchema.safeParse(rawDeposito);
       if (!parseResult.success) {
         const fieldErrors: Record<string, string> = {};
@@ -136,18 +133,15 @@ export async function registrarGrupoRapidoAction(
       }
     }
 
-    // 5. Validar archivo
     const file = formData.get('archivo') as File;
     const archivoError = validarArchivo(file);
     if (archivoError) {
       return { success: false, errors: { archivo: archivoError }, error: archivoError, fields: savedFields };
     }
 
-    // 6. Convertir archivo a Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 7. Ejecutar caso de uso
     const useCase = new RegistrarGrupoRapido(
       getUsuarioRepository(),
       getDepositoRepository(),
@@ -179,7 +173,7 @@ export async function registrarGrupoRapidoAction(
       success: true,
       totalRegistrados: resultado.totalRegistrados,
       folios: resultado.folios,
-      data: { emailPadre: session.user.email }
+      data: { folioPadre: folioRegistro }
     };
   } catch (error) {
     console.error('Error en registrarGrupoRapidoAction:', error);

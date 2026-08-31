@@ -44,24 +44,15 @@ export class RegistrarUsuario {
     const tStart = Date.now();
     const phase = (label: string, t: number) => { console.log(`[RegistrarUsuario] ${label} ${Date.now()-t}ms`); return Date.now(); };
     let t = tStart;
-    // 1. Verificar correo duplicado (optimista, también capturado por P2002)
-    const correo = Email.create(dto.correo);
-    const existente = await this.usuarioRepo.buscarPorCorreo(correo);
-    t = phase('buscarPorCorreo', t);
-    if (existente) {
-      throw RegistroError.CORREO_DUPLICADO(dto.correo);
-    }
 
-    // 2. Validar archivo comprobante
     ArchivoComprobante.create(dto.archivo.nombre, dto.archivo.mime, dto.archivo.tamanio);
 
-    // 3. Subir comprobante a storage (side-effect compensable)
     const ext = dto.archivo.nombre.split('.').pop() || 'bin';
     const archivoRuta = `comprobantes/${this.idGenerator.uuid()}.${ext}`;
     const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
     t = phase('storage.subir comprobante', t);
 
-    // Preparar entidades previas a tx
+    const correo = Email.create(dto.correo);
     const usuario = Usuario.create({
       nombre: dto.nombre,
       apellido: dto.apellido,
@@ -71,7 +62,9 @@ export class RegistrarUsuario {
       carrera: dto.carrera,
       dependencia: dto.dependencia,
       idTitulo: dto.idTitulo,
+      idTipoParticipante: dto.idTipoParticipante,
       idInstitucion: dto.idInstitucion,
+      institucionExterna: dto.institucionExterna,
       idEntidadFederativa: dto.idEntidadFederativa,
     });
 
@@ -79,7 +72,7 @@ export class RegistrarUsuario {
     const passwordHash = await this.passwordHasher.hash(generatedPassword);
 
     const deposito = Deposito.create({
-      folioRegistro: '__PENDING__', // placeholder, reemplazado tras crear usuario
+      folioRegistro: '__PENDING__',
       bancoSucursal: dto.deposito.bancoSucursal ?? null,
       ciudad: dto.deposito.ciudad ?? null,
       referencia: dto.deposito.referencia,
@@ -103,9 +96,8 @@ export class RegistrarUsuario {
       const usuarioPersistido = await uRepo.crear(usuario);
       folioRegistro = usuarioPersistido.folioRegistro!;
 
-      await aRepo.crear(dto.correo, passwordHash, 'USER', folioRegistro, `${dto.nombre} ${dto.apellido}`);
+      await aRepo.crear(passwordHash, 'USER', folioRegistro, `${dto.nombre} ${dto.apellido}`, dto.correo);
 
-      // Deposito con folio real
       const depositoReal = Deposito.create({
         folioRegistro,
         bancoSucursal: deposito.bancoSucursal,
@@ -146,8 +138,6 @@ export class RegistrarUsuario {
       if (this.txManager) {
         await this.txManager.run(async (ctx) => { await doTx(ctx); });
       } else {
-        // Fallback: si no hay txManager, ejecutar directo pero con manejo de P2002
-        // Intenta usar prisma.$transaction si está disponible vía repos
         const { prisma } = await import('@/infrastructure/database/client');
         await (prisma as any).$transaction(async (tx: any) => {
           const { PrismaUsuarioRepository } = await import('@/infrastructure/repositories/PrismaUsuarioRepository');
@@ -166,7 +156,6 @@ export class RegistrarUsuario {
         });
       }
     } catch (e: unknown) {
-      // Compensar archivo subido
       try { await this.storageService.eliminar(archivoRuta); } catch {}
       const mapped = mapPrismaError(e, dto.correo);
       if (mapped) throw mapped;
@@ -176,7 +165,6 @@ export class RegistrarUsuario {
 
     const folio = folioRegistro!;
 
-    // 9. Obtener datos de catálogos para el PDF y correo
     const [instituciones, titulos] = await Promise.all([
       this.catalogoRepo.obtenerInstituciones(),
       this.catalogoRepo.obtenerTitulos(),
@@ -186,7 +174,6 @@ export class RegistrarUsuario {
     const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
     const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    // 10. Generar constancia PDF
     const pdfBuffer = await this.pdfService.generarConstanciaInscripcion({
       nombre: dto.nombre,
       apellido: dto.apellido,
@@ -197,7 +184,6 @@ export class RegistrarUsuario {
     });
     t = phase('pdf generarConstancia', t);
 
-    // 11. Subir constancia a storage (si falla, no revierte registro; se regenera en CPanel)
     let urlConstancia = '';
     try {
       const constanciaRuta = `constancias/${folio}.pdf`;
@@ -208,7 +194,6 @@ export class RegistrarUsuario {
       urlConstancia = `constancias/${folio}.pdf`;
     }
 
-    // 12. Enviar correo de confirmación (best-effort, no revierte)
     try {
       await this.emailService.enviarConfirmacionRegistro(dto.correo, {
         nombre: dto.nombre,
@@ -222,7 +207,6 @@ export class RegistrarUsuario {
       console.log(`[RegistrarUsuario] total ${Date.now()-tStart}ms folio=${folio}`);
     } catch (e) {
       console.error('Error al enviar correo confirmación:', e);
-      // No lanza; el admin puede reenviar desde CPanel
     }
 
     return {

@@ -19,7 +19,7 @@ export interface ConfirmacionActividadesData {
 export interface NotificacionPonenteData {
   nombre: string;
   apellido: string;
-  correo: string;
+  folio: string;
   password: string;
   nombreActividad: string;
   rol: string;
@@ -39,5 +39,5 @@ export interface IEmailService {
   enviarNotificacionPonente(destinatario: string, datos: NotificacionPonenteData): Promise<void>;
   enviarConstanciaPonente(destinatario: string, pdfBuffer: Buffer, nombrePonente: string, nombreActividad: string): Promise<void>;
   enviarConstanciaParticipante(destinatario: string, pdfBuffer: Buffer, nombreParticipante: string, nombreActividad: string): Promise<void>;
-  enviarConfirmacionGrupoRapido(destinatario: string, datos: ConfirmacionGrupoRapidoData, pdfBuffer: Buffer): Promise<void>;
+  enviarConfirmacionGrupoRapido(destinatario: string, datos: ConfirmacionGrupoRapidoData): Promise<void>;
 }

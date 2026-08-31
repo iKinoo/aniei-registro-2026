@@ -12,12 +12,13 @@ export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
 export default async function PerfilPage() {
   const session = await auth();
 
-  if (!session?.user?.email) {
+  const folioRegistro = (session?.user as any)?.folioRegistro;
+  if (!folioRegistro) {
     redirect('/login');
   }
 
-  const acceso = await prisma.accesos.findUnique({
-    where: { email: session.user.email },
+  const acceso = await prisma.accesos.findFirst({
+    where: { folio_registro: folioRegistro },
     include: {
       usuarios: {
         include: {
@@ -33,7 +34,6 @@ export default async function PerfilPage() {
 
   const usuario = acceso.usuarios;
 
-  // Cargar inscripciones a actividades con detalle
   const inscripciones = acceso.folio_registro
     ? await prisma.inscripcion_actividades.findMany({
         where: { folio_registro: acceso.folio_registro },
@@ -49,7 +49,6 @@ export default async function PerfilPage() {
       })
     : [];
 
-  // Cargar historial de depósitos
   const depositosRaw = acceso.folio_registro
     ? await prisma.depositos.findMany({
         where: { folio_registro: acceso.folio_registro },
@@ -74,7 +73,6 @@ export default async function PerfilPage() {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        {/* Header */}
         <div className={styles.header}>
           <div>
             <p className={styles.headerSub}>Congreso ANIEI 2026</p>
@@ -84,7 +82,6 @@ export default async function PerfilPage() {
         </div>
 
         <div className={styles.content}>
-          {/* Datos Personales */}
           <div className={styles.sectionTitle}>Datos Personales</div>
           <div className={styles.grid}>
             <div className={styles.field}>
@@ -111,7 +108,6 @@ export default async function PerfilPage() {
             </div>
           </div>
             
-          {/* Actividades inscritas */}
           <div className={styles.sectionTitle}>
             Mis Actividades
             <span className={styles.actividadesBadge}>{inscripciones.length}</span>
@@ -154,7 +150,7 @@ export default async function PerfilPage() {
                       <span className={styles.metaItem}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         {new Date(act.fecha_inicio).toLocaleDateString('es-MX', {
                           day: '2-digit', month: 'short', year: 'numeric',
@@ -179,7 +175,6 @@ export default async function PerfilPage() {
             </div>
           )}
 
-          {/* Historial de Depósitos */}
           <div className={styles.sectionTitle}>
             Historial de Depósitos
             <span className={styles.actividadesBadge}>{depositos.length}</span>
@@ -188,7 +183,6 @@ export default async function PerfilPage() {
             <HistorialDepositosUsuario depositos={depositos} />
           </div>
 
-          {/* Acciones */}
           <div className={styles.actions}>
             {inscripciones.length > 0 && (
               <a href="/actividades" className={styles.btnSecondary}>
