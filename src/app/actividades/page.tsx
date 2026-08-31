@@ -7,7 +7,7 @@ export const metadata = { title: 'Selección de Actividades | ANIEI 2026' };
 
 export default async function ActividadesPage() {
   const session = await auth();
-  if (!session?.user?.email) redirect('/login');
+  if (!(session?.user as any)?.folioRegistro) redirect('/login');
 
   const [actRes, inscRes] = await Promise.all([
     getActividadesDisponiblesAction(),
