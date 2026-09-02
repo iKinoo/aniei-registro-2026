@@ -118,6 +118,7 @@ model equipos {
   id_equipo          Int                  @id @default(autoincrement())
   id_actividad       Int
   id_institucion     Int?
+  numero_equipo      Int                  @default(1)
   nombre_equipo      String               @db.VarChar(150)
   fecha_registro     DateTime?            @default(now()) @db.Timestamp(6)
   equipo_integrantes equipo_integrantes[]
