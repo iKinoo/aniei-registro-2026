@@ -13,6 +13,10 @@ function esActividadEspecial(tipo: ActividadDTO['tipoActividad']): boolean {
   return clave.includes('hackaton') || clave.includes('concurso') || desc.includes('hackaton') || desc.includes('concurso');
 }
 
+function filtrarPorClave(actividades: ActividadDTO[], clave: string): ActividadDTO[] {
+  return actividades.filter((a) => a.tipoActividad?.clave?.toLowerCase() === clave);
+}
+
 export async function getActividadesDisponiblesAction() {
   try {
     const useCase = new GestionarActividades(getActividadRepository());
@@ -21,6 +25,39 @@ export async function getActividadesDisponiblesAction() {
     return { success: true as const, data: disponibles };
   } catch (error) {
     console.error('Error en getActividadesDisponiblesAction:', error);
+    return { success: false as const, error: 'Error al cargar las actividades' };
+  }
+}
+
+export async function getTalleresAction() {
+  try {
+    const useCase = new GestionarActividades(getActividadRepository());
+    const todas = await useCase.listar();
+    return { success: true as const, data: filtrarPorClave(todas, 'taller') };
+  } catch (error) {
+    console.error('Error en getTalleresAction:', error);
+    return { success: false as const, error: 'Error al cargar los talleres' };
+  }
+}
+
+export async function getConcursosAction() {
+  try {
+    const useCase = new GestionarActividades(getActividadRepository());
+    const todas = await useCase.listar();
+    return { success: true as const, data: filtrarPorClave(todas, 'concurso') };
+  } catch (error) {
+    console.error('Error en getConcursosAction:', error);
+    return { success: false as const, error: 'Error al cargar los concursos' };
+  }
+}
+
+export async function getActividadesAction() {
+  try {
+    const useCase = new GestionarActividades(getActividadRepository());
+    const todas = await useCase.listar();
+    return { success: true as const, data: filtrarPorClave(todas, 'actividad') };
+  } catch (error) {
+    console.error('Error en getActividadesAction:', error);
     return { success: false as const, error: 'Error al cargar las actividades' };
   }
 }

@@ -260,9 +260,10 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
 interface Props {
   actividades: ActividadDTO[];
   inscritasIds: number[];
+  titulo?: string;
 }
 
-export default function ActividadesSeleccionClient({ actividades, inscritasIds }: Props) {
+export default function ActividadesSeleccionClient({ actividades, inscritasIds, titulo = 'Actividades del Congreso' }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<ActividadDTO[]>([]);
   const inscritasSet = new Set(inscritasIds);
@@ -300,7 +301,7 @@ export default function ActividadesSeleccionClient({ actividades, inscritasIds }
             Regresar al perfil
           </button>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
-            Actividades del Congreso
+            {titulo}
           </h1>
           <p className="text-indigo-200 text-lg">
             Selecciona las actividades a las que deseas inscribirte.

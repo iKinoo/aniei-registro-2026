@@ -120,9 +120,17 @@ export default async function PerfilPage() {
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <p>Aún no te has inscrito a actividades.</p>
-              <a href="/actividades" className={styles.btnActividades}>
-                Ver actividades disponibles →
-              </a>
+              <div className="flex flex-wrap gap-2 justify-center mt-2">
+                <a href="/actividades/talleres" className={styles.btnActividades}>
+                  Talleres
+                </a>
+                <a href="/actividades/concursos" className={styles.btnActividades}>
+                  Concursos
+                </a>
+                <a href="/actividades/actividades" className={styles.btnActividades}>
+                  Actividades
+                </a>
+              </div>
             </div>
           ) : (
             <div className={styles.actividadesList}>
@@ -185,9 +193,17 @@ export default async function PerfilPage() {
 
           <div className={styles.actions}>
             {inscripciones.length > 0 && (
-              <a href="/actividades" className={styles.btnSecondary}>
-                Inscribirse a actividades
-              </a>
+              <>
+                <a href="/actividades/talleres" className={styles.btnSecondary}>
+                  Talleres
+                </a>
+                <a href="/actividades/concursos" className={styles.btnSecondary}>
+                  Concursos
+                </a>
+                <a href="/actividades/actividades" className={styles.btnSecondary}>
+                  Actividades
+                </a>
+              </>
             )}
             <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
               Registro Grupal
