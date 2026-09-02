@@ -52,6 +52,15 @@ export class RegistrarUsuario {
     const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
     t = phase('storage.subir comprobante', t);
 
+    let constanciaRuta: string | null = null;
+    let urlConstanciaFiscal: string | null = null;
+    if (dto.facturacion?.archivoConstancia) {
+      const constanciaExt = dto.facturacion.archivoConstancia.nombre.split('.').pop() || 'bin';
+      constanciaRuta = `comprobantes/constancias/${this.idGenerator.uuid()}.${constanciaExt}`;
+      urlConstanciaFiscal = await this.storageService.subir(constanciaRuta, dto.facturacion.archivoConstancia.buffer, dto.facturacion.archivoConstancia.mime);
+      t = phase('storage.subir constancia fiscal', t);
+    }
+
     const correo = Email.create(dto.correo);
     const usuario = Usuario.create({
       nombre: dto.nombre,
@@ -125,6 +134,10 @@ export class RegistrarUsuario {
           municipio: dto.facturacion.municipio ?? null,
           codigoPostal: dto.facturacion.codigoPostal ?? null,
           idEntidadFederativaRfc: dto.facturacion.idEntidadFederativaRfc ?? null,
+          constanciaUrl: urlConstanciaFiscal,
+          constanciaNombre: dto.facturacion.archivoConstancia?.nombre ?? null,
+          constanciaMime: dto.facturacion.archivoConstancia?.mime ?? null,
+          constanciaTamanio: dto.facturacion.archivoConstancia?.tamanio ?? null,
         });
         await fRepo.crear(facturacion);
       }
@@ -157,6 +170,9 @@ export class RegistrarUsuario {
       }
     } catch (e: unknown) {
       try { await this.storageService.eliminar(archivoRuta); } catch {}
+      if (constanciaRuta) {
+        try { await this.storageService.eliminar(constanciaRuta); } catch {}
+      }
       const mapped = mapPrismaError(e, dto.correo);
       if (mapped) throw mapped;
       throw e;

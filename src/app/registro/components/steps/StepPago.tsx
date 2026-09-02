@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { Estado } from '@/shared/types/catalogos';
 import { DepositoWizard, FacturacionWizard } from '../RegistroForm';
 import { estadosToOptions } from '../SelectCatalogo';
@@ -29,6 +30,64 @@ function Field({ label, required, error, children }: { label: string; required?:
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
+      {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+    </div>
+  );
+}
+
+function ConstanciaFiscalUpload({ error }: { error?: string }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFileName(null);
+      setPreview(null);
+      return;
+    }
+    setFileName(file.name);
+    if (file.type.startsWith('image/')) {
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-slate-700">
+        Constancia de situación fiscal <span className="text-red-500">*</span>
+      </label>
+      <div
+        className="cursor-pointer rounded-lg border-2 border-dashed border-slate-300 p-5 text-center transition-colors hover:border-indigo-400"
+        onClick={() => inputRef.current?.click()}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          name="constancia_fiscal"
+          accept="image/png,image/jpeg,application/pdf"
+          className="hidden"
+          onChange={handleChange}
+        />
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="Preview" className="mx-auto max-h-32 rounded" />
+        ) : (
+          <div className="text-slate-500">
+            <svg className="mx-auto h-8 w-8 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm">Click para seleccionar constancia</p>
+            <p className="mt-1 text-xs text-slate-400">PNG, JPG o PDF (máx. 5 MB)</p>
+          </div>
+        )}
+        {fileName && (
+          <p className="mt-2 text-xs text-slate-600 truncate px-2">{fileName}</p>
+        )}
+      </div>
       {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
     </div>
   );
@@ -161,6 +220,7 @@ export function StepPago({
                 </select>
               </Field>
             </div>
+            <ConstanciaFiscalUpload error={errors?.['facturacion.constancia_fiscal']} />
           </div>
         )}
       </div>

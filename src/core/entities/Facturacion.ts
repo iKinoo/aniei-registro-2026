@@ -10,6 +10,10 @@ export interface FacturacionProps {
   municipio?: string | null;
   codigoPostal?: string | null;
   idEntidadFederativaRfc?: number | null;
+  constanciaUrl?: string | null;
+  constanciaNombre?: string | null;
+  constanciaMime?: string | null;
+  constanciaTamanio?: number | null;
 }
 
 export class Facturacion {
@@ -24,6 +28,10 @@ export class Facturacion {
   readonly municipio: string | null;
   readonly codigoPostal: string | null;
   readonly idEntidadFederativaRfc: number | null;
+  readonly constanciaUrl: string | null;
+  readonly constanciaNombre: string | null;
+  readonly constanciaMime: string | null;
+  readonly constanciaTamanio: number | null;
 
   private constructor(props: FacturacionProps) {
     this.idFacturacion = props.idFacturacion ?? null;
@@ -37,6 +45,10 @@ export class Facturacion {
     this.municipio = props.municipio ?? null;
     this.codigoPostal = props.codigoPostal ?? null;
     this.idEntidadFederativaRfc = props.idEntidadFederativaRfc ?? null;
+    this.constanciaUrl = props.constanciaUrl ?? null;
+    this.constanciaNombre = props.constanciaNombre ?? null;
+    this.constanciaMime = props.constanciaMime ?? null;
+    this.constanciaTamanio = props.constanciaTamanio ?? null;
   }
 
   static create(props: FacturacionProps): Facturacion {

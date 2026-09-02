@@ -15,6 +15,10 @@ export class FacturacionMapper {
       municipio: raw.municipio,
       codigoPostal: raw.codigo_postal,
       idEntidadFederativaRfc: raw.id_entidad_federativa_rfc,
+      constanciaUrl: raw.constancia_url,
+      constanciaNombre: raw.constancia_nombre,
+      constanciaMime: raw.constancia_mime,
+      constanciaTamanio: raw.constancia_tamanio,
     });
   }
 
@@ -30,6 +34,10 @@ export class FacturacionMapper {
       municipio: facturacion.municipio,
       codigo_postal: facturacion.codigoPostal,
       id_entidad_federativa_rfc: facturacion.idEntidadFederativaRfc,
+      constancia_url: facturacion.constanciaUrl,
+      constancia_nombre: facturacion.constanciaNombre,
+      constancia_mime: facturacion.constanciaMime,
+      constancia_tamanio: facturacion.constanciaTamanio,
     };
   }
 }

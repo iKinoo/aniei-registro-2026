@@ -1,3 +1,5 @@
+import { ArchivoDTO } from './RegistroUsuarioDTO';
+
 export interface FacturacionDTO {
   folioRegistro: string;
   razonSocial: string;
@@ -9,4 +11,5 @@ export interface FacturacionDTO {
   municipio?: string | null;
   codigoPostal?: string | null;
   idEntidadFederativaRfc?: number | null;
+  archivoConstancia?: ArchivoDTO;
 }

@@ -26,6 +26,7 @@ export interface FacturacionDTO {
   municipio?: string | null;
   codigoPostal?: string | null;
   idEntidadFederativaRfc?: number | null;
+  archivoConstancia?: ArchivoDTO;
 }
 
 export interface RegistroUsuarioDTO {

@@ -21,9 +21,17 @@ export interface HojaRegistroGrupoData {
   responsableNombre: string;
 }
 
+export interface ConstanciaManualData {
+  tipoConstancia: string;
+  destinatarios: string[];
+  descripcion: string;
+  fecha: string;
+}
+
 export interface IPdfService {
   generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer>;
   generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer>;
   generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Buffer>;
   generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer>;
+  generarConstanciaManual(datos: ConstanciaManualData): Promise<Buffer>;
 }

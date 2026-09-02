@@ -1,9 +1,10 @@
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
-import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData } from '@/application/ports/IPdfService';
+import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData, ConstanciaManualData } from '@/application/ports/IPdfService';
 import { GenericConstanciaTemplate } from './templates/GenericConstanciaTemplate';
 import { HojaRegistroGrupoTemplate } from './templates/HojaRegistroGrupoTemplate';
+import { ManualConstanciaTemplate } from './templates/ManualConstanciaTemplate';
 
 export class ReactPdfService implements IPdfService {
   async generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer> {
@@ -47,6 +48,18 @@ export class ReactPdfService implements IPdfService {
     const qrDataUrl = await QRCode.toDataURL(qrUrl);
 
     const element = React.createElement(HojaRegistroGrupoTemplate, { ...datos, qrDataUrl });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
+    return Buffer.from(buffer);
+  }
+
+  async generarConstanciaManual(datos: ConstanciaManualData): Promise<Buffer> {
+    const element = React.createElement(ManualConstanciaTemplate, {
+      tipoConstancia: datos.tipoConstancia,
+      destinatarios: datos.destinatarios,
+      descripcion: datos.descripcion,
+      fecha: datos.fecha,
+    });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
     return Buffer.from(buffer);

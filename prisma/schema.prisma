@@ -144,6 +144,10 @@ model facturaciones {
   municipio                 String?   @db.VarChar(100)
   codigo_postal             String?   @db.VarChar(10)
   id_entidad_federativa_rfc Int?
+  constancia_url            String?   @db.VarChar(500)
+  constancia_nombre         String?   @db.VarChar(255)
+  constancia_mime           String?   @db.VarChar(100)
+  constancia_tamanio        Int?
   estados                   estados?  @relation(fields: [id_entidad_federativa_rfc], references: [id_entidad_federativa], onUpdate: NoAction)
   usuarios                  usuarios  @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
@@ -260,4 +264,16 @@ model precios_inscripcion {
   tipo_participante    tipo_participante @relation(fields: [id_tipo_participante], references: [id_tipo_participante], onUpdate: NoAction)
 
   @@index([id_tipo_participante])
+}
+
+model constancias_manuales {
+  id_constancia    Int      @id @default(autoincrement())
+  tipo_constancia  String   @db.VarChar(50)
+  destinatarios    String   @db.Text
+  descripcion      String   @db.Text
+  url_pdf          String   @db.VarChar(500)
+  fecha_generacion DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([tipo_constancia])
+  @@index([fecha_generacion])
 }

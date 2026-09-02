@@ -1,6 +1,6 @@
 'use server';
 
-import { registroSchema, depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
+import { registroSchema, depositoSchema, facturacionSchema, validarArchivo, validarConstanciaFiscal } from '@/shared/validation/registro.schema';
 
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
@@ -175,6 +175,18 @@ export async function registrarUsuarioAction(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    let constanciaFile: File | null = null;
+    let constanciaBuffer: Buffer | null = null;
+    if (requiereFacturacion) {
+      constanciaFile = formData.get('constancia_fiscal') as File;
+      const constanciaError = validarConstanciaFiscal(constanciaFile);
+      if (constanciaError) {
+        return { success: false, errors: { 'facturacion.constancia_fiscal': constanciaError }, fields: savedFields };
+      }
+      const constanciaArrayBuffer = await constanciaFile.arrayBuffer();
+      constanciaBuffer = Buffer.from(constanciaArrayBuffer);
+    }
+
     const t0 = Date.now();
     const logPhase = (phase: string, start: number) => {
       const ms = Date.now() - start;
@@ -236,6 +248,14 @@ export async function registrarUsuarioAction(
               municipio: parsedFacturacion.data.municipio || null,
               codigoPostal: parsedFacturacion.data.codigoPostal || null,
               idEntidadFederativaRfc: parsedFacturacion.data.idEntidadFederativaRfc ?? null,
+              archivoConstancia: constanciaFile && constanciaBuffer
+                ? {
+                    nombre: constanciaFile.name,
+                    mime: constanciaFile.type,
+                    tamanio: constanciaFile.size,
+                    buffer: constanciaBuffer,
+                  }
+                : undefined,
             }
           : null,
     });

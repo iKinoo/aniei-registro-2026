@@ -1,35 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction, eliminarUsuarioAction, getInstitucionesAction } from './actions';
+import { getUsuariosAdminAction, eliminarUsuarioAction, getInstitucionesAction } from './actions';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { Institucion } from '@/shared/types/catalogos';
 import { useRouter } from 'next/navigation';
 
-// Icon components
 const SearchIcon = () => (
   <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
-);
-
-const FileIcon = () => (
-  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-  </svg>
-);
-
-const SendIcon = () => (
-  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-  </svg>
-);
-
-const SpinnerIcon = () => (
-  <svg className="animate-spin mr-1 h-4 w-4 text-slate-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
   </svg>
 );
 
@@ -45,6 +25,13 @@ const TrashIcon = () => (
   </svg>
 );
 
+const EyeIcon = () => (
+  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+);
+
 export default function AdminPanel() {
   const router = useRouter();
   const [usuarios, setUsuarios] = useState<UsuarioForAdminDTO[]>([]);
@@ -57,8 +44,6 @@ export default function AdminPanel() {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [fileErrors, setFileErrors] = useState<Record<string, string>>({});
-  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; folio: string; nombre: string }>({ isOpen: false, folio: '', nombre: '' });
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -92,37 +77,6 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Handler for resending confirmation
-  const handleResend = async (folioRegistro: string) => {
-    if (!confirm('¿Estás seguro de que deseas reenviar la constancia de registro a este usuario?')) return;
-
-    // Optimistic UI could go here, but since it's an email, better to wait
-    const result = await reenviarConstanciaAction(folioRegistro);
-    if (result.success) {
-      alert('Constancia reenviada exitosamente 🎉');
-    } else {
-      alert('Error: ' + result.error);
-    }
-  };
-
-  const handleVerArchivo = async (folioRegistro: string, ruta: string) => {
-    setLoadingFiles(prev => ({ ...prev, [folioRegistro]: true }));
-    setFileErrors(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
-
-    const result = await obtenerUrlArchivoAction(ruta);
-    
-    setLoadingFiles(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
-
-    if (result.success) {
-      window.open(result.url, '_blank');
-    } else {
-      setFileErrors(prev => ({ ...prev, [folioRegistro]: result.error }));
-      setTimeout(() => {
-        setFileErrors(prev => { const next = { ...prev }; delete next[folioRegistro]; return next; });
-      }, 4000);
-    }
-  };
 
   const handleEliminarUsuario = async () => {
     if (!deleteDialog.folio) return;
@@ -244,36 +198,12 @@ export default function AdminPanel() {
                         <span className="text-slate-600">{user.tipoUsuario}</span>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap overflow-visible">
-                        {user.deposito?.archivo?.ruta && (
-                          <div className="inline-flex flex-col items-center">
-                            <button
-                              onClick={() => handleVerArchivo(user.folioRegistro, user.deposito!.archivo.ruta)}
-                              disabled={loadingFiles[user.folioRegistro]}
-                              className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {loadingFiles[user.folioRegistro] ? <SpinnerIcon /> : <FileIcon />} Ver Archivo
-                            </button>
-                            {fileErrors[user.folioRegistro] && (
-                              <div 
-                                className="absolute  z-50 w-48 bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg shadow-sm border border-red-200 whitespace-normal text-left transition-all duration-300"
-                              >
-                                {fileErrors[user.folioRegistro]}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <a
-                          href={`/cpanel/usuarios/${user.folioRegistro}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => router.push(`/cpanel/usuarios/${user.folioRegistro}`)}
                           className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                         >
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          Ver depósitos
-                        </a>
+                          <EyeIcon /> Ver Detalles
+                        </button>
                         <button
                           onClick={() => router.push(`/cpanel/usuarios/${user.folioRegistro}/editar`)}
                           className="inline-flex items-center justify-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -285,12 +215,6 @@ export default function AdminPanel() {
                           className="inline-flex items-center justify-center px-3 py-1.5 border border-red-200 shadow-sm text-xs font-medium rounded-lg text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                         >
                           <TrashIcon /> Eliminar
-                        </button>
-                        <button
-                          onClick={() => handleResend(user.folioRegistro)}
-                          className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                        >
-                          <SendIcon /> Reenviar Correo
                         </button>
                       </td>
                     </tr>

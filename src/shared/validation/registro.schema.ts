@@ -67,3 +67,16 @@ export function validarArchivo(file: File): string | null {
   }
   return null;
 }
+
+export function validarConstanciaFiscal(file: File): string | null {
+  if (!file || file.size === 0) {
+    return 'La constancia de situación fiscal es requerida';
+  }
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return 'Tipo de archivo no permitido. Use PNG, JPG o PDF';
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return 'El archivo excede el tamaño máximo de 5 MB';
+  }
+  return null;
+}
