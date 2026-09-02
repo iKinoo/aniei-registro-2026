@@ -276,7 +276,7 @@ export async function registrarUsuarioAction(
 
     try {
       await signIn('credentials', {
-        email: resultado.correo,
+        folioRegistro: resultado.folio,
         password: resultado.passwordPlana,
         redirect: false,
       });
