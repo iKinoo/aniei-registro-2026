@@ -70,6 +70,19 @@ export default async function PerfilPage() {
     archivoNombre: d.archivo_nombre,
   }));
 
+  const equipos = acceso.folio_registro
+    ? await prisma.equipo_integrantes.findMany({
+        where: { folio_registro: acceso.folio_registro },
+        include: {
+          equipos: {
+            include: {
+              actividades: true,
+            },
+          },
+        },
+      })
+    : [];
+
   return (
     <div className={styles.container}>
       <div className={styles.card}>
@@ -181,6 +194,45 @@ export default async function PerfilPage() {
                 );
               })}
             </div>
+          )}
+
+          {equipos.length > 0 && (
+            <>
+              <div className={styles.sectionTitle}>
+                Mis Equipos
+                <span className={styles.actividadesBadge}>{equipos.length}</span>
+              </div>
+              <div className={styles.actividadesList}>
+                {equipos.map((ei) => {
+                  const equipo = ei.equipos;
+                  const actividad = equipo.actividades;
+                  return (
+                    <div key={equipo.id_equipo} className={styles.actividadCard}>
+                      <div className={styles.actividadTop}>
+                        <span className={styles.tipoBadge}>
+                          Equipo #{equipo.numero_equipo}
+                        </span>
+                        {ei.es_representante && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                            Capitán
+                          </span>
+                        )}
+                      </div>
+                      <h3 className={styles.actividadNombre}>{equipo.nombre_equipo}</h3>
+                      <div className={styles.actividadMeta}>
+                        <span className={styles.metaItem}>
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {actividad.nombre}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
 
           <div className={styles.sectionTitle}>
