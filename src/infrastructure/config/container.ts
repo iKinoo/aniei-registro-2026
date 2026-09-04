@@ -14,6 +14,7 @@ import { PrismaEquipoRepository } from '@/infrastructure/repositories/PrismaEqui
 import { NodemailerEmailService } from '@/infrastructure/services/email/NodemailerEmailService';
 import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
+import { LocalFilesystemStorageService } from '@/infrastructure/services/storage/LocalFilesystemStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IAuthService } from '@/application/ports/IAuthService';
@@ -83,6 +84,16 @@ export function getPdfService(): IPdfService {
 }
 
 export function getStorageService(): IStorageService {
+  const provider = process.env.STORAGE_PROVIDER ?? 'filesystem';
+  if (provider === 'filesystem') {
+    const dir = process.env.STORAGE_LOCAL_DIR ?? './storage';
+    const secret = process.env.STORAGE_URL_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error('STORAGE_URL_SECRET debe tener min 32 caracteres');
+    }
+    const ttl = Number(process.env.FILE_URL_TTL_SECONDS ?? '300') || 300;
+    return new LocalFilesystemStorageService(dir, secret, ttl);
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
