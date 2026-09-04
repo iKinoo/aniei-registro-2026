@@ -2,7 +2,7 @@
 
 > **Fecha:** 2026-09-04
 > **Para:** persona que recibe el código fuente y debe echar a andar la aplicación en producción en un servidor Linux.
-> **Rama a desplegar:** `feat/local-postgres` (incluye migración a PG local + storage en filesystem; ver `PLAN_MIGRACION_INFRA.md` y `AUDITORIA_04.09.2026.md`).
+> **Modelo de entrega:** tradicional con archivo **.zip** (no hay repositorio ni git en el servidor). El equipo dev te entrega algo como `aniei-registro-2026-2026-09-04.zip`. Guarda ese nombre + fecha: es tu identificador de versión.
 > **Restricciones:** **prohibido Docker**. PostgreSQL **solo datos relacionales**; archivos en `./storage` del proyecto (filesystem puro, sin S3).
 > **SO de referencia:** Ubuntu 24.04 LTS. Node 20+ (recomendado 22 LTS). PostgreSQL 17 (repositorio oficial PGDG).
 
@@ -28,7 +28,7 @@ La app lee todo de **variables de entorno** (`.env.local`, jamás commiteado). N
 
 | # | Dato | Para qué | A quién pedirlo |
 |---|------|----------|-----------------|
-| 1 | Código fuente (rama `feat/local-postgres`) + tag de referencia | Desplegar exactamente lo auditado | Equipo dev |
+| 1 | Código fuente en **.zip** (ya migrado a PG local + filesystem) + documentos `PLAN_MIGRACION_INFRA.md` y `AUDITORIA_04.09.2026.md` incluidos | Desplegar exactamente lo auditado | Equipo dev |
 | 2 | `AUTH_SECRET` (32+ chars aleatorios) | Firmar sesiones Auth.js. **Genera uno nuevo por entorno**, no reutilices el de otro servidor | Generarlo tú (§5.2) |
 | 3 | `STORAGE_URL_SECRET` (32+ chars) | Firmar URLs de archivos `/api/archivos` | Generarlo tú (§5.2) |
 | 4 | Cuenta Gmail + App Password (o SMTP que te indiquen) | Correos de confirmación/constancias (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`) | Equipo ANIEI |
@@ -49,7 +49,7 @@ sudo apt update && sudo apt upgrade -y
 
 # 3.2 Node 22 LTS (NodeSource) + herramientas
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs git curl ca-certificates gnupg postgresql-client-17
+sudo apt install -y nodejs curl ca-certificates gnupg postgresql-client-17
 node --version   # v22.x
 npm --version
 
@@ -96,11 +96,15 @@ sudo grep -v '^#' /etc/postgresql/17/main/pg_hba.conf | grep -v '^$' | head
 ## 5. Código y configuración `[AMBAS]`
 
 ```bash
-# 5.1 Clonar como usuario aniei
+# 5.1 Descomprimir el .zip entregado (como usuario aniei; no hay git en el servidor)
 sudo -u aniei -i
-git clone -b feat/local-postgres <URL-DEL-REPO> /opt/aniei-registro-2026
+mkdir -p /opt && cd /opt
+unzip ~/aniei-registro-2026-*.zip -d /opt/
+mv /opt/aniei-registro-2026-* /opt/aniei-registro-2026   # ajusta al nombre real dentro del zip
 cd /opt/aniei-registro-2026
-git log --oneline -1   # confirma el commit entregado
+ls PLAN_DESPLIEGUE.md .env.example package.json   # confirma que es el paquete completo
+# Registra tu versión (no hay git log): nombre del zip + fecha
+echo "ZIP: aniei-registro-2026-2026-09-04.zip | Instalado: $(date +%F) | Por: TU-NOMBRE" | sudo tee /opt/VERSION-ANIEI.txt
 
 # 5.2 Generar secretos (uno por entorno, no reutilizar entre servidores)
 openssl rand -base64 32   # → AUTH_SECRET
@@ -342,8 +346,7 @@ sudo systemctl status aniei --no-pager
 sudo journalctl -u aniei -f                    # en vivo
 sudo journalctl -u aniei --since "1 hour ago" --no-pager | tail -50
 
-# Reinicio tras cambio de .env.local o código
-cd /opt/aniei-registro-2026 && git pull && npm ci && npm run build
+# Reinicio tras cambio de .env.local
 sudo systemctl restart aniei
 
 # Respaldos (cron sugerido 02:00; guarda 7 días)
@@ -357,18 +360,37 @@ Restaurar respaldo: §6.1 con tu `.dump` + extraer el `.tgz` sobre `./storage/` 
 
 ---
 
-## 13. Actualizar a una versión nueva del código
+## 13. Actualizar a una versión nueva (llega otro .zip)
+
+> Sin git: cada versión nueva es un .zip completo. **Nunca descomprimas encima sin respaldar**: el zip no trae tu `.env.local` ni tus archivos.
 
 ```bash
-cd /opt/aniei-registro-2026
-git fetch && git status          # revisa qué va a cambiar
-git pull                          # o checkout del tag/commit indicado por dev
-npm ci && npm run build
+# 13.1 Congelar: respaldo previo (BD + .env.local + storage)
+source /tmp/prod-env.sh   # helper del §6 (regenéralo si abriste otra terminal)
+pg_dump -Fc -f /var/backups/aniei/aniei-previo-$(date +%F).dump "$DIRECT_URL"
+cp /opt/aniei-registro-2026/.env.local /var/backups/aniei/env.local.prev
+sudo systemctl stop aniei
+mv /opt/aniei-registro-2026 /opt/aniei-registro-2026-anterior   # rollback instantáneo
+
+# 13.2 Descomprimir la versión nueva y devolverle TUS datos (no los del zip)
+unzip ~/aniei-registro-2026-*.zip -d /opt/
+mv /opt/aniei-registro-2026-* /opt/aniei-registro-2026
+cp /var/backups/aniei/env.local.prev /opt/aniei-registro-2026/.env.local
+chmod 600 /opt/aniei-registro-2026/.env.local
+# OJO: ./storage del zip viene vacío (solo .gitkeep). Devuelve tus archivos:
+cp -a /opt/aniei-registro-2026-anterior/storage/. /opt/aniei-registro-2026/storage/
+sudo chown -R aniei:aniei /opt/aniei-registro-2026
+echo "ZIP: <nombre-del-nuevo-zip> | Instalado: $(date +%F) | Por: TU-NOMBRE" | sudo tee /opt/VERSION-ANIEI.txt
+
+# 13.3 Compilar + migraciones + arrancar
+cd /opt/aniei-registro-2026 && npm ci && npm run build
 source /tmp/prod-env.sh && npx prisma migrate status   # si hay migraciones nuevas:
 # npx prisma migrate deploy
-sudo systemctl restart aniei
+sudo systemctl start aniei
 # verifica checklist §11 filas 6–10
 ```
+
+Rollback de versión: `sudo systemctl stop aniei && rm -rf /opt/aniei-registro-2026 && mv /opt/aniei-registro-2026-anterior /opt/aniei-registro-2026 && sudo systemctl start aniei` (+ `pg_restore` del dump previo solo si la versión nueva corrió migraciones). Borra `-anterior` a la semana.
 
 > Nunca corras `prisma migrate dev` ni `prisma db push` en producción (pueden borrar datos). Solo `migrate deploy` / `migrate status`.
 
@@ -403,4 +425,4 @@ sudo systemctl restart aniei
 
 ---
 
-*Guía generada 2026-09-04 desde el estado real de la rama `feat/local-postgres` (PG 17 nativo, `./storage`, systemd). Dudas de arquitectura: `AUDITORIA_04.09.2026.md`. Detalle de la migración origen: `PLAN_MIGRACION_INFRA.md`.*
+*Guía generada 2026-09-04 desde el paquete entregado como .zip (PG 17 nativo, `./storage`, systemd). Dudas de arquitectura: `AUDITORIA_04.09.2026.md`. Detalle de la migración origen: `PLAN_MIGRACION_INFRA.md`.*
