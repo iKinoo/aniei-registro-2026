@@ -341,4 +341,14 @@ rsync -a --delete ./storage/ /var/backups/aniei/storage/
 
 ---
 
+## 13. Anexo de ejecución — 2026-09-04 (rama `feat/local-postgres`, commit `aa36caa` + s.)
+
+- [x] **F0:** tag `antes-supabase-2026-09-04`; `supabase/migrations/` → `migrations_legacy/`; backup `/tmp/aniei-20260904.dump` (307K, exit 0).
+- [x] **F1:** PG 17.11 nativo ya online; rol `aniei` + BD `aniei` + `pg_trgm` creados por el operador. `migrate deploy` directo **falla** (`20260821_harden_schema`: no hay baseline, las tablas base se crearon con `db push`) → se restauró **solo schema `public`** del dump (incluye `_prisma_migrations`): `pg_restore --schema=public --clean --if-exists --no-owner --no-acl`. Esquemas Supabase (`auth`, `storage`, …) excluidos a propósito. Resultado: `migrate status` → "Database schema is up to date!" (10 migraciones).
+- [x] **Datos:** conteos origen = destino → `usuarios 41`, `depositos 34`, `accesos 40`, `inscripcion_actividades 7`. `usuarios_folio_seq last_value=80`. Cero `folio_registro NULL` en `depositos`. Índice `idx_depositos_folio` presente (`Seq Scan` en `EXPLAIN` es correcto con 34 filas).
+- [x] **F2:** inventario Supabase `comprobantes 86 + constancias 68 = 154 objetos (~8.8 MiB)`; migrados 154/154, fallidos 0; `--verificar` OK por bytes. Cero referencias BD sin archivo en disco. 117 archivos en disco sin referencia en BD = **huérfanos preexistentes en Supabase** (subidas fuera de tx, issue D-05), no pérdida de la migración.
+- [x] **Build/lint:** `tsc`, `eslint`, `npm run build` verdes (`/api/archivos/[...path]` dinámica OK).
+- [x] **Humo:** sin firma → 401; firma mala → 401; firma válida sin sesión → 401 "Sesión inválida" (HMAC interoperable servicio↔ruta).
+- [ ] **Pendiente usuario:** login real + registro de prueba E2E (200 con sesión), mantener Supabase en lectura 7 días, F4 limpieza.
+
 *Plan revisado 2026-09-04 rev.2: Ubuntu 24.04 + PostgreSQL 17 nativo (APT PGDG), storage en `./storage` del proyecto, filesystem puro, Postgres exclusivamente relacional. Supervisor de proceso en producción pendiente de decisión.*
