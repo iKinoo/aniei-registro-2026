@@ -1,0 +1,1 @@
+ALTER TABLE "equipos" ADD COLUMN "numero_equipo" INTEGER NOT NULL DEFAULT 1;
