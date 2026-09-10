@@ -10,7 +10,8 @@ import {
   enviarConstanciaPonenteAction,
   generarConstanciaParticipanteAction,
   enviarConstanciaParticipanteAction,
-  generarConstanciaParticipanteBatchAction
+  generarConstanciaParticipanteBatchAction,
+  generarListaParticipantesPdfAction
 } from './actions';
 import { ActividadModal } from '../ActividadModal';
 
@@ -41,6 +42,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     new Set(manejaConstanciasParticipantes ? inscritos.map(i => i.folioRegistro) : [])
   );
   const [loadingBatch, setLoadingBatch] = useState(false);
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
   const refreshPage = useCallback(() => {
     startTransition(() => router.refresh());
@@ -72,6 +74,29 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
       }
     } finally {
       setLoadingBatch(false);
+    }
+  };
+
+  const handleDescargarListaPdf = async () => {
+    setLoadingPdf(true);
+    try {
+      const res = await generarListaParticipantesPdfAction(actividad.idActividad);
+      if (!res.success) {
+        alert(res.error || 'Error al generar la lista');
+      } else {
+        const { base64, nombreArchivo } = res.data;
+        const blob = new Blob([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setLoadingPdf(false);
     }
   };
 
@@ -233,17 +258,41 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
 
         {/* Inscritos */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
             <h2 className="text-lg font-semibold text-slate-800">Participantes Inscritos ({inscritos.length})</h2>
-            {manejaConstanciasParticipantes && inscritos.length > 0 && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={handleGenerarParticipanteBatch}
-                disabled={loadingBatch || selectedInscritos.size === 0}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                onClick={handleDescargarListaPdf}
+                disabled={loadingPdf || inscritos.length === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
-                {loadingBatch ? 'Generando en lote...' : `Generar constancias (${selectedInscritos.size})`}
+                {loadingPdf ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Descargar lista (PDF)
+                  </>
+                )}
               </button>
-            )}
+              {manejaConstanciasParticipantes && inscritos.length > 0 && (
+                <button
+                  onClick={handleGenerarParticipanteBatch}
+                  disabled={loadingBatch || selectedInscritos.size === 0}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {loadingBatch ? 'Generando en lote...' : `Generar constancias (${selectedInscritos.size})`}
+                </button>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left font-sans text-sm whitespace-nowrap">

@@ -154,3 +154,54 @@ export async function generarConstanciaParticipanteBatchAction(idActividad: numb
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar lote' };
   }
 }
+
+export async function generarListaParticipantesPdfAction(idActividad: number) {
+  try {
+    const actividadRepo = getActividadRepository();
+    const inscripcionRepo = getInscripcionActividadRepository();
+    const pdfService = getPdfService();
+
+    const actividad = await actividadRepo.obtenerPorId(idActividad);
+    if (!actividad) {
+      return { success: false as const, error: 'Actividad no encontrada' };
+    }
+
+    const inscritos = await inscripcionRepo.obtenerPorActividad(idActividad);
+    const tipos = await actividadRepo.obtenerTiposActividad();
+    const nombreTipo = tipos.find(t => t.idTipoActividad === actividad.idTipoActividad)?.descripcion ?? 'Actividad';
+
+    const fechaStr = new Date(actividad.fechaInicio).toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const pdfBuffer = await pdfService.generarListaParticipantes({
+      nombreActividad: actividad.nombre,
+      tipoActividad: nombreTipo,
+      fecha: fechaStr,
+      participantes: inscritos.map((i, index) => ({
+        numero: index + 1,
+        nombre: `${i.nombre} ${i.apellido}`,
+        correo: i.correo,
+        fechaInscripcion: i.fechaInscripcion
+          ? new Date(i.fechaInscripcion).toLocaleDateString('es-MX')
+          : '-',
+      })),
+    });
+
+    const base64 = pdfBuffer.toString('base64');
+    const nombreArchivo = actividad.nombre.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+
+    return {
+      success: true as const,
+      data: {
+        base64,
+        nombreArchivo: `lista_participantes_${nombreArchivo}.pdf`,
+      },
+    };
+  } catch (error) {
+    console.error('Error en generarListaParticipantesPdfAction:', error);
+    return { success: false as const, error: 'Error al generar la lista de participantes' };
+  }
+}

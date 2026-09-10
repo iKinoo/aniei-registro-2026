@@ -28,10 +28,34 @@ export interface ConstanciaManualData {
   fecha: string;
 }
 
+export interface ListaParticipantesPdfData {
+  nombreActividad: string;
+  tipoActividad: string;
+  fecha: string;
+  participantes: {
+    numero: number;
+    nombre: string;
+    correo: string;
+    fechaInscripcion: string;
+  }[];
+}
+
+export interface ReporteInstitucionesPdfData {
+  totalInstituciones: number;
+  totalParticipantes: number;
+  instituciones: {
+    numero: number;
+    nombre: string;
+    totalParticipantes: number;
+  }[];
+}
+
 export interface IPdfService {
   generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer>;
   generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer>;
   generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Buffer>;
   generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer>;
   generarConstanciaManual(datos: ConstanciaManualData): Promise<Buffer>;
+  generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Buffer>;
+  generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Buffer>;
 }

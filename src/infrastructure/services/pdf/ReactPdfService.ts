@@ -1,10 +1,12 @@
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
-import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData, ConstanciaManualData } from '@/application/ports/IPdfService';
+import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData, ConstanciaManualData, ListaParticipantesPdfData, ReporteInstitucionesPdfData } from '@/application/ports/IPdfService';
 import { GenericConstanciaTemplate } from './templates/GenericConstanciaTemplate';
 import { HojaRegistroGrupoTemplate } from './templates/HojaRegistroGrupoTemplate';
 import { ManualConstanciaTemplate } from './templates/ManualConstanciaTemplate';
+import { ListaParticipantesTemplate } from './templates/ListaParticipantesTemplate';
+import { ReporteInstitucionesTemplate } from './templates/ReporteInstitucionesTemplate';
 
 export class ReactPdfService implements IPdfService {
   async generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer> {
@@ -60,6 +62,20 @@ export class ReactPdfService implements IPdfService {
       descripcion: datos.descripcion,
       fecha: datos.fecha,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
+    return Buffer.from(buffer);
+  }
+
+  async generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Buffer> {
+    const element = React.createElement(ListaParticipantesTemplate, { data: datos });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
+    return Buffer.from(buffer);
+  }
+
+  async generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Buffer> {
+    const element = React.createElement(ReporteInstitucionesTemplate, { data: datos });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
     return Buffer.from(buffer);
