@@ -2,7 +2,7 @@
 
 > **Fecha:** 2026-09-11
 > **Para:** persona que recibe el código fuente y debe echar a andar la aplicación en producción en un servidor Linux.
-> **Modelo de entrega:** tradicional con archivo **.zip** (no hay repositorio ni git en el servidor). El equipo dev te entrega algo como `aniei-registro-2026-2026-09-11.zip`. Guarda ese nombre + fecha: es tu identificador de versión.
+> **Modelo de entrega:** repositorio Git en `https://github.com/iKinoo/aniei-registro-2026.git`. El servidor clona y actualiza vía `git pull`.
 > **Restricciones:** **prohibido Docker**. MySQL **solo datos relacionales**; archivos en `./storage` del proyecto (filesystem puro, sin S3).
 > **SO de referencia:** Ubuntu 24.04 LTS. Node 20+ (recomendado 22 LTS). MySQL 8.0+ (repositorio de Ubuntu).
 
@@ -28,7 +28,7 @@ La app lee todo de **variables de entorno** (`.env.local`, jamás commiteado). N
 
 | # | Dato | Para qué | A quién pedirlo |
 |---|------|----------|-----------------|
-| 1 | Código fuente en **.zip** (ya migrado a PG local + filesystem) + documentos `PLAN_MIGRACION_INFRA.md` y `AUDITORIA_04.09.2026.md` incluidos | Desplegar exactamente lo auditado | Equipo dev |
+| 1 | Acceso al repositorio `https://github.com/iKinoo/aniei-registro-2026.git` | Clonar código fuente | Equipo dev |
 | 2 | `AUTH_SECRET` (32+ chars aleatorios) | Firmar sesiones Auth.js. **Genera uno nuevo por entorno**, no reutilices el de otro servidor | Generarlo tú (§5.2) |
 | 3 | `STORAGE_URL_SECRET` (32+ chars) | Firmar URLs de archivos `/api/archivos` | Generarlo tú (§5.2) |
 | 4 | Cuenta Gmail + App Password (o SMTP que te indiquen) | Correos de confirmación/constancias (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`) | Equipo ANIEI |
@@ -49,9 +49,10 @@ sudo apt update && sudo apt upgrade -y
 
 # 3.2 Node 22 LTS (NodeSource) + herramientas
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs curl ca-certificates gnupg mysql-client
+sudo apt install -y nodejs curl ca-certificates gnupg mysql-client git
 node --version   # v22.x
 npm --version
+git --version
 
 # 3.3 MySQL 8.0+ servidor (repositorio de Ubuntu)
 sudo apt update && sudo apt install -y mysql-server
@@ -100,15 +101,11 @@ mysql -u aniei -p'TU-CLAVE-SEGURA' aniei -e "SELECT VERSION(), @@collation_datab
 ## 5. Código y configuración `[AMBAS]`
 
 ```bash
-# 5.1 Descomprimir el .zip entregado (como usuario aniei; no hay git en el servidor)
-sudo -u aniei -i
-mkdir -p /opt && cd /opt
-unzip ~/aniei-registro-2026-*.zip -d /opt/
-mv /opt/aniei-registro-2026-* /opt/aniei-registro-2026   # ajusta al nombre real dentro del zip
+# 5.1 Clonar el repositorio en /opt
+cd /opt
+git clone https://github.com/iKinoo/aniei-registro-2026.git
 cd /opt/aniei-registro-2026
 ls PLAN_DESPLIEGUE.md .env.example package.json   # confirma que es el paquete completo
-# Registra tu versión (no hay git log): nombre del zip + fecha
-echo "ZIP: aniei-registro-2026-2026-09-04.zip | Instalado: $(date +%F) | Por: TU-NOMBRE" | sudo tee /opt/VERSION-ANIEI.txt
 
 # 5.2 Generar secretos (uno por entorno, no reutilizar entre servidores)
 openssl rand -base64 32   # → AUTH_SECRET
@@ -388,38 +385,52 @@ Restaurar respaldo: §6.1 con tu `.sql` + extraer el `.tgz` sobre `./storage/` (
 
 ---
 
-## 13. Actualizar a una versión nueva (llega otro .zip)
+## 13. Actualizar a una versión nueva
 
-> Sin git: cada versión nueva es un .zip completo. **Nunca descomprimas encima sin respaldar**: el zip no trae tu `.env.local` ni tus archivos.
+> El servidor usa git. **Nunca hagas `git pull` sin respaldar primero** en caso de que algo falle.
 
 ```bash
-# 13.1 Congelar: respaldo previo (BD + .env.local + storage)
+# 13.1 Respaldar BD antes de actualizar
 source /tmp/prod-env.sh   # helper del §6 (regenéralo si abriste otra terminal)
 mysqldump --single-transaction --quick --routines --triggers --default-character-set=utf8mb4 \
   -u aniei -p"$MYSQL_PWD" aniei | gzip > /var/backups/aniei/aniei-previo-$(date +%F).sql.gz
-cp /opt/aniei-registro-2026/.env.local /var/backups/aniei/env.local.prev
+
+# 13.2 Detener servicio y actualizar código
 sudo systemctl stop aniei
-mv /opt/aniei-registro-2026 /opt/aniei-registro-2026-anterior   # rollback instantáneo
+cd /opt/aniei-registro-2026
+git pull origin main
 
-# 13.2 Descomprimir la versión nueva y devolverle TUS datos (no los del zip)
-unzip ~/aniei-registro-2026-*.zip -d /opt/
-mv /opt/aniei-registro-2026-* /opt/aniei-registro-2026
-cp /var/backups/aniei/env.local.prev /opt/aniei-registro-2026/.env.local
-chmod 600 /opt/aniei-registro-2026/.env.local
-# OJO: ./storage del zip viene vacío (solo .gitkeep). Devuelve tus archivos:
-cp -a /opt/aniei-registro-2026-anterior/storage/. /opt/aniei-registro-2026/storage/
-sudo chown -R aniei:aniei /opt/aniei-registro-2026
-echo "ZIP: <nombre-del-nuevo-zip> | Instalado: $(date +%F) | Por: TU-NOMBRE" | sudo tee /opt/VERSION-ANIEI.txt
+# 13.3 Reinstalar dependencias y compilar
+npm ci
+npm run build
 
-# 13.3 Compilar + migraciones + arrancar
-cd /opt/aniei-registro-2026 && npm ci && npm run build
-source /tmp/prod-env.sh && npx prisma migrate status   # si hay migraciones nuevas:
+# 13.4 Aplicar migraciones si las hay
+source /tmp/prod-env.sh
+npx prisma migrate status   # si dice "pending", aplica:
 # npx prisma migrate deploy
+
+# 13.5 Asegurar permisos y arrancar
+chown -R aniei:aniei .next node_modules
 sudo systemctl start aniei
 # verifica checklist §11 filas 6–10
 ```
 
-Rollback de versión: `sudo systemctl stop aniei && rm -rf /opt/aniei-registro-2026 && mv /opt/aniei-registro-2026-anterior /opt/aniei-registro-2026 && sudo systemctl start aniei` (+ restaurar el `.sql.gz` previo solo si la versión nueva corrió migraciones). Borra `-anterior` a la semana.
+**Rollback de versión:**
+```bash
+# Ver commit anterior
+cd /opt/aniei-registro-2026
+git log --oneline -5
+
+# Volver a versión anterior
+sudo systemctl stop aniei
+git checkout <commit-hash>
+npm ci && npm run build
+chown -R aniei:aniei .next node_modules
+sudo systemctl start aniei
+
+# Si hubo migraciones nuevas, restaurar BD desde respaldo:
+# source /tmp/prod-env.sh && gunzip < /var/backups/aniei/aniei-previo-YYYY-MM-DD.sql.gz | mysql -u aniei -p aniei
+```
 
 > Nunca corras `prisma migrate dev` ni `prisma db push` en producción (pueden borrar datos). Solo `migrate deploy` / `migrate status`.
 
@@ -456,4 +467,4 @@ Rollback de versión: `sudo systemctl stop aniei && rm -rf /opt/aniei-registro-2
 
 ---
 
-*Guía generada 2026-09-11 desde el paquete entregado como .zip (MySQL 8.0+ nativo, `./storage`, systemd). Dudas de arquitectura: `docs/DESIGN.md`. Detalle de la migración PostgreSQL → MySQL: `docs/PLAN_MIGRACION_MYSQL.md`.*
+*Guía generada 2026-09-11, actualizada para despliegue vía Git (MySQL 8.0+ nativo, `./storage`, systemd). Dudas de arquitectura: `docs/DESIGN.md`. Detalle de la migración PostgreSQL → MySQL: `docs/PLAN_MIGRACION_MYSQL.md`.*
