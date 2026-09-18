@@ -193,7 +193,7 @@ npx prisma migrate deploy                # aplica el baseline init_mysql
 npx prisma migrate status                # "Database schema is up to date!"
 
 # Sembrar catálogos (idempotente, puede re-ejecutarse)
-node prisma/seed.mjs
+npx tsx prisma/seed.ts
 ```
 
 > `[VACÍA]` Catálogos: el seed incluye `cargos`, `estados`, `tipo_usuario`, `tipo_actividad`, `titulos`, `instituciones`, `tipo_participante`, `precios_inscripcion`.
@@ -206,7 +206,7 @@ node prisma/seed.mjs
 # 7.1 Estructura (ya viene con .gitkeep; el contenido real NO está en git)
 mkdir -p storage/comprobantes storage/constancias
 sudo chown -R aniei:aniei /opt/aniei-registro-2026/storage
-chmod 750 /opt/aniei-registro-2026/storage
+sudo chmod 750 /opt/aniei-registro-2026/storage
 
 # 7.2 [CON-DATOS] Copiar los archivos entregados preservando rutas bucket/path
 # Ejemplo (ajusta origen):
@@ -230,17 +230,42 @@ comm -23 /tmp/rutas-bd.txt /tmp/rutas-disco.txt   # debe salir VACÍO (cero link
 
 La app autentica contra la tabla `accesos` (Auth.js + bcrypt, sin proveedor externo). Si la BD viene del dump, los admins ya existen. Si es instalación vacía (o perdiste el acceso), créalo así:
 
+> **IMPORTANTE:** La tabla `accesos` tiene foreign key a `usuarios`. **Primero debes crear el usuario en `usuarios` y luego el acceso en `accesos`**, de lo contrario fallará por integridad referencial.
+
 ```bash
 source /tmp/prod-env.sh
-FOLIO="ANI26-0001"  # usa el folio del usuario admin (debe existir en tabla usuarios)
+# Extraer password de DATABASE_URL para mysql (evita prompt interactivo)
+export MYSQL_PWD=$(python3 -c "import urllib.parse; print(urllib.parse.urlparse('$DATABASE_URL').password)")
+
+FOLIO="ANI26-0001"
+NOMBRE="Administrador"
+APELLIDO="ANIEI"
+CORREO="admin@tudominio.mx"
 PASS="Cambia-esto-ya-2026!"   # contraseña inicial; el admin la cambia al entrar
 
-HASH=$(node -e "const b=require('bcryptjs'); b.hash(process.argv[1],10).then(h=>console.log(h))" "$PASS")
-mysql -u aniei -p -e "INSERT INTO accesos (folio_registro, email, rol, nombre, password) VALUES ('$FOLIO','admin@tudominio.mx','ADMIN','Administrador','$HASH')
+# Paso 1: Crear el usuario en la tabla usuarios
+mysql -u aniei -e "INSERT INTO usuarios (folio_registro, nombre, apellido, correo) VALUES ('$FOLIO','$NOMBRE','$APELLIDO','$CORREO')
   ON DUPLICATE KEY UPDATE folio_registro=folio_registro;" aniei
+
+# Paso 2: Crear el acceso con rol ADMIN
+HASH=$(node -e "const b=require('bcryptjs'); b.hash(process.argv[1],10).then(h=>console.log(h))" "$PASS")
+mysql -u aniei -e "INSERT INTO accesos (folio_registro, email, rol, nombre, password) VALUES ('$FOLIO','$CORREO','ADMIN','$NOMBRE','$HASH')
+  ON DUPLICATE KEY UPDATE folio_registro=folio_registro;" aniei
+
+unset MYSQL_PWD
 ```
 
-> En instalación vacía primero inserta el `usuario` con ese folio (o usa `folio_registro` de un usuario creado por registro normal y luego súbelo a `ADMIN`: `UPDATE accesos SET rol='ADMIN' WHERE folio_registro='...';`).
+> Si ya existe un usuario creado por registro normal y solo quieres darle acceso admin:
+> ```bash
+> source /tmp/prod-env.sh
+> export MYSQL_PWD=$(python3 -c "import urllib.parse; print(urllib.parse.urlparse('$DATABASE_URL').password)")
+> FOLIO="folio-existente"
+> PASS="Cambia-esto-ya-2026!"
+> HASH=$(node -e "const b=require('bcryptjs'); b.hash(process.argv[1],10).then(h=>console.log(h))" "$PASS")
+> mysql -u aniei -e "INSERT INTO accesos (folio_registro, email, rol, nombre, password) VALUES ('$FOLIO','admin@tudominio.mx','ADMIN','Administrador','$HASH')
+>   ON DUPLICATE KEY UPDATE rol='ADMIN';" aniei
+> unset MYSQL_PWD
+> ```
 
 ---
 
@@ -248,9 +273,9 @@ mysql -u aniei -p -e "INSERT INTO accesos (folio_registro, email, rol, nombre, p
 
 ```bash
 # 9.1 Compilar y verificar
-npm run build    # debe terminar sin errores
-npx tsc --noEmit # cero errores
-npm run lint     # cero errores
+sudo npm run build    # debe terminar sin errores
+sudo npx tsc --noEmit # cero errores
+
 
 # 9.2 Unidad systemd (WorkingDirectory es OBLIGATORIO: ./storage es relativo a él)
 sudo tee /etc/systemd/system/aniei.service > /dev/null <<'UNIT'
@@ -410,6 +435,7 @@ Rollback de versión: `sudo systemctl stop aniei && rm -rf /opt/aniei-registro-2
 | Subidas fallan / 500 al registrar | Permisos de `./storage` o `WorkingDirectory` mal | `chown aniei:aniei storage`, verifica `WorkingDirectory` en la unit |
 | `/api/archivos/...` → 401 siempre | `STORAGE_URL_SECRET` distinto entre quien firmó y quien sirve (dos instancias con env distinto) | Unifica el secreto, reinicia |
 | Login redirige a localhost | `NEXT_PUBLIC_APP_URL` con valor viejo | Pon la URL pública + `restart` |
+| `UntrustedHost` en logs de auth | NextAuth no confía en el host detrás de nginx | Verifica `trustHost: true` en `src/auth.config.ts` y que `NEXT_PUBLIC_APP_URL` sea el dominio público |
 | Correos no llegan | Gmail bloquea / App Password inválida | Genera nueva App Password (2FA activado), revisa `journalctl` |
 | `Access denied for user 'aniei'@'localhost'` | Contraseña incorrecta o usuario no creado | Verifica credenciales en `.env.local` y recrea usuario (§4.1) |
 | Puerto 3000 en uso | Dos instancias | `ss -ltnp \| grep 3000`, mata la sobrante, `restart aniei` |
