@@ -154,12 +154,13 @@ export class RegistrarUsuario {
         const { prisma } = await import('@/infrastructure/database/client');
         await (prisma as any).$transaction(async (tx: any) => {
           const { PrismaUsuarioRepository } = await import('@/infrastructure/repositories/PrismaUsuarioRepository');
+          const { PrismaFolioGenerator } = await import('@/infrastructure/database/PrismaFolioGenerator');
           const { PrismaAccesoRepository } = await import('@/infrastructure/repositories/PrismaAccesoRepository');
           const { PrismaDepositoRepository } = await import('@/infrastructure/repositories/PrismaDepositoRepository');
           const { PrismaFacturacionRepository } = await import('@/infrastructure/repositories/PrismaFacturacionRepository');
           const { PrismaInscripcionActividadRepository } = await import('@/infrastructure/repositories/PrismaInscripcionActividadRepository');
           const ctx = {
-            usuarioRepo: new PrismaUsuarioRepository(tx),
+            usuarioRepo: new PrismaUsuarioRepository(tx, new PrismaFolioGenerator(tx)),
             accesoRepo: new PrismaAccesoRepository(tx),
             depositoRepo: new PrismaDepositoRepository(tx),
             facturacionRepo: new PrismaFacturacionRepository(tx),

@@ -1,15 +1,20 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { IFolioGenerator } from '@/application/ports/IFolioGenerator';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
 import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 import { UsuarioMapper } from '../mappers/UsuarioMapper';
 
 export class PrismaUsuarioRepository implements IUsuarioRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly folioGenerator: IFolioGenerator,
+  ) {}
 
   async crear(usuario: Usuario): Promise<Usuario> {
-    const data = UsuarioMapper.toPersistence(usuario);
+    const folio = usuario.folioRegistro ?? (await this.folioGenerator.siguiente());
+    const data = { ...UsuarioMapper.toPersistence(usuario), folio_registro: folio };
     const created = await this.prisma.usuarios.create({ data });
     return UsuarioMapper.toDomain(created);
   }
@@ -81,8 +86,11 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       const folios: string[] = [];
 
       for (const m of data.miembros) {
+        const { id } = await tx.folios_contador.create({ data: {} });
+        const folio = `ANI26-${String(id).padStart(4, '0')}`;
         const newUsuario = await tx.usuarios.create({
           data: {
+            folio_registro: folio,
             nombre: m.nombre,
             apellido: m.apellido,
             correo: m.correo,

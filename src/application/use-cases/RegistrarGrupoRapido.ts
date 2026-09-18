@@ -102,9 +102,10 @@ export class RegistrarGrupoRapido {
         await (prisma as any).$transaction(async (tx: any) => {
           const { PrismaDepositoRepository } = await import('@/infrastructure/repositories/PrismaDepositoRepository');
           const { PrismaUsuarioRepository } = await import('@/infrastructure/repositories/PrismaUsuarioRepository');
+          const { PrismaFolioGenerator } = await import('@/infrastructure/database/PrismaFolioGenerator');
           const ctx = {
             depositoRepo: new PrismaDepositoRepository(tx),
-            usuarioRepo: new PrismaUsuarioRepository(tx),
+            usuarioRepo: new PrismaUsuarioRepository(tx, new PrismaFolioGenerator(tx)),
           };
           await doTx(ctx);
         });

@@ -32,9 +32,9 @@ export async function buscarUsuariosAction(query: string): Promise<{ success: tr
     const rows = await prisma.usuarios.findMany({
       where: {
         OR: [
-          { nombre: { contains: q, mode: 'insensitive' } },
-          { apellido: { contains: q, mode: 'insensitive' } },
-          { correo: { contains: q, mode: 'insensitive' } },
+          { nombre: { contains: q } },
+          { apellido: { contains: q } },
+          { correo: { contains: q } },
         ],
       },
       select: { folio_registro: true, nombre: true, apellido: true, correo: true },

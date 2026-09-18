@@ -123,10 +123,10 @@ export class PrismaEquipoRepository implements IEquipoRepository {
     const rows = await this.prisma.usuarios.findMany({
       where: {
         OR: [
-          { folio_registro: { contains: q, mode: 'insensitive' } },
-          { nombre: { contains: q, mode: 'insensitive' } },
-          { apellido: { contains: q, mode: 'insensitive' } },
-          { correo: { contains: q, mode: 'insensitive' } },
+          { folio_registro: { contains: q } },
+          { nombre: { contains: q } },
+          { apellido: { contains: q } },
+          { correo: { contains: q } },
         ],
       },
       select: {

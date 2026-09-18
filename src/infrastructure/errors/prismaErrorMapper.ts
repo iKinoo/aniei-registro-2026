@@ -25,10 +25,14 @@ export function mapPrismaError(e: unknown, fallbackCorreo?: string): Error | nul
     }
   }
   // DriverAdapterError wraps Prisma code in cause
-  const anyErr = e as { code?: string; cause?: { code?: string } };
+  const anyErr = e as { code?: string; cause?: { code?: string; meta?: { target?: string[] } }; meta?: { target?: string[] } };
   const code = anyErr.code ?? anyErr.cause?.code;
-  if (code === 'P2002' && fallbackCorreo) {
-    return RegistroError.CORREO_DUPLICADO(fallbackCorreo);
+  if (code === 'P2002') {
+    const target = (anyErr.meta?.target ?? anyErr.cause?.meta?.target)?.join(',') ?? '';
+    if (target.includes('correo') || target.includes('email')) {
+      return RegistroError.CORREO_DUPLICADO(fallbackCorreo ?? 'correo');
+    }
+    return new RegistroError(`Restricción única violada: ${target}`, 'P2002');
   }
   return null;
 }

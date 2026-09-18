@@ -1,7 +1,7 @@
 # PLAN & DESIGN — Sistema de Registro ANIEI 2026
 
 > **Estado:** En desarrollo activo (MVP funcional con módulos expandidos)  
-> **Stack:** Next.js 16 (App Router) · React 19 · PostgreSQL (Supabase) · Prisma 7 (@prisma/adapter-pg) · TypeScript · Zod 4 · Tailwind CSS 4 · NextAuth v5 (Auth.js) · Nodemailer · @react-pdf/renderer · qrcode · bcryptjs  
+> **Stack:** Next.js 16 (App Router) · React 19 · MySQL 8.x · Prisma 7 (@prisma/adapter-mariadb) · TypeScript · Zod 4 · Tailwind CSS 4 · NextAuth v5 (Auth.js) · Nodemailer · @react-pdf/renderer · qrcode · bcryptjs  
 > **Principio rector:** Clean Architecture (Arquitectura por capas / Hexagonal) adaptada a Next.js
 
 ---
@@ -72,7 +72,7 @@ El sistema se construye sobre Next.js aprovechando **Server Actions** como punto
 | ID     | Requisito                                                                               |
 |--------|-----------------------------------------------------------------------------------------|
 | RNF-01 | La capa de dominio y aplicación **NO** deben depender de frameworks ni librerías externas |
-| RNF-02 | Cambiar de proveedor de BD (Supabase → VPS PostgreSQL) no debe afectar casos de uso      |
+| RNF-02 | Cambiar de proveedor de BD (PostgreSQL → MySQL) no debe afectar casos de uso      |
 | RNF-03 | Cambiar proveedor de correo (Nodemailer → SendGrid → SMTP propio) requiere solo un adaptador |
 | RNF-04 | Cambiar almacenamiento (Supabase Storage → S3 → filesystem) requiere solo un adaptador    |
 | RNF-05 | El módulo de registro grupal es independiente y opera vía token; no interfiere con el flujo base individual |
@@ -117,7 +117,7 @@ La clave es separar **qué hace el sistema** (dominio + casos de uso) de **cómo
 │                         ▲ implementa                             │
 │  ┌──────────────────────┴────────────────────────────────────┐  │
 │  │              INFRASTRUCTURE LAYER                          │  │
-│  │    database/     → Prisma schema, client (PrismaPg+pg)    │  │
+│  │    database/     → Prisma schema, client (PrismaMariaDb+mariadb)    │  │
 │  │    mappers/      → Data Mappers (PrismaType ↔ Entidad)   │  │
 │  │    repositories/ → Implementaciones concretas (Prisma)    │  │
 │  │    services/     → Email, PDF, Storage, Auth (adapters)   │  │
@@ -358,7 +358,7 @@ graph TB
         StoreSvc["Storage Adapters<br/>Supabase Storage (buckets)"]
         AuthSvc["Auth Adapters<br/>Auth.js (Credentials)"]
         AdminSvc["Admin Services<br/>PrismaAdminQueryService"]
-        DB[("PostgreSQL 17<br/>(Supabase pooler)")]
+        DB[("MySQL 8.x<br/>(InnoDB)")]
     end
 
     CC -->|"submit form"| SA
@@ -376,7 +376,7 @@ graph TB
 
     Repos -->|"usa"| Mappers
     Repos -->|"query/insert"| ORM
-    ORM -->|"SQL (pg Pool)"| DB
+    ORM -->|"SQL (mariadb Pool)"| DB
 
     style Domain fill:#1a1a2e,stroke:#e94560,color:#fff
     style Application fill:#16213e,stroke:#0f3460,color:#fff
@@ -992,7 +992,7 @@ sequenceDiagram
     participant Store as IStorageService<br/>(Supabase)
     participant PDF as IPdfService<br/>(ReactPdf)
     participant Mail as IEmailService<br/>(Nodemailer)
-    participant DB as PostgreSQL
+    participant DB as MySQL
 
     A->>CC: Llena wizard 3 pasos +<br/>comprobante (img/PDF)
     CC->>SA: submit (FormData + numMiembros)
@@ -1056,7 +1056,7 @@ sequenceDiagram
     participant Store as IStorageService
     participant PDF as IPdfService
     participant Mail as IEmailService
-    participant DB as PostgreSQL
+    participant DB as MySQL
 
     R->>CC: Ingresa N miembros {nombre, apellido}<br/>+ depósito único
     CC->>SA: submit (FormData)
@@ -1483,7 +1483,7 @@ export function getAuthService(): IAuthService { return new AuthJsAuthService();
 
 | Escenario                         | Qué cambia                              | Qué NO cambia                  |
 |-----------------------------------|------------------------------------------|---------------------------------|
-| Supabase → VPS con PostgreSQL     | `DATABASE_URL` en `.env`                 | Use Cases, Domain, Presentation |
+| Supabase → VPS con MySQL     | `DATABASE_URL` en `.env`                 | Use Cases, Domain, Presentation |
 | Prisma → Drizzle                  | Repos, Mappers, esquema ORM              | Use Cases, Domain, Presentation |
 | Nodemailer → SendGrid                 | Nuevo adapter `SendGridEmailService`     | Use Cases, Domain, Presentation |
 | Supabase Storage → S3             | Nuevo adapter `S3StorageService`         | Use Cases, Domain, Presentation |
@@ -1524,7 +1524,7 @@ sequenceDiagram
     participant Repo as PrismaUsuarioRepo
     participant Mapper as UsuarioMapper
     participant Prisma as PrismaClient
-    participant DB as PostgreSQL
+    participant DB as MySQL
 
     Note over UC,DB: LECTURA: buscarPorCorreo()
     UC->>Repo: buscarPorCorreo(email)
@@ -1654,12 +1654,12 @@ graph LR
     subgraph Infra["🔌 Infraestructura"]
         R["PrismaUsuarioRepo<br/>PrismaDepositoRepo"]
         P["PrismaClient + PrismaPg"]
-        DB[("PostgreSQL")]
+        DB[("MySQL")]
     end
 
     R -->|"toPersistence()"| M
     M -->|"datos primitivos"| P
-    P -->|"SQL (pg Pool)"| DB
+    P -->|"SQL (mariadb Pool)"| DB
     DB -->|"rows"| P
     P -->|"PrismaTypes"| M
     M -->|"toDomain()"| R
@@ -1684,7 +1684,7 @@ graph LR
 ### ADR-02: ORM + Data Mapper Pattern
 
 - **Contexto:** Acceso a BD con type-safety sin acoplar dominio al ORM.
-- **Decisión:** Prisma + `@prisma/adapter-pg` (PrismaPg + `pg` Pool) en infraestructura, con Data Mapper por entidad.
+- **Decisión:** Prisma + `@prisma/adapter-mariadb` (PrismaMariaDb + `mariadb` Pool) en infraestructura, con Data Mapper por entidad.
 - **Razón:** `client.ts:1` usa `DATABASE_URL` (pooler 6543) + `PrismaPg`. El Mapper aísla dominio.
 - **Consecuencia:** Cambiar ORM solo afecta repos/mappers.
 
@@ -1770,7 +1770,7 @@ graph LR
 
 ## Apéndice A: Mapeo Dominio ↔ Base de Datos
 
-| Entidad de Dominio   | Tabla PostgreSQL       | Notas                                        |
+| Entidad de Dominio   | Tabla MySQL       | Notas                                        |
 |-----------------------|------------------------|----------------------------------------------|
 | `Usuario`             | `usuarios`             | PK `folio_registro ANI26-XXXX` (secuencia)   |
 | `Deposito`            | `depositos`            | `archivo_url/nombre/mime/tamanio` + `proposito` + `notas` |
@@ -1791,9 +1791,10 @@ graph LR
 ## Apéndice B: Variables de Entorno Esperadas
 
 ```env
-# ── Base de Datos (Supabase / PostgreSQL) ──
-DATABASE_URL="postgresql://postgres.[REF]:[PASS]@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
-DIRECT_URL="postgresql://postgres.[REF]:[PASS]@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+# ── Base de Datos (MySQL 8.x) ──
+DATABASE_URL="mysql://aniei:[PASS]@localhost:3306/aniei"
+DIRECT_URL="mysql://aniei:[PASS]@localhost:3306/aniei"
+SHADOW_DATABASE_URL="mysql://aniei:[PASS]@localhost:3306/aniei_shadow"
 
 # ── Supabase: Storage ──
 NEXT_PUBLIC_SUPABASE_URL="https://[REF].supabase.co"
@@ -1815,7 +1816,7 @@ NEXT_PUBLIC_BASE_URL="https://aniei-registro-2026.vercel.app" # para QR de grupo
 # ENABLE_GROUP_REGISTRATION no se usa (reemplazado por flujo grupo rápido autenticado)
 ```
 
-> `DATABASE_URL` (pooler 6543) es la usada por `@prisma/adapter-pg` en `src/infrastructure/database/client.ts:11`. `DIRECT_URL` solo para CLI/migraciones Prisma.
+> `DATABASE_URL` es la usada por `@prisma/adapter-mariadb` en `src/infrastructure/database/client.ts`. `DIRECT_URL` solo para CLI/migraciones Prisma. `SHADOW_DATABASE_URL` requerida para `prisma migrate dev`.
 
 ## Apéndice C: Rutas y Páginas (implementación real)
 

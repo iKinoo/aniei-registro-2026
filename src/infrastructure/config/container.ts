@@ -1,4 +1,5 @@
 import { prisma } from '@/infrastructure/database/client';
+import { PrismaFolioGenerator } from '@/infrastructure/database/PrismaFolioGenerator';
 import { PrismaUsuarioRepository } from '@/infrastructure/repositories/PrismaUsuarioRepository';
 import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDepositoRepository';
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
@@ -38,7 +39,7 @@ import { IPdfService } from '@/application/ports/IPdfService';
 import { IStorageService } from '@/application/ports/IStorageService';
 
 export function getUsuarioRepository(): IUsuarioRepository {
-  return new PrismaUsuarioRepository(prisma);
+  return new PrismaUsuarioRepository(prisma, new PrismaFolioGenerator(prisma));
 }
 
 export function getDepositoRepository(): IDepositoRepository {

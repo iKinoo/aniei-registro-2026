@@ -1,31 +1,26 @@
-import { Pool } from 'pg';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-  pool: Pool | undefined;
-};
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
 function createPrismaClient() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL no está configurada");
-  }
-  const pool =
-    globalForPrisma.pool ??
-    new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 10,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 5000,
-      maxUses: 7500,
-    });
-  pool.on("error", (err) => {
-    console.error("pg pool error", err);
-  });
-  globalForPrisma.pool = pool;
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL no está configurada');
 
-  const adapter = new PrismaPg(pool);
+  const u = new URL(url);
+  const adapter = new PrismaMariaDb({
+    host: u.hostname,
+    port: u.port ? Number(u.port) : 3306,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    database: u.pathname.replace(/^\//, ''),
+    connectionLimit: 10,
+    acquireTimeout: 5000,
+    idleTimeout: 30,
+    connectTimeout: 5000,
+    timezone: 'Z',
+  });
+
   return new PrismaClient({ adapter });
 }
 

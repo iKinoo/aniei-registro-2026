@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 enum Rol {
@@ -18,7 +18,7 @@ model accesos {
   email          String?   @db.VarChar(100)
   rol            Rol       @default(USER)
   nombre         String?   @db.VarChar(150)
-  auth_id        String?   @unique @db.Uuid
+  auth_id        String?   @unique @db.VarChar(36)
   password       String?   @db.VarChar(255)
   usuarios       usuarios? @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
@@ -40,8 +40,8 @@ model actividades {
   id_actividad            Int                       @id @default(autoincrement())
   nombre                  String                    @db.VarChar(200)
   cupo_maximo             Int?                      @default(0)
-  fecha_inicio            DateTime                  @db.Timestamp(6)
-  fecha_fin               DateTime                  @db.Timestamp(6)
+  fecha_inicio            DateTime                  @db.DateTime(6)
+  fecha_fin               DateTime                  @db.DateTime(6)
   id_tipo_actividad       Int?
   id_institucion_sede     Int?
   id_sala                 Int?                      @default(0)
@@ -62,7 +62,7 @@ model asistencia_actividades {
   id_asistencia      Int          @id @default(autoincrement())
   folio_registro     String       @db.VarChar(15)
   id_actividad       Int?
-  fecha_hora_marcaje DateTime     @default(now()) @db.Timestamp(6)
+  fecha_hora_marcaje DateTime     @default(now()) @db.DateTime(6)
   actividades        actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios           usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
@@ -90,8 +90,8 @@ model depositos {
   ciudad          String?   @db.VarChar(100)
   referencia      String    @db.VarChar(50)
   monto           Decimal   @db.Decimal(10, 2)
-  fecha_deposito  DateTime  @db.Timestamp(6)
-  fecha_registro  DateTime  @default(now()) @db.Timestamp(6)
+  fecha_deposito  DateTime  @db.DateTime(6)
+  fecha_registro  DateTime  @default(now()) @db.DateTime(6)
   archivo_url     String    @db.VarChar(500)
   archivo_nombre  String    @db.VarChar(255)
   archivo_mime    String    @db.VarChar(100)
@@ -120,7 +120,7 @@ model equipos {
   id_institucion     Int?
   numero_equipo      Int                  @default(1)
   nombre_equipo      String               @db.VarChar(150)
-  fecha_registro     DateTime?            @default(now()) @db.Timestamp(6)
+  fecha_registro     DateTime?            @default(now()) @db.DateTime(6)
   equipo_integrantes equipo_integrantes[]
   actividades        actividades          @relation(fields: [id_actividad], references: [id_actividad], onUpdate: NoAction)
   instituciones      instituciones?       @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
@@ -159,7 +159,7 @@ model inscripcion_actividades {
   id_inscripcion    Int          @id @default(autoincrement())
   folio_registro    String       @db.VarChar(15)
   id_actividad      Int?
-  fecha_inscripcion DateTime     @default(now()) @db.Timestamp(6)
+  fecha_inscripcion DateTime     @default(now()) @db.DateTime(6)
   url_constancia    String?      @db.VarChar(500)
   actividades       actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios          usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
@@ -194,7 +194,7 @@ model tipo_usuario {
 }
 
 model usuarios {
-  folio_registro String @id @default(dbgenerated("('ANI26-'::text || lpad((nextval('usuarios_folio_seq'::regclass))::text, 4, '0'::text))")) @db.VarChar(15)
+  folio_registro String @id @db.VarChar(15)
 
   codigo_barras           String?                   @unique @db.VarChar(50)
   nombre                  String                    @db.VarChar(125)
@@ -213,13 +213,14 @@ model usuarios {
   id_entidad_federativa   Int?
   institucion_externa     String?                   @db.VarChar(150)
   verificado              Boolean                   @default(false)
-  fecha_registro          DateTime                  @default(now()) @db.Timestamp(6)
+  fecha_registro          DateTime                  @default(now()) @db.DateTime(6)
   id_grupo_registro       Int?
 
   @@index([id_institucion])
   @@index([id_grupo_registro])
   @@index([id_entidad_federativa])
   @@index([id_tipo_participante])
+  @@index([apellido, nombre])
   accesos                 accesos[]
   actividad_ponentes      actividad_ponentes[]
   asistencia_actividades  asistencia_actividades[]
@@ -240,7 +241,7 @@ model grupos_registro {
   id                         Int        @id @default(autoincrement())
   token                      String     @unique @db.VarChar(100)
   folio_registro_responsable String     @db.VarChar(15)
-  fecha_registro             DateTime   @default(now()) @db.Timestamp(6)
+  fecha_registro             DateTime   @default(now()) @db.DateTime(6)
   responsable                usuarios   @relation("GrupoResponsable", fields: [folio_registro_responsable], references: [folio_registro], onDelete: Cascade)
   miembros                   usuarios[] @relation("GrupoMiembros")
 }
@@ -258,7 +259,7 @@ model precios_inscripcion {
   id                   Int               @id @default(autoincrement())
   id_tipo_participante Int
   es_afiliada          Boolean           @default(true)
-  fecha_limite         DateTime          @db.Timestamp(6)
+  fecha_limite         DateTime          @db.DateTime(6)
   costo                Decimal           @db.Decimal(10, 2)
   orden                Int               @default(1)
   activo               Boolean           @default(true)
@@ -273,8 +274,13 @@ model constancias_manuales {
   destinatarios    String   @db.Text
   descripcion      String   @db.Text
   url_pdf          String   @db.VarChar(500)
-  fecha_generacion DateTime @default(now()) @db.Timestamp(6)
+  fecha_generacion DateTime @default(now()) @db.DateTime(6)
 
   @@index([tipo_constancia])
   @@index([fecha_generacion])
+}
+
+model folios_contador {
+  id         Int      @id @default(autoincrement())
+  creado_en  DateTime @default(now()) @db.DateTime(6)
 }

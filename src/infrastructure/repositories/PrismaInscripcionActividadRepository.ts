@@ -1,4 +1,4 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { InscritoDTO } from '@/application/dtos/ActividadDTO';
 
@@ -91,13 +91,13 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
             }
 
             // 2. Contar inscritos dentro de la transacción (dato fresco + bloqueado)
-            const [{ count }] = await tx.$queryRaw<Array<{ count: bigint }>>`
-              SELECT COUNT(*)::bigint as count
+            const [{ total }] = await tx.$queryRaw<Array<{ total: bigint }>>`
+              SELECT COUNT(*) AS total
               FROM inscripcion_actividades
               WHERE id_actividad = ${idActividad}
             `;
 
-            if (Number(count) >= actividad.cupo_maximo) {
+            if (Number(total) >= actividad.cupo_maximo) {
               // Cupo lleno → lanzar para marcarla como sinCupo
               throw new Error('SIN_CUPO');
             }
@@ -113,6 +113,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
           {
             // Timeout de 8s para no bloquear indefinidamente
             timeout: 8000,
+            isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
           },
         );
 

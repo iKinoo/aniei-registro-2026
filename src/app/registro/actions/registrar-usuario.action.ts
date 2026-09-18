@@ -368,7 +368,7 @@ export async function registrarUsuarioAction(
         return { success: false, errors: { _form: `${domainError.message}. Por favor intente de nuevo.` }, fields: savedFieldsOnError };
       }
       if (domainError.code === 'P2002') {
-        return { success: false, errors: { correo: domainError.message }, fields: savedFieldsOnError };
+        return { success: false, errors: { _form: domainError.message }, fields: savedFieldsOnError };
       }
     }
     if (error instanceof Error && error.message.includes('RFC')) {

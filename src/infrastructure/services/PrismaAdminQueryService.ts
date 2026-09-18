@@ -19,9 +19,9 @@ export class PrismaAdminQueryService implements IAdminQueryService {
     if (search) {
       conditions.push({
         OR: [
-          { nombre: { contains: search, mode: 'insensitive' } },
-          { apellido: { contains: search, mode: 'insensitive' } },
-          { correo: { contains: search, mode: 'insensitive' } },
+          { nombre: { contains: search } },
+          { apellido: { contains: search } },
+          { correo: { contains: search } },
         ],
       });
     }

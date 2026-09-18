@@ -133,10 +133,10 @@ export async function registrarGrupoRapidoAction(
       }
     }
 
-    const file = formData.get('archivo') as File;
+    const file = formData.get('comprobante') as File;
     const archivoError = validarArchivo(file);
     if (archivoError) {
-      return { success: false, errors: { archivo: archivoError }, error: archivoError, fields: savedFields };
+      return { success: false, errors: { comprobante: archivoError }, error: archivoError, fields: savedFields };
     }
 
     const arrayBuffer = await file.arrayBuffer();
