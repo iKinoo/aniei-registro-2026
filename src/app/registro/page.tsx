@@ -1,6 +1,8 @@
 import { getCatalogoRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { RegistroForm } from './components/RegistroForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function RegistroPage() {
   const catalogoRepo = getCatalogoRepository();
   const precioRepo = getPrecioInscripcionRepository();

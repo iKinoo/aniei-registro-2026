@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/infrastructure/database/client';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Completar Registro | ANIEI 2026' };
 
 export default async function GrupoCompletarPage(props: { params: Promise<{ token: string }> }) {

@@ -1,6 +1,8 @@
 import { getActividadesConEquiposAction } from './actions';
 import EquiposListClient from './EquiposListClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Administrar Equipos | CPanel ANIEI',
 };

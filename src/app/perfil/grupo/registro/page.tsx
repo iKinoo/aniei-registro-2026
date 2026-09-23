@@ -4,6 +4,8 @@ import { prisma } from '@/infrastructure/database/client';
 import { getCatalogoRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { GrupoRapidoForm } from './GrupoRapidoForm';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Registro Grupal | ANIEI 2026',
   description: 'Registra un grupo de participantes',

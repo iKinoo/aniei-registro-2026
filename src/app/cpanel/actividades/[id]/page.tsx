@@ -1,6 +1,8 @@
 import { getDetalleActividadAction } from './actions';
 import DetalleActividadClient from './DetalleActividadClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DetalleActividadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const result = await getDetalleActividadAction(id);

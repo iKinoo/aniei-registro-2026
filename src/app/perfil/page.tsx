@@ -7,6 +7,8 @@ import AutoLogout from './AutoLogout';
 import { CerrarSesionButton } from './CerrarSesionButton';
 import styles from './page.module.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
 
 export default async function PerfilPage() {

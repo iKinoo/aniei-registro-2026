@@ -1,6 +1,8 @@
 import { getActividadesAction, getTiposActividadAction, getInstitucionesAction } from './actions';
 import ActividadesClient from './ActividadesClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Gestión de Actividades | CPanel ANIEI',
 };

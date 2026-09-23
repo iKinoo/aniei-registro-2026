@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { getActividadDetalleAction, getEquiposAction } from '../actions';
 import EquiposManagerClient from './EquiposManagerClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Gestión de Equipos | CPanel ANIEI',
 };

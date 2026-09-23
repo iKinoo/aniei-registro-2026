@@ -2,6 +2,8 @@ import { prisma } from '@/infrastructure/database/client';
 import Link from 'next/link';
 import { CompletarRegistroForm } from './CompletarRegistroForm';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Completar Registro Alumno | ANIEI 2026' };
 
 function NotFoundUI() {

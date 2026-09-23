@@ -4,6 +4,8 @@ import { prisma } from '@/infrastructure/database/client';
 import Link from 'next/link';
 import { UsuarioEditarForm } from './UsuarioEditarForm';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Editar Usuario | CPanel ANIEI 2026' };
 
 export default async function UsuarioEditarPage({ params }: { params: Promise<{ folio: string }> }) {

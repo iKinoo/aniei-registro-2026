@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getActividadesDisponiblesAction, getInscripcionesUsuarioAction } from './actions';
 import ActividadesSeleccionClient from './ActividadesSeleccionClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Selección de Actividades | ANIEI 2026' };
 
 export default async function ActividadesPage() {
