@@ -19,6 +19,7 @@ function createPrismaClient() {
     idleTimeout: 30,
     connectTimeout: 5000,
     timezone: 'Z',
+    allowPublicKeyRetrieval: true,
   });
 
   return new PrismaClient({ adapter });
