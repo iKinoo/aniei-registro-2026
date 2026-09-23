@@ -32,7 +32,7 @@ La app lee todo de **variables de entorno** (`.env.local`, jamás commiteado). N
 | 2 | `AUTH_SECRET` (32+ chars aleatorios) | Firmar sesiones Auth.js. **Genera uno nuevo por entorno**, no reutilices el de otro servidor | Generarlo tú (§5.2) |
 | 3 | `STORAGE_URL_SECRET` (32+ chars) | Firmar URLs de archivos `/api/archivos` | Generarlo tú (§5.2) |
 | 4 | Cuenta Gmail + App Password (o SMTP que te indiquen) | Correos de confirmación/constancias (`GMAIL_USER`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`) | Equipo ANIEI |
-| 5 | Dominio público (ej. `registro.aniii.mx`) o IP | `NEXT_PUBLIC_APP_URL` + nginx/TLS | Equipo ANIEI |
+| 5 | Dominio público (ej. `registro.anieii.mx`) o IP | `NEXT_PUBLIC_APP_URL` + nginx/TLS | Equipo ANIEI |
 | 6 | Dump de datos (`aniei-AAAA-MM-DD.sql`, formato `mysqldump`) **o** confirmación de instalación vacía | Precargar usuarios/catálogos reales | Equipo dev |
 | 7 | Carpeta `storage/` con archivos (o acceso para migrarlos) | Comprobantes/constancias históricas | Equipo dev |
 | 8 | Credenciales del primer ADMIN (folio + contraseña inicial) | Entrar al `/cpanel` | Se crean en §8 |
@@ -443,28 +443,14 @@ sudo systemctl start aniei
 | `prisma migrate deploy` → "datasource.url is required" | Prisma CLI no lee `.env.local` | Exporta vars primero (`source /tmp/prod-env.sh`, §6) |
 | `migrate deploy` → `Table 'accesos' doesn't exist` en BD **vacía** | Sin baseline (esperado) | Usa `npx prisma migrate deploy` con el baseline `init_mysql` |
 | `Error: STORAGE_URL_SECRET debe tener min 32` | Secreto corto o ausente | Regenera con `openssl` (§5.2), reinicia |
-| Subidas fallan / 500 al registrar | Permisos de `./storage` o `WorkingDirectory` mal | `chown aniei:aniei storage`, verifica `WorkingDirectory` en la unit |
+| Subidas fallan / 500 al registrar | Permisos de `./storage` o `WorkingDirectory` mal | Como root: `chown -R aniei:aniei /opt/aniei-registro-2026/storage`, verifica `WorkingDirectory` en la unit |
 | `/api/archivos/...` → 401 siempre | `STORAGE_URL_SECRET` distinto entre quien firmó y quien sirve (dos instancias con env distinto) | Unifica el secreto, reinicia |
 | Login redirige a localhost | `NEXT_PUBLIC_APP_URL` con valor viejo | Pon la URL pública + `restart` |
 | `UntrustedHost` en logs de auth | NextAuth no confía en el host detrás de nginx | Verifica `trustHost: true` en `src/auth.config.ts` y que `NEXT_PUBLIC_APP_URL` sea el dominio público |
 | Correos no llegan | Gmail bloquea / App Password inválida | Genera nueva App Password (2FA activado), revisa `journalctl` |
 | `Access denied for user 'aniei'@'localhost'` | Contraseña incorrecta o usuario no creado | Verifica credenciales en `.env.local` y recrea usuario (§4.1) |
-| Puerto 3000 en uso | Dos instancias | `ss -ltnp \| grep 3000`, mata la sobrante, `restart aniei` |
+| Puerto 3000 en uso | Dos instancias | `ss -ltnp \| grep 3000`, mata la sobrante, `systemctl restart aniei` |
 | `pool timeout` en logs | MySQL no responde o credenciales mal | Verifica `mysqladmin ping` y credenciales en `.env.local` |
+| Permiso denegado en `.next` o `node_modules` tras `git pull` | Archivos creados por root pero servicio corre como `aniei` | Como root: `chown -R aniei:aniei /opt/aniei-registro-2026/.next /opt/aniei-registro-2026/node_modules` |
 
 ---
-
-## 15. Seguridad mínima antes de abrir al público
-
-- [ ] `.env.local` con `chmod 600` y dueño `aniei`; jamás commiteado ni enviado por chat sin redactar.
-- [ ] `AUTH_SECRET` y `STORAGE_URL_SECRET` únicos de este servidor (generados aquí).
-- [ ] Contraseña del usuario `aniei` en MySQL fuerte y solo en `.env.local`.
-- [ ] MySQL escuchando solo localhost; UFW con 22/80/443; 3306 y 3000 **no** expuestos.
-- [ ] HTTPS activo y `NEXT_PUBLIC_APP_URL=https://...`.
-- [ ] Primer ADMIN con contraseña inicial cambiada tras el primer login.
-- [ ] Respaldos programados y **restaurados una vez en prueba** (un backup no probado no existe).
-- [ ] `docs/db/migrations_pg_legacy/` no se ejecuta; fuente de esquema: `prisma/migrations/`.
-
----
-
-*Guía generada 2026-09-11, actualizada para despliegue vía Git (MySQL 8.0+ nativo, `./storage`, systemd). Dudas de arquitectura: `docs/DESIGN.md`. Detalle de la migración PostgreSQL → MySQL: `docs/PLAN_MIGRACION_MYSQL.md`.*
