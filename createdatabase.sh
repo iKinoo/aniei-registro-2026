@@ -1,0 +1,8 @@
+sudo mysql <<'SQL'
+CREATE DATABASE IF NOT EXISTS aniei CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE IF NOT EXISTS aniei_shadow CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'aniei'@'localhost' IDENTIFIED BY 'TU-CLAVE-SEGURA';
+GRANT ALL PRIVILEGES ON aniei.* TO 'aniei'@'localhost';
+GRANT ALL PRIVILEGES ON aniei_shadow.* TO 'aniei'@'localhost';
+FLUSH PRIVILEGES;
+SQL
