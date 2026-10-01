@@ -1,7 +1,5 @@
 import { ReportesClient } from './ReportesClient';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = {
   title: 'Reportes - CPanel',
 };

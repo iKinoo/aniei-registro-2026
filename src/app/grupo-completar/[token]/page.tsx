@@ -2,8 +2,6 @@ import { getRegistroQueryService } from '@/infrastructure/config/container';
 import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = { title: 'Completar Registro | ANIEI 2026' };
 
 export default async function GrupoCompletarPage(props: { params: Promise<{ token: string }> }) {

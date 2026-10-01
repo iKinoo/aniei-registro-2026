@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation';
 import { getTalleresAction, getInscripcionesUsuarioAction } from '../actions';
 import ActividadesSeleccionClient from '../ActividadesSeleccionClient';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = { title: 'Talleres | ANIEI 2026' };
 
 export default async function TalleresPage() {

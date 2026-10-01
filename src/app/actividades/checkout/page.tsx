@@ -7,8 +7,6 @@ import { getFacturacionRepository } from '@/infrastructure/config/container';
 import CheckoutClient from './CheckoutClient';
 import type { FacturacionDefaults } from '@/app/registro/components/SeccionFacturacion';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = { title: 'Checkout de Actividades | ANIEI 2026' };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ ids?: string }> }) {

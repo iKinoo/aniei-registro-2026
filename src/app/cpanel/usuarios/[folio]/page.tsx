@@ -6,8 +6,6 @@ import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { UsuarioDetalleClient } from './UsuarioDetalleClient';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = { title: 'Detalle de Usuario | CPanel ANIEI 2026' };
 
 export default async function UsuarioDetallePage({ params }: { params: Promise<{ folio: string }> }) {

@@ -1,8 +1,6 @@
 import { getTiposActividadAction, obtenerPreciosAction, obtenerTiposParticipanteAction } from './actions';
 import PreciosClient from './PreciosClient';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = {
   title: 'Configuración - CPanel',
 };

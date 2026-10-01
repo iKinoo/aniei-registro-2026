@@ -1,7 +1,5 @@
 import { ConstanciasManualesClient } from './ConstanciasManualesClient';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = {
   title: 'Constancias Manuales - CPanel',
 };

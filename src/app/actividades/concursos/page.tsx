@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation';
 import { getConcursosAction, getInscripcionesUsuarioAction } from '../actions';
 import ActividadesSeleccionClient from '../ActividadesSeleccionClient';
 
-export const dynamic = 'force-dynamic';
-
 export const metadata = { title: 'Concursos | ANIEI 2026' };
 
 export default async function ConcursosPage() {
