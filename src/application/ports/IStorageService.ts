@@ -12,8 +12,8 @@ export function parseFileReference(ruta: string): FileReference {
 }
 
 export interface IStorageService {
-  subir(ruta: string, buffer: Buffer, mime: string): Promise<string>;
+  subir(ruta: string, buffer: Uint8Array, mime: string): Promise<string>;
   getAccess(file: FileReference): Promise<string>;
   eliminar(ruta: string): Promise<void>;
-  descargar(ruta: string): Promise<Buffer>;
+  descargar(ruta: string): Promise<Uint8Array>;
 }

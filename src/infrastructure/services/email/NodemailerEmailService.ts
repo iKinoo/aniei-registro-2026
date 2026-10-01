@@ -31,7 +31,7 @@ export class NodemailerEmailService implements IEmailService {
     });
   }
 
-  async enviarConstancia(destinatario: string, pdfBuffer: Buffer, folio: string): Promise<void> {
+  async enviarConstancia(destinatario: string, pdfBuffer: Uint8Array, folio: string): Promise<void> {
     const html = renderConstanciaEmailHTML({
       nombre: '',
       apellido: '',
@@ -46,7 +46,7 @@ export class NodemailerEmailService implements IEmailService {
       attachments: [
         {
           filename: `constancia-${folio}.pdf`,
-          content: pdfBuffer,
+          content: Buffer.from(pdfBuffer),
         },
       ],
     });
@@ -76,7 +76,7 @@ export class NodemailerEmailService implements IEmailService {
 
   async enviarConstanciaPonente(
     destinatario: string,
-    pdfBuffer: Buffer,
+    pdfBuffer: Uint8Array,
     nombrePonente: string,
     nombreActividad: string
   ): Promise<void> {
@@ -98,14 +98,14 @@ export class NodemailerEmailService implements IEmailService {
       html,
       attachments: [{
         filename: `constancia-ponente-${nombrePonente.trim().replace(/\\s+/g, '-')}.pdf`,
-        content: pdfBuffer,
+        content: Buffer.from(pdfBuffer),
       }],
     });
   }
 
   async enviarConstanciaParticipante(
     destinatario: string,
-    pdfBuffer: Buffer,
+    pdfBuffer: Uint8Array,
     nombreParticipante: string,
     nombreActividad: string
   ): Promise<void> {
@@ -127,7 +127,7 @@ export class NodemailerEmailService implements IEmailService {
       html,
       attachments: [{
         filename: `constancia-participante-${nombreParticipante.trim().replace(/\\s+/g, '-')}.pdf`,
-        content: pdfBuffer,
+        content: Buffer.from(pdfBuffer),
       }],
     });
   }

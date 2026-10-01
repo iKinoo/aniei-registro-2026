@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ConstanciaManualModal } from './ConstanciaManualModal';
 import { obtenerConstanciasManualesAction, ConstanciaManualResponse } from './actions';
 
@@ -32,18 +32,15 @@ export function ConstanciasManualesClient() {
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const fetchConstancias = useCallback(async () => {
-    setLoading(true);
-    const result = await obtenerConstanciasManualesAction();
-    if (result.success) {
-      setConstancias(result.data);
-    }
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
-    fetchConstancias();
-  }, [fetchConstancias]);
+    let activo = true;
+    obtenerConstanciasManualesAction().then(result => {
+      if (!activo) return;
+      if (result.success) setConstancias(result.data);
+      setLoading(false);
+    });
+    return () => { activo = false; };
+  }, []);
 
   const handleSuccess = (data: ConstanciaManualResponse) => {
     setConstancias((prev) => [data, ...prev]);

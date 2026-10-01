@@ -22,12 +22,10 @@ const styles = StyleSheet.create({
 });
 
 export const HojaRegistroGrupoTemplate = ({
-  token,
   nombres,
   responsableNombre,
   qrDataUrl
 }: {
-  token: string;
   nombres: string[];
   responsableNombre: string;
   qrDataUrl: string;
@@ -54,6 +52,7 @@ export const HojaRegistroGrupoTemplate = ({
             Escanea este código QR con tu celular. Te mostraremos esta lista de participantes. 
             Selecciona tu nombre y completa tu registro para activar tu cuenta y acceder al portal.
           </Text>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image src={qrDataUrl} style={styles.qrImage} />
         </View>
 

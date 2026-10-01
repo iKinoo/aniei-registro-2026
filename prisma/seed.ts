@@ -2,7 +2,7 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import 'dotenv/config';
 
-const globalForPrisma = globalThis as any;
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createPrismaClient() {
   const url = process.env.DATABASE_URL;

@@ -1,25 +1,17 @@
+import { PrepararRegistro } from '@/application/use-cases/PrepararRegistro';
 import { getCatalogoRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { RegistroForm } from './components/RegistroForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RegistroPage() {
-  const catalogoRepo = getCatalogoRepository();
-  const precioRepo = getPrecioInscripcionRepository();
-  const tipoParticipanteRepo = getTipoParticipanteRepository();
-
-  const [titulos, estados, instituciones, precios, tiposParticipante] = await Promise.all([
-    catalogoRepo.obtenerTitulos(),
-    catalogoRepo.obtenerEstados(),
-    catalogoRepo.obtenerInstituciones(),
-    precioRepo.obtenerTodos(),
-    tipoParticipanteRepo.obtenerTodos(),
-  ]);
+  const { catalogos, precios, tiposParticipante } = await new PrepararRegistro(getCatalogoRepository(),
+    getPrecioInscripcionRepository(), getTipoParticipanteRepository()).execute();
 
   return (
     <div className="min-h-screen bg-slate-50">
       <RegistroForm
-        catalogos={{ titulos, estados, instituciones }}
+        catalogos={catalogos}
         precios={precios}
         tiposParticipante={tiposParticipante}
       />

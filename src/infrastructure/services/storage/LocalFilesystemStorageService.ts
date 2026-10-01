@@ -34,7 +34,7 @@ export class LocalFilesystemStorageService implements IStorageService {
     return destino;
   }
 
-  async subir(ruta: string, buffer: Buffer, mime: string): Promise<string> {
+  async subir(ruta: string, buffer: Uint8Array, mime: string): Promise<string> {
     void mime; // el MIME lo valida el VO ArchivoComprobante antes de llegar aquí
     const destino = this.resolveRuta(ruta);
     await mkdir(path.dirname(destino), { recursive: true });

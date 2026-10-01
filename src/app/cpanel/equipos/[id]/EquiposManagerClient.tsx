@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { EquipoDTO, UsuarioBusquedaDTO } from '@/application/dtos/EquipoDTO';
 import {
@@ -86,7 +87,6 @@ interface Props {
 }
 
 export default function EquiposManagerClient({ actividad, initialEquipos }: Props) {
-  const router = useRouter();
   const [equipos, setEquipos] = useState<EquipoDTO[]>(initialEquipos);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEquipo, setEditingEquipo] = useState<EquipoDTO | null>(null);
@@ -157,7 +157,7 @@ export default function EquiposManagerClient({ actividad, initialEquipos }: Prop
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <a
+              <Link
                 href="/cpanel/equipos"
                 className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
               >
@@ -165,7 +165,7 @@ export default function EquiposManagerClient({ actividad, initialEquipos }: Prop
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Equipos
-              </a>
+              </Link>
               <span className="text-slate-300">/</span>
               <span className="text-sm text-slate-600 font-medium">{actividad.nombre}</span>
             </div>
@@ -281,7 +281,7 @@ interface ModalProps {
   onSave: (nombre: string, integrantes: IntegranteSeleccionado[]) => Promise<boolean>;
 }
 
-function EquipoModal({ actividad, equipo, onClose, onSave }: ModalProps) {
+function EquipoModal({ equipo, onClose, onSave }: ModalProps) {
   const [nombre, setNombre] = useState(equipo?.nombreEquipo ?? '');
   const [integrantes, setIntegrantes] = useState<IntegranteSeleccionado[]>(
     equipo?.integrantes.map((i) => ({

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { SelectCatalogo, estadosToOptions } from './SelectCatalogo';
-import { Estado } from '@/shared/types/catalogos';
+import { Estado } from '@/application/dtos/CatalogosDTO';
 import { RegistroFormFields } from '../actions/registrar-usuario.action';
 
 /** Datos preexistentes de facturación para pre-llenar el formulario */

@@ -1,5 +1,5 @@
 import { IPrecioInscripcionRepository, CrearPrecioDTO, ActualizarPrecioDTO } from '@/application/ports/IPrecioInscripcionRepository';
-import { PrecioInscripcion } from '@/shared/types/catalogos';
+import { PrecioInscripcion } from '@/application/dtos/CatalogosDTO';
 
 export class GestionarPrecios {
   constructor(private readonly precioRepo: IPrecioInscripcionRepository) {}

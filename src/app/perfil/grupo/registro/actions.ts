@@ -1,15 +1,15 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/infrastructure/database/client';
+import { requireUser } from '@/shared/auth/requireAdmin';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import {
+  getPasswordHasher,
+  getIdGenerator,
+  getPasswordGenerator,
+  getTransactionManager,
   getUsuarioRepository,
-  getDepositoRepository,
   getStorageService,
   getEmailService,
-  getPdfService,
-  getAccesoRepository,
 } from '@/infrastructure/config/container';
 import { z } from 'zod';
 import { depositoSchema } from '@/shared/validation/registro.schema';
@@ -55,26 +55,7 @@ export async function registrarGrupoRapidoAction(
   formData: FormData,
 ): Promise<GrupoRapidoActionState> {
   try {
-    const session = await auth();
-    const folioRegistro = (session?.user as any)?.folioRegistro;
-    if (!folioRegistro) {
-      return {
-        success: false,
-        error: 'No hay una sesión activa',
-      };
-    }
-
-    const acceso = await prisma.accesos.findFirst({
-      where: { folio_registro: folioRegistro },
-      select: { folio_registro: true },
-    });
-
-    if (!acceso?.folio_registro) {
-      return {
-        success: false,
-        error: 'Usuario no encontrado',
-      };
-    }
+    const { folioRegistro } = await requireUser();
 
     const grupoActivo = formData.get('grupoActivo') === 'true';
     const numMiembros = parseInt((formData.get('numMiembros') as string) ?? '0', 10) || 0;
@@ -142,16 +123,11 @@ export async function registrarGrupoRapidoAction(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const useCase = new RegistrarGrupoRapido(
-      getUsuarioRepository(),
-      getDepositoRepository(),
-      getStorageService(),
-      getEmailService(),
-      getPdfService(),
-    );
+    const useCase = new RegistrarGrupoRapido(getUsuarioRepository(), getStorageService(), getEmailService(),
+          getPasswordHasher(), getIdGenerator(), getPasswordGenerator(), getTransactionManager());
 
     const resultado = await useCase.execute({
-      responsableId: acceso.folio_registro,
+      responsableId: folioRegistro,
       miembros: grupoActivo ? miembros : [],
       deposito: {
         bancoSucursal: rawDeposito.bancoSucursal || null,

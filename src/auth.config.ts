@@ -10,22 +10,22 @@ export const authConfig = {
     signIn: "/login",
   },
   callbacks: {
-    authorized: async ({ auth }) => {
+    authorized: async () => {
       return true;
     },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.folioRegistro = (user as any).folioRegistro;
-        token.role = ((user as any).role as string)?.toUpperCase() ?? "USER";
+        token.folioRegistro = user.folioRegistro;
+        token.role = user.role?.toUpperCase() ?? "USER";
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
-        (session.user as any).folioRegistro = token.folioRegistro;
-        (session.user as any).role = token.role;
+        session.user.folioRegistro = typeof token.folioRegistro === 'string' ? token.folioRegistro : undefined;
+        session.user.role = typeof token.role === 'string' ? token.role : undefined;
       }
       return session;
     },

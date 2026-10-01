@@ -4,7 +4,7 @@ import { useState, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ActividadDTO, PonenteDTO, InscritoDTO } from '@/application/dtos/ActividadDTO';
-import { TipoActividad, Institucion } from '@/shared/types/catalogos';
+import { TipoActividad, Institucion } from '@/application/dtos/CatalogosDTO';
 import { 
   generarConstanciaPonenteAction, 
   enviarConstanciaPonenteAction,
@@ -32,7 +32,7 @@ const EditIcon = () => (
 
 export default function DetalleActividadClient({ actividad, nombreTipo, ponentes, inscritos, tiposActividad, instituciones }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [loadingGenerar, setLoadingGenerar] = useState<string | null>(null);
   const [loadingSend, setLoadingSend] = useState<string | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);

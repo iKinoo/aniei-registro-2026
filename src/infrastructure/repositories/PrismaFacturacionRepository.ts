@@ -1,10 +1,10 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { Facturacion } from '@/core/entities/Facturacion';
 import { FacturacionMapper } from '../mappers/FacturacionMapper';
 
 export class PrismaFacturacionRepository implements IFacturacionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: Prisma.TransactionClient) {}
 
   async crear(facturacion: Facturacion): Promise<Facturacion> {
     const data = FacturacionMapper.toPersistence(facturacion);

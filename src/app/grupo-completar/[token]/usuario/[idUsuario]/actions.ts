@@ -1,10 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import { prisma } from '@/infrastructure/database/client';
-import bcrypt from 'bcryptjs';
 import { signIn } from '@/auth';
-import { getEmailService } from '@/infrastructure/config/container';
+import { getEmailService, getTransactionManager, getPasswordHasher, getPasswordGenerator, getCatalogoRepository } from '@/infrastructure/config/container';
+import { CompletarRegistroGrupo } from '@/application/use-cases/CompletarRegistroGrupo';
 import { redirect } from 'next/navigation';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
@@ -37,73 +36,12 @@ export async function completarRegistroAction(
   try {
     const validatedData = completarRegistroSchema.parse(fields);
 
-    const grupo = await prisma.grupos_registro.findUnique({
-      where: { token },
-      include: { miembros: { where: { folio_registro: folioRegistro } } },
-    });
-
-    if (!grupo || grupo.miembros.length === 0) {
-      return { fields, errors: { _form: 'Usuario o grupo inválido.' } };
-    }
-
-    const usuario = grupo.miembros[0];
-
-    const acceso = await prisma.accesos.findFirst({
-      where: { folio_registro: folioRegistro }
-    });
-
-    if (!acceso) {
-      return { fields, errors: { _form: 'No se encontró el acceso para este usuario.' } };
-    }
-
-    const { generateSecurePassword } = await import('@/shared/security/password');
-    const rawPassword = generateSecurePassword(12, false);
-    const passwordHash = await bcrypt.hash(rawPassword, 10);
-
-    const emailService = getEmailService();
-    const institucion = await prisma.instituciones.findUnique({
-      where: { id_institucion: usuario.id_institucion || undefined }
-    });
-
-    await prisma.$transaction(async (tx) => {
-      await tx.usuarios.update({
-        where: { folio_registro: folioRegistro },
-        data: {
-          correo: validatedData.correo,
-          telefono: validatedData.telefono || null,
-          lada: validatedData.lada || null,
-          extension: validatedData.extension || null,
-          genero: validatedData.genero,
-          carrera: validatedData.carrera || null,
-          id_titulo: validatedData.idTitulo,
-        },
-      });
-
-      await tx.accesos.update({
-        where: { id_acceso: acceso.id_acceso },
-        data: {
-          email: validatedData.correo,
-          password: passwordHash,
-        },
-      });
-    });
-
-    const fechaStr = new Date().toLocaleDateString('es-MX', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-
-    await emailService.enviarConfirmacionRegistro(validatedData.correo, {
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      folio: usuario.folio_registro || 'N/A',
-      institucion: institucion?.nombre || 'N/A',
-      fecha: fechaStr,
-      password: rawPassword,
-    });
+    const resultado = await new CompletarRegistroGrupo(getTransactionManager(), getPasswordHasher(),
+      getPasswordGenerator(), getEmailService(), getCatalogoRepository()).execute(token, folioRegistro, validatedData);
 
     await signIn('credentials', {
-      folioRegistro: acceso.folio_registro,
-      password: rawPassword,
+      folioRegistro: resultado.folioRegistro,
+      password: resultado.password,
       redirect: false
     });
 

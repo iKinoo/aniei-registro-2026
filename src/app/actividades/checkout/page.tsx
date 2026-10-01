@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { prisma } from '@/infrastructure/database/client';
+import { requireUser } from '@/shared/auth/requireAdmin';
+import { ConsultarFacturacion } from '@/application/use-cases/ConsultarFacturacion';
 import { getActividadesPorIdsAction, getEstadosCheckoutAction } from '../checkout/actions';
 import { getFacturacionRepository } from '@/infrastructure/config/container';
 import CheckoutClient from './CheckoutClient';
@@ -12,7 +13,7 @@ export const metadata = { title: 'Checkout de Actividades | ANIEI 2026' };
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ ids?: string }> }) {
   const session = await auth();
-  const folioRegistro = (session?.user as any)?.folioRegistro;
+  const folioRegistro = session?.user?.folioRegistro;
   if (!folioRegistro) redirect('/login');
 
   const params = await searchParams;
@@ -23,16 +24,13 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
 
   if (ids.length === 0) redirect('/actividades');
 
-  const acceso = await prisma.accesos.findFirst({
-    where: { folio_registro: folioRegistro },
-    select: { folio_registro: true },
-  });
+  await requireUser();
 
   // Cargar la facturación previa del usuario (si existe)
   let facturacionDefaults: FacturacionDefaults | undefined;
-  if (acceso?.folio_registro) {
+  if (folioRegistro) {
     try {
-      const facturacion = await getFacturacionRepository().buscarPorUsuario(acceso.folio_registro);
+      const facturacion = await new ConsultarFacturacion(getFacturacionRepository()).buscarPorUsuario(folioRegistro);
       if (facturacion) {
         facturacionDefaults = {
           razonSocial:          facturacion.razonSocial,

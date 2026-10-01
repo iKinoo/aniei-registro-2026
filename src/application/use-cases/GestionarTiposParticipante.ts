@@ -1,5 +1,5 @@
 import { ITipoParticipanteRepository, CrearTipoParticipanteDTO, ActualizarTipoParticipanteDTO } from '@/application/ports/ITipoParticipanteRepository';
-import { TipoParticipante } from '@/shared/types/catalogos';
+import { TipoParticipante } from '@/application/dtos/CatalogosDTO';
 
 export class GestionarTiposParticipante {
   constructor(private readonly repo: ITipoParticipanteRepository) {}

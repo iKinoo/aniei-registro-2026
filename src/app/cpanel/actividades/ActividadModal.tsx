@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback } from 'react';
 import { ActividadDTO, CrearActividadDTO, PonenteDTO } from '@/application/dtos/ActividadDTO';
-import { TipoActividad, Institucion } from '@/shared/types/catalogos';
+import { TipoActividad, Institucion } from '@/application/dtos/CatalogosDTO';
 import { crearActividadAction, actualizarActividadAction, getActividadesAction } from './actions';
 import { vincularPonenteAction } from './ponentes.actions';
 import { SeccionPonentes } from './SeccionPonentes';

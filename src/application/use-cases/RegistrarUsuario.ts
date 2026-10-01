@@ -1,13 +1,8 @@
-import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
-import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
-import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
-import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { IStorageService } from '@/application/ports/IStorageService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IPdfService } from '@/application/ports/IPdfService';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
-import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
-import type { ITransactionManager } from '@/application/ports/ITransactionManager';
+import type { TransactionContext, ITransactionManager } from '@/application/ports/ITransactionManager';
 import { RegistroUsuarioDTO } from '@/application/dtos/RegistroUsuarioDTO';
 import { ResultadoRegistro } from '@/application/dtos/ResultadoRegistro';
 import { Usuario } from '@/core/entities/Usuario';
@@ -17,49 +12,24 @@ import { Monto } from '@/core/value-objects/Monto';
 import { Email } from '@/core/value-objects/Email';
 import { Telefono } from '@/core/value-objects/Telefono';
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
-import { RegistroError } from '@/core/errors/RegistroError';
 import type { IPasswordHasher } from '@/application/ports/IPasswordHasher';
 import type { IIdGenerator } from '@/application/ports/IIdGenerator';
-import { BcryptPasswordHasher } from '@/infrastructure/services/auth/BcryptPasswordHasher';
-import { generateSecurePassword } from '@/shared/security/password';
-import { mapPrismaError } from '@/infrastructure/errors/prismaErrorMapper';
+import type { IPasswordGenerator } from '@/application/ports/IPasswordGenerator';
 
 export class RegistrarUsuario {
   constructor(
-    private readonly usuarioRepo: IUsuarioRepository,
-    private readonly depositoRepo: IDepositoRepository,
-    private readonly facturacionRepo: IFacturacionRepository,
     private readonly storageService: IStorageService,
     private readonly emailService: IEmailService,
     private readonly pdfService: IPdfService,
     private readonly catalogoRepo: ICatalogoRepository,
-    private readonly accesoRepo: IAccesoRepository,
-    private readonly inscripcionRepo?: IInscripcionActividadRepository,
-    private readonly passwordHasher: IPasswordHasher = new BcryptPasswordHasher(),
-    private readonly idGenerator: IIdGenerator = { uuid: () => crypto.randomUUID() },
-    private readonly txManager?: ITransactionManager,
+    private readonly passwordHasher: IPasswordHasher,
+    private readonly idGenerator: IIdGenerator,
+    private readonly passwordGenerator: IPasswordGenerator,
+    private readonly txManager: ITransactionManager,
   ) {}
 
   async execute(dto: RegistroUsuarioDTO): Promise<ResultadoRegistro> {
-    const tStart = Date.now();
-    const phase = (label: string, t: number) => { console.log(`[RegistrarUsuario] ${label} ${Date.now()-t}ms`); return Date.now(); };
-    let t = tStart;
-
     ArchivoComprobante.create(dto.archivo.nombre, dto.archivo.mime, dto.archivo.tamanio);
-
-    const ext = dto.archivo.nombre.split('.').pop() || 'bin';
-    const archivoRuta = `comprobantes/${this.idGenerator.uuid()}.${ext}`;
-    const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
-    t = phase('storage.subir comprobante', t);
-
-    let constanciaRuta: string | null = null;
-    let urlConstanciaFiscal: string | null = null;
-    if (dto.facturacion?.archivoConstancia) {
-      const constanciaExt = dto.facturacion.archivoConstancia.nombre.split('.').pop() || 'bin';
-      constanciaRuta = `comprobantes/constancias/${this.idGenerator.uuid()}.${constanciaExt}`;
-      urlConstanciaFiscal = await this.storageService.subir(constanciaRuta, dto.facturacion.archivoConstancia.buffer, dto.facturacion.archivoConstancia.mime);
-      t = phase('storage.subir constancia fiscal', t);
-    }
 
     const correo = Email.create(dto.correo);
     const usuario = Usuario.create({
@@ -77,138 +47,124 @@ export class RegistrarUsuario {
       idEntidadFederativa: dto.idEntidadFederativa,
     });
 
-    const generatedPassword = generateSecurePassword(12, false);
+    const generatedPassword = this.passwordGenerator.generar();
     const passwordHash = await this.passwordHasher.hash(generatedPassword);
 
-    const deposito = Deposito.create({
-      folioRegistro: '__PENDING__',
-      bancoSucursal: dto.deposito.bancoSucursal ?? null,
-      ciudad: dto.deposito.ciudad ?? null,
-      referencia: dto.deposito.referencia,
-      monto: Monto.create(dto.deposito.monto),
-      fechaDeposito: dto.deposito.fechaDeposito,
-      archivoUrl: urlComprobante,
-      archivoNombre: dto.archivo.nombre,
-      archivoMime: dto.archivo.mime,
-      archivoTamanio: dto.archivo.tamanio,
-      notas: dto.deposito.notas ?? null,
-    });
-
+    const monto = Monto.create(dto.deposito.monto);
+    const [instituciones, titulos] = await Promise.all([
+      this.catalogoRepo.obtenerInstituciones(),
+      this.catalogoRepo.obtenerTitulos(),
+    ]);
+    const institucion = instituciones.find((i) => i.idInstitucion === dto.idInstitucion);
+    const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
+    const ext = dto.archivo.nombre.split('.').pop() || 'bin';
+    const archivoRuta = `comprobantes/${this.idGenerator.uuid()}.${ext}`;
+    let constanciaRuta: string | null = null;
+    let urlConstanciaFiscal: string | null = null;
     let folioRegistro: string;
-    const doTx = async (ctx?: any) => {
-      const uRepo = ctx?.usuarioRepo ?? this.usuarioRepo;
-      const aRepo = ctx?.accesoRepo ?? this.accesoRepo;
-      const dRepo = ctx?.depositoRepo ?? this.depositoRepo;
-      const fRepo = ctx?.facturacionRepo ?? this.facturacionRepo;
-      const iRepo = ctx?.inscripcionRepo ?? this.inscripcionRepo;
+    try {
+      const urlComprobante = await this.storageService.subir(archivoRuta, dto.archivo.buffer, dto.archivo.mime);
 
-      const usuarioPersistido = await uRepo.crear(usuario);
-      folioRegistro = usuarioPersistido.folioRegistro!;
+      if (dto.facturacion?.archivoConstancia) {
+        const constanciaExt = dto.facturacion.archivoConstancia.nombre.split('.').pop() || 'bin';
+        constanciaRuta = `comprobantes/constancias/${this.idGenerator.uuid()}.${constanciaExt}`;
+        urlConstanciaFiscal = await this.storageService.subir(constanciaRuta, dto.facturacion.archivoConstancia.buffer, dto.facturacion.archivoConstancia.mime);
+      }
 
-      await aRepo.crear(passwordHash, 'USER', folioRegistro, `${dto.nombre} ${dto.apellido}`, dto.correo);
-
-      const depositoReal = Deposito.create({
-        folioRegistro,
-        bancoSucursal: deposito.bancoSucursal,
-        ciudad: deposito.ciudad,
-        referencia: deposito.referencia,
-        monto: deposito.monto,
-        fechaDeposito: deposito.fechaDeposito,
-        archivoUrl: deposito.archivoUrl,
+      const deposito = Deposito.create({
+        folioRegistro: '__PENDING__',
+        bancoSucursal: dto.deposito.bancoSucursal ?? null,
+        ciudad: dto.deposito.ciudad ?? null,
+        referencia: dto.deposito.referencia,
+        monto,
+        fechaDeposito: dto.deposito.fechaDeposito,
+        archivoUrl: urlComprobante,
         archivoNombre: dto.archivo.nombre,
         archivoMime: dto.archivo.mime,
         archivoTamanio: dto.archivo.tamanio,
         notas: dto.deposito.notas ?? null,
       });
-      await dRepo.crear(depositoReal);
 
-      if (dto.facturacion) {
-        const facturacion = Facturacion.create({
+      const doTx = async (ctx: TransactionContext) => {
+        const uRepo = ctx.usuarioRepo;
+        const aRepo = ctx.accesoRepo;
+        const dRepo = ctx.depositoRepo;
+        const fRepo = ctx.facturacionRepo;
+        const iRepo = ctx.inscripcionRepo;
+
+        const usuarioPersistido = await uRepo.crear(usuario);
+        folioRegistro = usuarioPersistido.folioRegistro!;
+
+        await aRepo.crear(passwordHash, 'USER', folioRegistro, `${dto.nombre} ${dto.apellido}`, dto.correo);
+
+        const depositoReal = Deposito.create({
           folioRegistro,
-          razonSocial: dto.facturacion.razonSocial,
-          rfc: dto.facturacion.rfc,
-          calle: dto.facturacion.calle ?? null,
-          numExterior: dto.facturacion.numExterior ?? null,
-          numInterior: dto.facturacion.numInterior ?? null,
-          colonia: dto.facturacion.colonia ?? null,
-          municipio: dto.facturacion.municipio ?? null,
-          codigoPostal: dto.facturacion.codigoPostal ?? null,
-          idEntidadFederativaRfc: dto.facturacion.idEntidadFederativaRfc ?? null,
-          constanciaUrl: urlConstanciaFiscal,
-          constanciaNombre: dto.facturacion.archivoConstancia?.nombre ?? null,
-          constanciaMime: dto.facturacion.archivoConstancia?.mime ?? null,
-          constanciaTamanio: dto.facturacion.archivoConstancia?.tamanio ?? null,
+          bancoSucursal: deposito.bancoSucursal,
+          ciudad: deposito.ciudad,
+          referencia: deposito.referencia,
+          monto: deposito.monto,
+          fechaDeposito: deposito.fechaDeposito,
+          archivoUrl: deposito.archivoUrl,
+          archivoNombre: dto.archivo.nombre,
+          archivoMime: dto.archivo.mime,
+          archivoTamanio: dto.archivo.tamanio,
+          notas: dto.deposito.notas ?? null,
         });
-        await fRepo.crear(facturacion);
-      }
+        await dRepo.crear(depositoReal);
 
-      if (dto.actividadesIds && dto.actividadesIds.length > 0 && iRepo) {
-        await iRepo.crearMuchasConValidacion(folioRegistro, dto.actividadesIds);
-      }
-    };
+        if (dto.facturacion) {
+          const facturacion = Facturacion.create({
+            folioRegistro,
+            razonSocial: dto.facturacion.razonSocial,
+            rfc: dto.facturacion.rfc,
+            calle: dto.facturacion.calle ?? null,
+            numExterior: dto.facturacion.numExterior ?? null,
+            numInterior: dto.facturacion.numInterior ?? null,
+            colonia: dto.facturacion.colonia ?? null,
+            municipio: dto.facturacion.municipio ?? null,
+            codigoPostal: dto.facturacion.codigoPostal ?? null,
+            idEntidadFederativaRfc: dto.facturacion.idEntidadFederativaRfc ?? null,
+            constanciaUrl: urlConstanciaFiscal,
+            constanciaNombre: dto.facturacion.archivoConstancia?.nombre ?? null,
+            constanciaMime: dto.facturacion.archivoConstancia?.mime ?? null,
+            constanciaTamanio: dto.facturacion.archivoConstancia?.tamanio ?? null,
+          });
+          await fRepo.crear(facturacion);
+        }
 
-    try {
-      if (this.txManager) {
-        await this.txManager.run(async (ctx) => { await doTx(ctx); });
-      } else {
-        const { prisma } = await import('@/infrastructure/database/client');
-        await (prisma as any).$transaction(async (tx: any) => {
-          const { PrismaUsuarioRepository } = await import('@/infrastructure/repositories/PrismaUsuarioRepository');
-          const { PrismaFolioGenerator } = await import('@/infrastructure/database/PrismaFolioGenerator');
-          const { PrismaAccesoRepository } = await import('@/infrastructure/repositories/PrismaAccesoRepository');
-          const { PrismaDepositoRepository } = await import('@/infrastructure/repositories/PrismaDepositoRepository');
-          const { PrismaFacturacionRepository } = await import('@/infrastructure/repositories/PrismaFacturacionRepository');
-          const { PrismaInscripcionActividadRepository } = await import('@/infrastructure/repositories/PrismaInscripcionActividadRepository');
-          const ctx = {
-            usuarioRepo: new PrismaUsuarioRepository(tx, new PrismaFolioGenerator(tx)),
-            accesoRepo: new PrismaAccesoRepository(tx),
-            depositoRepo: new PrismaDepositoRepository(tx),
-            facturacionRepo: new PrismaFacturacionRepository(tx),
-            inscripcionRepo: this.inscripcionRepo ? new PrismaInscripcionActividadRepository(tx) : undefined,
-          };
-          await doTx(ctx);
-        });
-      }
+        if (dto.actividadesIds && dto.actividadesIds.length > 0) {
+          await iRepo.crearMuchasConValidacion(folioRegistro, dto.actividadesIds);
+        }
+      };
+
+      await this.txManager.run(doTx);
     } catch (e: unknown) {
-      try { await this.storageService.eliminar(archivoRuta); } catch {}
+      try { await this.storageService.eliminar(archivoRuta); } catch (cleanupError) { console.error('Error al compensar comprobante:', cleanupError); }
       if (constanciaRuta) {
-        try { await this.storageService.eliminar(constanciaRuta); } catch {}
+        try { await this.storageService.eliminar(constanciaRuta); } catch (cleanupError) { console.error('Error al compensar constancia fiscal:', cleanupError); }
       }
-      const mapped = mapPrismaError(e, dto.correo);
-      if (mapped) throw mapped;
       throw e;
     }
-    t = phase('db transaction', t);
 
     const folio = folioRegistro!;
 
-    const [instituciones, titulos] = await Promise.all([
-      this.catalogoRepo.obtenerInstituciones(),
-      this.catalogoRepo.obtenerTitulos(),
-    ]);
-    t = phase('catalogos', t);
-    const institucion = instituciones.find((i) => i.idInstitucion === dto.idInstitucion);
-    const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
     const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaInscripcion({
-      nombre: dto.nombre,
-      apellido: dto.apellido,
-      folio,
-      institucion: institucion?.nombre ?? 'N/A',
-      tipoUsuario: titulo?.descripcion ?? 'N/A',
-      fecha: fechaStr,
-    });
-    t = phase('pdf generarConstancia', t);
-
-    let urlConstancia = '';
+    let urlConstancia = `constancias/${folio}.pdf`;
     try {
+      const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
+        nombre: dto.nombre,
+        apellido: dto.apellido,
+        folio,
+        institucion: institucion?.nombre ?? 'N/A',
+        tipoUsuario: titulo?.descripcion ?? 'N/A',
+        fecha: fechaStr,
+      });
+
       const constanciaRuta = `constancias/${folio}.pdf`;
-      urlConstancia = await this.storageService.subir(constanciaRuta, pdfBuffer, 'application/pdf');
-      t = phase('storage.subir constancia', t);
-    } catch (e) {
-      console.error('Error al subir constancia, se regenerará en CPanel:', e);
-      urlConstancia = `constancias/${folio}.pdf`;
+      urlConstancia = await this.storageService.subir(constanciaRuta, pdfUint8Array, 'application/pdf');
+    } catch (error) {
+      console.error('Error al generar o subir constancia, se regenerará en CPanel:', error);
     }
 
     try {
@@ -220,8 +176,6 @@ export class RegistrarUsuario {
         fecha: fechaStr,
         password: generatedPassword,
       });
-      t = phase('email enviarConfirmacion', t);
-      console.log(`[RegistrarUsuario] total ${Date.now()-tStart}ms folio=${folio}`);
     } catch (e) {
       console.error('Error al enviar correo confirmación:', e);
     }

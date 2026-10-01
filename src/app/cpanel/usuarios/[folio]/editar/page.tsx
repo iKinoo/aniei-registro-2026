@@ -1,6 +1,10 @@
+import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
+import { requireAdmin } from '@/shared/auth/requireAdmin';
+import { getCatalogoRepository } from '@/infrastructure/config/container';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { prisma } from '@/infrastructure/database/client';
+import { getRegistroQueryService } from '@/infrastructure/config/container';
+import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import Link from 'next/link';
 import { UsuarioEditarForm } from './UsuarioEditarForm';
 
@@ -10,35 +14,12 @@ export const metadata = { title: 'Editar Usuario | CPanel ANIEI 2026' };
 
 export default async function UsuarioEditarPage({ params }: { params: Promise<{ folio: string }> }) {
   const session = await auth();
-  const folioRegistro = (session?.user as any)?.folioRegistro;
+  const folioRegistro = session?.user?.folioRegistro;
   if (!folioRegistro) redirect('/login');
 
-  const accesoAdmin = await prisma.accesos.findFirst({
-    where: { folio_registro: folioRegistro },
-    select: { rol: true },
-  });
-  if (accesoAdmin?.rol !== 'ADMIN') redirect('/cpanel');
-
+  await requireAdmin();
   const { folio } = await params;
-
-  const usuario = await prisma.usuarios.findUnique({
-    where: { folio_registro: folio },
-    select: {
-      folio_registro: true,
-      nombre: true,
-      apellido: true,
-      correo: true,
-      telefono: true,
-      lada: true,
-      extension: true,
-      genero: true,
-      carrera: true,
-      dependencia: true,
-      id_titulo: true,
-      id_institucion: true,
-      id_entidad_federativa: true,
-    },
-  });
+  const usuario = await new ConsultarRegistros(getRegistroQueryService()).obtenerUsuario(folio);
 
   if (!usuario) {
     return (
@@ -54,10 +35,9 @@ export default async function UsuarioEditarPage({ params }: { params: Promise<{ 
     );
   }
 
+  const catalogoRepo = new ConsultarCatalogos(getCatalogoRepository());
   const [titulos, instituciones, estados] = await Promise.all([
-    prisma.titulos.findMany({ orderBy: { descripcion: 'asc' } }),
-    prisma.instituciones.findMany({ orderBy: { nombre: 'asc' } }),
-    prisma.estados.findMany({ orderBy: { nombre: 'asc' } }),
+    catalogoRepo.obtenerTitulos(), catalogoRepo.obtenerInstituciones(), catalogoRepo.obtenerEstados(),
   ]);
 
   return (
@@ -70,12 +50,12 @@ export default async function UsuarioEditarPage({ params }: { params: Promise<{ 
           Editar usuario
         </h1>
         <p className="text-slate-500 text-sm mt-1">
-          Folio: <span className="font-mono font-medium text-slate-700">{usuario.folio_registro}</span>
+          Folio: <span className="font-mono font-medium text-slate-700">{usuario.folioRegistro}</span>
         </p>
       </div>
 
       <UsuarioEditarForm
-        folio={usuario.folio_registro}
+        folio={usuario.folioRegistro}
         initialData={{
           nombre: usuario.nombre,
           apellido: usuario.apellido,
@@ -86,9 +66,9 @@ export default async function UsuarioEditarPage({ params }: { params: Promise<{ 
           genero: usuario.genero ?? '',
           carrera: usuario.carrera ?? '',
           dependencia: usuario.dependencia ?? '',
-          idTitulo: usuario.id_titulo?.toString() ?? '',
-          idInstitucion: usuario.id_institucion?.toString() ?? '',
-          idEntidadFederativa: usuario.id_entidad_federativa?.toString() ?? '',
+          idTitulo: usuario.idTitulo?.toString() ?? '',
+          idInstitucion: usuario.idInstitucion?.toString() ?? '',
+          idEntidadFederativa: usuario.idEntidadFederativa?.toString() ?? '',
         }}
         catalogos={{ titulos, instituciones, estados }}
       />

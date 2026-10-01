@@ -51,11 +51,11 @@ export interface ReporteInstitucionesPdfData {
 }
 
 export interface IPdfService {
-  generarConstanciaInscripcion(datos: ConstanciaData): Promise<Buffer>;
-  generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Buffer>;
-  generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Buffer>;
-  generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer>;
-  generarConstanciaManual(datos: ConstanciaManualData): Promise<Buffer>;
-  generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Buffer>;
-  generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Buffer>;
+  generarConstanciaInscripcion(datos: ConstanciaData): Promise<Uint8Array>;
+  generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Uint8Array>;
+  generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Uint8Array>;
+  generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Uint8Array>;
+  generarConstanciaManual(datos: ConstanciaManualData): Promise<Uint8Array>;
+  generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Uint8Array>;
+  generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Uint8Array>;
 }

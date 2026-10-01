@@ -1,22 +1,24 @@
 'use server';
 
+import { RegistroError } from '@/core/errors/RegistroError';
+
 import { registroSchema, depositoSchema, facturacionSchema, validarArchivo, validarConstanciaFiscal } from '@/shared/validation/registro.schema';
 
+import { RegistrarInscripcion } from '@/application/use-cases/RegistrarInscripcion';
 import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import { Genero } from '@/core/enums/Genero';
 import { signIn } from '@/auth';
-import { mapPrismaError } from '@/infrastructure/errors/prismaErrorMapper';
 import {
+  getPasswordHasher,
+  getIdGenerator,
+  getPasswordGenerator,
+  getTransactionManager,
   getUsuarioRepository,
-  getDepositoRepository,
-  getFacturacionRepository,
   getStorageService,
   getEmailService,
   getPdfService,
   getCatalogoRepository,
-  getAccesoRepository,
-  getInscripcionActividadRepository,
 } from '@/infrastructure/config/container';
 
 export interface RegistroFormFields {
@@ -187,25 +189,11 @@ export async function registrarUsuarioAction(
       constanciaBuffer = Buffer.from(constanciaArrayBuffer);
     }
 
-    const t0 = Date.now();
-    const logPhase = (phase: string, start: number) => {
-      const ms = Date.now() - start;
-      console.log(`[registro] ${phase} ${ms}ms`);
-      return Date.now();
-    };
-    let tPhase = t0;
-    console.log(`[registro] start correo=${rawData.correo} file=${file.name} ${file.size} bytes`);
-
-    const useCase = new RegistrarUsuario(
-      getUsuarioRepository(),
-      getDepositoRepository(),
-      getFacturacionRepository(),
-      getStorageService(),
-      getEmailService(),
-      getPdfService(),
-      getCatalogoRepository(),
-      getAccesoRepository(),
-      getInscripcionActividadRepository(),
+    const useCase = new RegistrarInscripcion(
+      new RegistrarUsuario(getStorageService(), getEmailService(), getPdfService(), getCatalogoRepository(),
+        getPasswordHasher(), getIdGenerator(), getPasswordGenerator(), getTransactionManager()),
+      new RegistrarGrupoRapido(getUsuarioRepository(), getStorageService(), getEmailService(),
+        getPasswordHasher(), getIdGenerator(), getPasswordGenerator(), getTransactionManager()),
     );
 
     const idInstitucion = parsed.data.noAfiliada !== true ? (parsed.data.idInstitucion ?? null) : null;
@@ -258,41 +246,7 @@ export async function registrarUsuarioAction(
                 : undefined,
             }
           : null,
-    });
-    tPhase = logPhase('useCase.execute', tPhase);
-    console.log(`[registro] success folio=${resultado.folio} total=${Date.now() - t0}ms`);
-
-    if (miembros.length > 0) {
-      try {
-        const grupoUseCase = new RegistrarGrupoRapido(
-          getUsuarioRepository(),
-          getDepositoRepository(),
-          getStorageService(),
-          getEmailService(),
-          getPdfService(),
-        );
-        await grupoUseCase.execute({
-          responsableId: resultado.folio,
-          miembros: miembros.map((m) => ({ nombre: m.nombre, apellido: m.apellido, correo: m.correo })),
-          deposito: {
-            bancoSucursal: parsedDeposito.data.bancoSucursal || null,
-            ciudad: parsedDeposito.data.ciudad || null,
-            referencia: parsedDeposito.data.referencia,
-            monto: parsedDeposito.data.monto,
-            fechaDeposito: parsedDeposito.data.fechaDeposito,
-            notas: parsedDeposito.data.notas || null,
-          },
-          archivo: {
-            nombre: file.name,
-            mime: file.type,
-            tamanio: file.size,
-            buffer,
-          },
-        });
-      } catch (grupoError) {
-        console.error('Error en registro grupal (usuario principal registrado correctamente):', grupoError);
-      }
-    }
+    }, miembros.map(m => ({ nombre: m.nombre, apellido: m.apellido, correo: m.correo })));
 
     try {
       await signIn('credentials', {
@@ -300,7 +254,8 @@ export async function registrarUsuarioAction(
         password: resultado.passwordPlana,
         redirect: false,
       });
-    } catch (_) {
+    } catch (error) {
+      console.error('Error al iniciar sesión tras registro:', error);
     }
 
     return {
@@ -310,10 +265,8 @@ export async function registrarUsuarioAction(
     };
   } catch (error) {
     const anyErr = error as { code?: string; cause?: { code?: string; message?: string }; meta?: unknown; stack?: string };
-    const prismaMapped = mapPrismaError(error, (formData.get('correo') as string) || undefined);
-    if (prismaMapped) {
-      console.error('[registro] prismaMapped', { code: (prismaMapped as { code?: string }).code, message: prismaMapped.message, meta: anyErr.meta });
-      error = prismaMapped;
+    if (error instanceof RegistroError) {
+      console.error('[registro] Error de registro:', { code: error.code, message: error.message });
     } else {
       console.error('[registro] Error en registro:', {
         message: error instanceof Error ? error.message : String(error),

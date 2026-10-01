@@ -78,7 +78,7 @@ export function ConstanciaPonenteTemplate(props: ConstanciaPonenteTemplateProps)
             por su destacada participación en la impartición de la {props.tipoActividad.toLowerCase()} titulada:
           </Text>
           <Text style={{ marginTop: 15, fontStyle: 'italic', fontWeight: 'bold' }}>
-            "{props.nombreActividad}"
+            &quot;{props.nombreActividad}&quot;
           </Text>
         </View>
 

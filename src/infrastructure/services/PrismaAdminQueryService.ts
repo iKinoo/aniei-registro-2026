@@ -1,4 +1,4 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import { PrismaClient, Prisma } from '@/generated/prisma/client';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
@@ -14,7 +14,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
   ): Promise<PaginatedResult<UsuarioForAdminDTO>> {
     const skip = (page - 1) * limit;
 
-    const conditions: any[] = [];
+    const conditions: Prisma.usuariosWhereInput[] = [];
 
     if (search) {
       conditions.push({
@@ -30,7 +30,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       conditions.push({ id_institucion: idInstitucion });
     }
 
-    const whereClause: any = conditions.length > 0
+    const whereClause: Prisma.usuariosWhereInput = conditions.length > 0
       ? conditions.length === 1
         ? conditions[0]
         : { AND: conditions }

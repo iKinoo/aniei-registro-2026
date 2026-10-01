@@ -1,38 +1,28 @@
-import { Prisma } from '@/generated/prisma/client';
 import { RegistroError } from '@/core/errors/RegistroError';
 
-export function mapPrismaError(e: unknown, fallbackCorreo?: string): Error | null {
-  if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    // P2002 unique constraint
-    if (e.code === 'P2002') {
-      const target = (e.meta?.target as string[] | undefined)?.join(',') ?? '';
-      if (target.includes('correo') || target.includes('email')) {
-        return RegistroError.CORREO_DUPLICADO(fallbackCorreo ?? 'correo');
-      }
-      return new RegistroError(`Restricción única violada: ${target}`, 'P2002');
-    }
-    if (e.code === 'P2003') {
-      return new RegistroError(`Referencia a catálogo inexistente (FK): ${(e.meta?.field_name as string) ?? ''}`, 'FK_INVALIDA');
-    }
-    if (e.code === 'P2025') {
-      return new RegistroError('Registro no encontrado', 'NO_ENCONTRADO');
-    }
-    if (e.code === 'P2024') {
-      return new RegistroError('Timeout de transacción, intente de nuevo', 'TX_TIMEOUT');
-    }
-    if (e.code === 'P2034') {
-      return new RegistroError('Transacción en conflicto, intente de nuevo', 'TX_CONFLICTO');
-    }
+function extraerError(error: unknown): { code?: string; meta?: { target?: unknown } } | null {
+  if (!error || typeof error !== 'object') return null;
+  if ('code' in error && typeof error.code === 'string') {
+    return { code: error.code, meta: 'meta' in error && error.meta && typeof error.meta === 'object' ? error.meta : undefined };
   }
-  // DriverAdapterError wraps Prisma code in cause
-  const anyErr = e as { code?: string; cause?: { code?: string; meta?: { target?: string[] } }; meta?: { target?: string[] } };
-  const code = anyErr.code ?? anyErr.cause?.code;
-  if (code === 'P2002') {
-    const target = (anyErr.meta?.target ?? anyErr.cause?.meta?.target)?.join(',') ?? '';
-    if (target.includes('correo') || target.includes('email')) {
-      return RegistroError.CORREO_DUPLICADO(fallbackCorreo ?? 'correo');
-    }
-    return new RegistroError(`Restricción única violada: ${target}`, 'P2002');
+  return 'cause' in error ? extraerError(error.cause) : null;
+}
+
+export function mapPrismaError(error: unknown, fallbackCorreo?: string): Error | null {
+  const info = extraerError(error);
+  if (!info) return null;
+  if (info.code === 'P2002') {
+    const raw = info.meta?.target;
+    const target = Array.isArray(raw) ? raw.join(',') : typeof raw === 'string' ? raw : '';
+    if (target.includes('correo') || target.includes('email')) return RegistroError.CORREO_DUPLICADO(fallbackCorreo ?? 'proporcionado');
+    return new RegistroError('Ya existe un registro con los datos proporcionados', 'P2002');
   }
-  return null;
+  const errores: Record<string, [string, string]> = {
+    P2003: ['Referencia a catálogo inexistente', 'FK_INVALIDA'],
+    P2025: ['Registro no encontrado', 'NO_ENCONTRADO'],
+    P2024: ['Timeout de transacción, intente de nuevo', 'TX_TIMEOUT'],
+    P2034: ['Transacción en conflicto, intente de nuevo', 'TX_CONFLICTO'],
+  };
+  const datos = info.code ? errores[info.code] : undefined;
+  return datos ? new RegistroError(...datos) : null;
 }

@@ -1,10 +1,17 @@
+import type { IEnlaceArchivoService } from '@/application/ports/IEnlaceArchivoService';
+import { HmacEnlaceArchivoService } from '@/infrastructure/services/storage/HmacEnlaceArchivoService';
+import type { IRegistroQueryService } from '@/application/ports/IRegistroQueryService';
+import { PrismaRegistroQueryService } from '@/infrastructure/services/PrismaRegistroQueryService';
+import type { IIdGenerator } from '@/application/ports/IIdGenerator';
+import type { IPasswordGenerator } from '@/application/ports/IPasswordGenerator';
+import { CryptoIdGenerator } from '@/infrastructure/services/auth/CryptoIdGenerator';
+import { SecurePasswordGenerator } from '@/infrastructure/services/auth/SecurePasswordGenerator';
 import { prisma } from '@/infrastructure/database/client';
 import { PrismaFolioGenerator } from '@/infrastructure/database/PrismaFolioGenerator';
 import { PrismaUsuarioRepository } from '@/infrastructure/repositories/PrismaUsuarioRepository';
 import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDepositoRepository';
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
 import { PrismaCatalogoRepository } from '@/infrastructure/repositories/PrismaCatalogoRepository';
-import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAccesoRepository';
 import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
@@ -22,7 +29,6 @@ import { IAuthService } from '@/application/ports/IAuthService';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { IFacturacionRepository } from '@/application/ports/IFacturacionRepository';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
-import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
@@ -54,9 +60,7 @@ export function getCatalogoRepository(): ICatalogoRepository {
   return new PrismaCatalogoRepository(prisma);
 }
 
-export function getAccesoRepository(): IAccesoRepository {
-  return new PrismaAccesoRepository(prisma);
-}
+export { getAccesoRepository, getPasswordHasher } from './credenciales';
 
 export function getActividadRepository(): IActividadRepository {
   return new PrismaActividadRepository(prisma);
@@ -129,4 +133,23 @@ export function getTransactionManager(): ITransactionManager {
 
 export function getEquipoRepository(): IEquipoRepository {
   return new PrismaEquipoRepository(prisma);
+}
+
+
+export function getIdGenerator(): IIdGenerator {
+  return new CryptoIdGenerator();
+}
+
+export function getPasswordGenerator(): IPasswordGenerator {
+  return new SecurePasswordGenerator();
+}
+
+export function getRegistroQueryService(): IRegistroQueryService {
+  return new PrismaRegistroQueryService(prisma);
+}
+
+export function getEnlaceArchivoService(): IEnlaceArchivoService {
+  const secret = process.env.STORAGE_URL_SECRET;
+  if (!secret || secret.length < 32) throw new Error('STORAGE_URL_SECRET debe tener min 32 caracteres');
+  return new HmacEnlaceArchivoService(secret);
 }

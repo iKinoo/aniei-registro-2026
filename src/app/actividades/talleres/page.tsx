@@ -9,7 +9,7 @@ export const metadata = { title: 'Talleres | ANIEI 2026' };
 
 export default async function TalleresPage() {
   const session = await auth();
-  if (!(session?.user as any)?.folioRegistro) redirect('/login');
+  if (!session?.user?.folioRegistro) redirect('/login');
 
   const [actRes, inscRes] = await Promise.all([
     getTalleresAction(),

@@ -1,7 +1,7 @@
 'use client';
 
 import { MiembroWizard } from '../RegistroForm';
-import { TipoParticipante, PrecioInscripcion } from '@/shared/types/catalogos';
+import { TipoParticipante, PrecioInscripcion } from '@/application/dtos/CatalogosDTO';
 
 interface Props {
   grupoActivo: boolean;

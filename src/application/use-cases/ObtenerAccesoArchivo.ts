@@ -1,26 +1,16 @@
-import { IStorageService, parseFileReference } from '@/application/ports/IStorageService';
-import { IAuthService } from '@/application/ports/IAuthService';
-import { IAccesoRepository } from '@/application/ports/IAccesoRepository';
+import type { IStorageService } from '../ports/IStorageService';
+import { parseFileReference } from '../ports/IStorageService';
+import type { IAuthService } from '../ports/IAuthService';
+import type { IAccesoRepository } from '../ports/IAccesoRepository';
+import type { IDepositoRepository } from '../ports/IDepositoRepository';
+import { AutorizarArchivo } from './AutorizarArchivo';
 
 export class ObtenerAccesoArchivo {
-  constructor(
-    private readonly storage: IStorageService,
-    private readonly authService: IAuthService,
-    private readonly accesoRepo: IAccesoRepository
-  ) {}
+  constructor(private readonly storage: IStorageService, private readonly auth: IAuthService,
+    private readonly accesos: IAccesoRepository, private readonly depositos: IDepositoRepository) {}
 
   async execute(ruta: string): Promise<string> {
-    const session = await this.authService.getCurrentSession();
-    if (!session) {
-      throw new Error('Unauthorized: Sesión inválida');
-    }
-
-    const acceso = await this.accesoRepo.buscarPorFolioRegistro(session.folioRegistro);
-    if (!acceso || !acceso.isAdmin()) {
-      throw new Error('Unauthorized: Se requieren los permisos de administrador para realizar esta accion');
-    }
-
-    const file = parseFileReference(ruta);
-    return await this.storage.getAccess(file);
+    await new AutorizarArchivo(this.auth, this.accesos, this.depositos).execute(ruta);
+    return this.storage.getAccess(parseFileReference(ruta));
   }
 }

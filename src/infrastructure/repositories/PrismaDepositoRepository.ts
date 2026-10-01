@@ -1,10 +1,10 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
 import { Deposito } from '@/core/entities/Deposito';
 import { DepositoMapper } from '../mappers/DepositoMapper';
 
 export class PrismaDepositoRepository implements IDepositoRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: Prisma.TransactionClient) {}
 
   async crear(deposito: Deposito): Promise<Deposito> {
     const data = DepositoMapper.toPersistence(deposito);

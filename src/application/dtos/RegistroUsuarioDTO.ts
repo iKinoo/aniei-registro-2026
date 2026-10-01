@@ -4,7 +4,7 @@ export interface ArchivoDTO {
   nombre: string;
   mime: string;
   tamanio: number;
-  buffer: Buffer;
+  buffer: Uint8Array;
 }
 
 export interface DepositoDTO {

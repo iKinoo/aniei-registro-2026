@@ -1,4 +1,4 @@
-import { TipoParticipante } from '@/shared/types/catalogos';
+import { TipoParticipante } from '@/application/dtos/CatalogosDTO';
 
 export interface CrearTipoParticipanteDTO {
   descripcion: string;

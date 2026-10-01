@@ -5,18 +5,18 @@ import { useRouter } from 'next/navigation';
 import { actualizarUsuarioAction, UsuarioEditarData } from './actions';
 
 interface Titulo {
-  id_titulo: number;
+  idTitulo: number;
   descripcion: string;
 }
 
 interface Institucion {
-  id_institucion: number;
+  idInstitucion: number;
   nombre: string;
   abreviatura: string | null;
 }
 
 interface Estado {
-  id_entidad_federativa: number;
+  idEntidadFederativa: number;
   nombre: string;
 }
 
@@ -138,7 +138,7 @@ export function UsuarioEditarForm({ folio, initialData, catalogos }: Props) {
         <select className={selectCls} value={data.idInstitucion} onChange={(e) => handleChange('idInstitucion', e.target.value)}>
           <option value="">Seleccione...</option>
           {catalogos.instituciones.map((i) => (
-            <option key={i.id_institucion} value={i.id_institucion}>
+            <option key={i.idInstitucion} value={i.idInstitucion}>
               {i.abreviatura ? `${i.abreviatura} - ${i.nombre}` : i.nombre}
             </option>
           ))}
@@ -156,7 +156,7 @@ export function UsuarioEditarForm({ folio, initialData, catalogos }: Props) {
           <select className={selectCls} value={data.idTitulo} onChange={(e) => handleChange('idTitulo', e.target.value)}>
             <option value="">Seleccione...</option>
             {catalogos.titulos.map((t) => (
-              <option key={t.id_titulo} value={t.id_titulo}>{t.descripcion}</option>
+              <option key={t.idTitulo} value={t.idTitulo}>{t.descripcion}</option>
             ))}
           </select>
         </div>
@@ -165,7 +165,7 @@ export function UsuarioEditarForm({ folio, initialData, catalogos }: Props) {
           <select className={selectCls} value={data.idEntidadFederativa} onChange={(e) => handleChange('idEntidadFederativa', e.target.value)}>
             <option value="">Seleccione...</option>
             {catalogos.estados.map((e) => (
-              <option key={e.id_entidad_federativa} value={e.id_entidad_federativa}>{e.nombre}</option>
+              <option key={e.idEntidadFederativa} value={e.idEntidadFederativa}>{e.nombre}</option>
             ))}
           </select>
         </div>

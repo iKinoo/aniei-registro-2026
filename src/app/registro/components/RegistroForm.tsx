@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useActionState } from 'react';
 import { registrarUsuarioAction, RegistroActionState } from '../actions/registrar-usuario.action';
-import { Titulo, Estado, Institucion, PrecioInscripcion, TipoParticipante } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, PrecioInscripcion, TipoParticipante } from '@/application/dtos/CatalogosDTO';
 import { StepDatosGenerales } from './steps/StepDatosGenerales';
 import { StepGrupo } from './steps/StepGrupo';
 import { StepPago } from './steps/StepPago';
@@ -92,11 +92,10 @@ function obtenerPrecioVigente(
 export function RegistroForm({ catalogos, precios, tiposParticipante }: RegistroFormProps) {
   const [state, formAction, isPending] = useActionState(registrarUsuarioAction, initialState);
   const [step, setStep] = useState(1);
-  const [maxStep, setMaxStep] = useState(1);
   const [datos, setDatos] = useState<DatosGeneralesWizard>(emptyDatos);
   const [grupoActivo, setGrupoActivo] = useState(false);
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
-  const [deposito, setDeposito] = useState<DepositoWizard>(emptyDeposito);
+  const [depositoIngresado, setDeposito] = useState<DepositoWizard>(emptyDeposito);
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
   const [montoTouched, setMontoTouched] = useState(false);
 
@@ -130,13 +129,11 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
     .filter((p) => p.activo && p.idTipoParticipante === idTipoParticipante && p.esAfiliada === esAfiliada && new Date(p.fechaLimite) > new Date())
     .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime());
 
-  useEffect(() => {
-    if (!montoTouched) {
-      setDeposito((prev) => ({ ...prev, monto: total.toFixed(2) }));
-    }
-  }, [total, montoTouched]);
+  const deposito = montoTouched ? depositoIngresado : { ...depositoIngresado, monto: total.toFixed(2) };
+  const [respuestaAnterior, setRespuestaAnterior] = useState(state);
 
-  useEffect(() => {
+  if (state !== respuestaAnterior) {
+    setRespuestaAnterior(state);
     if (!state.success && state.fields && (state.errors || state.success === false)) {
       const f = state.fields;
       setDatos({
@@ -188,11 +185,10 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
         }
       }
     }
-  }, [state]);
+  }
 
   function goTo(n: number) {
     setStep(n);
-    setMaxStep((prev) => Math.max(prev, n));
   }
 
   if (state.success) {

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { ITipoParticipanteRepository, CrearTipoParticipanteDTO, ActualizarTipoParticipanteDTO } from '@/application/ports/ITipoParticipanteRepository';
-import { TipoParticipante } from '@/shared/types/catalogos';
+import { TipoParticipante } from '@/application/dtos/CatalogosDTO';
 
 const toTipoParticipante = (row: {
   id_tipo_participante: number;

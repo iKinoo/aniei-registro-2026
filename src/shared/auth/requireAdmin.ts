@@ -3,7 +3,7 @@ import { getAccesoRepository } from "@/infrastructure/config/container";
 
 export async function requireAdmin(): Promise<{ folioRegistro: string; acceso: import("@/core/entities/Acceso").Acceso }> {
   const session = await auth();
-  const folioRegistro = (session?.user as any)?.folioRegistro;
+  const folioRegistro = session?.user?.folioRegistro;
   if (!folioRegistro) {
     throw new Error("UNAUTHORIZED");
   }
@@ -16,7 +16,7 @@ export async function requireAdmin(): Promise<{ folioRegistro: string; acceso: i
 
 export async function requireUser(): Promise<{ folioRegistro: string; acceso: import("@/core/entities/Acceso").Acceso }> {
   const session = await auth();
-  const folioRegistro = (session?.user as any)?.folioRegistro;
+  const folioRegistro = session?.user?.folioRegistro;
   if (!folioRegistro) {
     throw new Error("UNAUTHORIZED");
   }

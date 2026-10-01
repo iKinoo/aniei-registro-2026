@@ -30,7 +30,7 @@ export class GenerarConstanciaPonenteUseCase {
       year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaPonente({
+    const pdfUint8Array = await this.pdfService.generarConstanciaPonente({
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       tipoActividad,
@@ -39,7 +39,7 @@ export class GenerarConstanciaPonenteUseCase {
     });
 
     const ruta = `constancias/ponente-act-${idActividad}-usr-${folioRegistro}.pdf`;
-    await this.storageService.subir(ruta, pdfBuffer, 'application/pdf');
+    await this.storageService.subir(ruta, pdfUint8Array, 'application/pdf');
 
     const fileRef = parseFileReference(ruta);
     const publicUrl = await this.storageService.getAccess(fileRef);

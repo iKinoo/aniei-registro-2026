@@ -5,9 +5,9 @@ import { NextResponse } from "next/server";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-  const isLoggedIn = !!(req.auth?.user as any)?.folioRegistro;
+  const isLoggedIn = !!req.auth?.user?.folioRegistro;
   const { pathname } = req.nextUrl;
-  const role = ((req.auth?.user as any)?.role as string | undefined)?.toUpperCase();
+  const role = req.auth?.user?.role?.toUpperCase();
 
   const isAuthRoute = pathname.startsWith('/login');
   const isCpanelRoute = pathname.startsWith('/cpanel');

@@ -8,7 +8,7 @@ export class SupabaseStorageService implements IStorageService {
     this.client = createClient(supabaseUrl, serviceRoleKey);
   }
 
-  async subir(ruta: string, buffer: Buffer, mime: string): Promise<string> {
+  async subir(ruta: string, buffer: Uint8Array, mime: string): Promise<string> {
     const bucket = ruta.startsWith('constancias/') ? 'constancias' : 'comprobantes';
     const filePath = ruta.startsWith('constancias/') || ruta.startsWith('comprobantes/')
       ? ruta.substring(ruta.indexOf('/') + 1)

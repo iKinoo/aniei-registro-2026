@@ -28,7 +28,7 @@ export class EnviarConstanciaPonenteUseCase {
       year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaPonente({
+    const pdfUint8Array = await this.pdfService.generarConstanciaPonente({
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       tipoActividad,
@@ -38,7 +38,7 @@ export class EnviarConstanciaPonenteUseCase {
 
     await this.emailService.enviarConstanciaPonente(
       usuario.correo.toString(),
-      pdfBuffer,
+      pdfUint8Array,
       `${usuario.nombre} ${usuario.apellido}`,
       actividad.nombre
     );

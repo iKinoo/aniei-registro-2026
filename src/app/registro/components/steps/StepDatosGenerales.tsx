@@ -1,6 +1,6 @@
 'use client';
 
-import { Titulo, Estado, Institucion, TipoParticipante } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoParticipante } from '@/application/dtos/CatalogosDTO';
 import { DatosGeneralesWizard } from '../RegistroForm';
 import { titulosToOptions, estadosToOptions, institucionesToOptions } from '../SelectCatalogo';
 

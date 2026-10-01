@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getUsuariosAdminAction, eliminarUsuarioAction, getInstitucionesAction } from './actions';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
-import { Institucion } from '@/shared/types/catalogos';
+import { Institucion } from '@/application/dtos/CatalogosDTO';
 import { useRouter } from 'next/navigation';
 
 const SearchIcon = () => (
@@ -55,6 +55,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
+      setLoading(true);
       setDebouncedSearch(search);
       setPage(1);
     }, 500);
@@ -75,8 +76,18 @@ export default function AdminPanel() {
   }, [page, limit, debouncedSearch, filtroInstitucion]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let activo = true;
+    getUsuariosAdminAction(page, limit, debouncedSearch, filtroInstitucion).then(result => {
+      if (!activo) return;
+      if (result.success && result.data) {
+        setUsuarios(result.data.data);
+        setTotal(result.data.total);
+        setTotalPages(result.data.totalPages);
+      }
+      setLoading(false);
+    });
+    return () => { activo = false; };
+  }, [page, limit, debouncedSearch, filtroInstitucion]);
 
   const handleEliminarUsuario = async () => {
     if (!deleteDialog.folio) return;
@@ -106,6 +117,7 @@ export default function AdminPanel() {
             <select
               value={filtroInstitucion ?? ''}
               onChange={(e) => {
+                setLoading(true);
                 setFiltroInstitucion(e.target.value ? Number(e.target.value) : undefined);
                 setPage(1);
               }}
@@ -236,6 +248,7 @@ export default function AdminPanel() {
                 id="limit"
                 value={limit}
                 onChange={(e) => {
+                  setLoading(true);
                   setLimit(Number(e.target.value));
                   setPage(1);
                 }}
@@ -250,7 +263,7 @@ export default function AdminPanel() {
 
             <div className="flex flex-row space-x-2">
               <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => { setLoading(true); setPage((p) => Math.max(1, p - 1)); }}
                 disabled={page === 1 || loading}
                 className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -260,7 +273,7 @@ export default function AdminPanel() {
                 Página {page} de {totalPages || 1}
               </div>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => { setLoading(true); setPage((p) => Math.min(totalPages, p + 1)); }}
                 disabled={page >= totalPages || loading}
                 className="px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >

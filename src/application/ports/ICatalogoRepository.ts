@@ -1,4 +1,4 @@
-import { Titulo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoUsuario } from '@/application/dtos/CatalogosDTO';
 
 export interface ICatalogoRepository {
   obtenerTitulos(): Promise<Titulo[]>;

@@ -1,4 +1,5 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import type { ActualizarUsuarioDTO, CompletarRegistroDTO } from '@/application/dtos/ActualizarUsuarioDTO';
+import type { Prisma } from '@/generated/prisma/client';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IFolioGenerator } from '@/application/ports/IFolioGenerator';
 import { Usuario } from '@/core/entities/Usuario';
@@ -8,9 +9,34 @@ import { UsuarioMapper } from '../mappers/UsuarioMapper';
 
 export class PrismaUsuarioRepository implements IUsuarioRepository {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly prisma: Prisma.TransactionClient,
     private readonly folioGenerator: IFolioGenerator,
   ) {}
+
+  async actualizar(folio: string, d: ActualizarUsuarioDTO): Promise<void> {
+    await this.prisma.usuarios.update({ where: { folio_registro: folio }, data: {
+      nombre: d.nombre, apellido: d.apellido, correo: d.correo, telefono: d.telefono, lada: d.lada,
+      extension: d.extension, genero: d.genero, carrera: d.carrera, dependencia: d.dependencia,
+      id_titulo: d.idTitulo, id_institucion: d.idInstitucion, id_entidad_federativa: d.idEntidadFederativa,
+    } });
+  }
+
+  async completar(folio: string, d: CompletarRegistroDTO): Promise<void> {
+    await this.prisma.usuarios.update({ where: { folio_registro: folio }, data: {
+      correo: d.correo, telefono: d.telefono || null, lada: d.lada || null, extension: d.extension || null,
+      genero: d.genero, carrera: d.carrera || null, id_titulo: d.idTitulo,
+    } });
+  }
+
+  async eliminar(folio: string): Promise<string[]> {
+    const depositos = await this.prisma.depositos.findMany({ where: { folio_registro: folio }, select: { archivo_url: true } });
+    await this.prisma.inscripcion_actividades.deleteMany({ where: { folio_registro: folio } });
+    await this.prisma.facturaciones.deleteMany({ where: { folio_registro: folio } });
+    await this.prisma.depositos.deleteMany({ where: { folio_registro: folio } });
+    await this.prisma.usuarios.delete({ where: { folio_registro: folio } });
+    await this.prisma.accesos.deleteMany({ where: { folio_registro: folio } });
+    return depositos.map(d => d.archivo_url);
+  }
 
   async crear(usuario: Usuario): Promise<Usuario> {
     const folio = usuario.folioRegistro ?? (await this.folioGenerator.siguiente());
@@ -60,7 +86,7 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     return UsuarioMapper.toDomain(model);
   }
 
-  async crearGrupoTransaccional(data: {
+  async crearGrupo(data: {
     token: string;
     responsableId: string;
     institucionId: number | null;
@@ -74,50 +100,49 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       idTipoParticipante: number;
     }>;
   }): Promise<{ usuariosIds: string[], folios: string[] }> {
-    return this.prisma.$transaction(async (tx) => {
-      const grupo = await tx.grupos_registro.create({
+    const tx = this.prisma;
+    const grupo = await tx.grupos_registro.create({
+      data: {
+        token: data.token,
+        responsable: { connect: { folio_registro: data.responsableId } },
+      },
+    });
+
+    const usuariosIds: string[] = [];
+    const folios: string[] = [];
+
+    for (const m of data.miembros) {
+      const { id } = await tx.folios_contador.create({ data: {} });
+      const folio = `ANI26-${String(id).padStart(4, '0')}`;
+      const newUsuario = await tx.usuarios.create({
         data: {
-          token: data.token,
-          responsable: { connect: { folio_registro: data.responsableId } },
+          folio_registro: folio,
+          nombre: m.nombre,
+          apellido: m.apellido,
+          correo: m.correo,
+          id_grupo_registro: grupo.id,
+          id_institucion: data.institucionId,
+          dependencia: data.dependenciaId,
+          id_entidad_federativa: data.estadoId,
+          id_tipo_participante: m.idTipoParticipante,
+          verificado: true,
         },
       });
 
-      const usuariosIds: string[] = [];
-      const folios: string[] = [];
+      await tx.accesos.create({
+        data: {
+          email: m.correo,
+          nombre: `${m.nombre} ${m.apellido}`,
+          password: m.passwordHash,
+          rol: 'USER',
+          folio_registro: newUsuario.folio_registro,
+        },
+      });
 
-      for (const m of data.miembros) {
-        const { id } = await tx.folios_contador.create({ data: {} });
-        const folio = `ANI26-${String(id).padStart(4, '0')}`;
-        const newUsuario = await tx.usuarios.create({
-          data: {
-            folio_registro: folio,
-            nombre: m.nombre,
-            apellido: m.apellido,
-            correo: m.correo,
-            id_grupo_registro: grupo.id,
-            id_institucion: data.institucionId,
-            dependencia: data.dependenciaId,
-            id_entidad_federativa: data.estadoId,
-            id_tipo_participante: m.idTipoParticipante,
-            verificado: true,
-          },
-        });
+      usuariosIds.push(newUsuario.folio_registro);
+      folios.push(newUsuario.folio_registro);
+    }
 
-        await tx.accesos.create({
-          data: {
-            email: m.correo,
-            nombre: `${m.nombre} ${m.apellido}`,
-            password: m.passwordHash,
-            rol: 'USER',
-            folio_registro: newUsuario.folio_registro,
-          },
-        });
-
-        usuariosIds.push(newUsuario.folio_registro);
-        folios.push(newUsuario.folio_registro);
-      }
-
-      return { usuariosIds, folios };
-    });
+    return { usuariosIds, folios };
   }
 }

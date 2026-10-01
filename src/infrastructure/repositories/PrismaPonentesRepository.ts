@@ -1,9 +1,9 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
 import { PonenteDTO } from '@/application/dtos/ActividadDTO';
 
 export class PrismaPonentesRepository implements IPonentesRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: Prisma.TransactionClient) {}
 
   async vincular(idActividad: number, folioRegistro: string, rol?: string): Promise<void> {
     await this.prisma.actividad_ponentes.upsert({

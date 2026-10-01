@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { PrecioInscripcion, TipoParticipante } from '@/shared/types/catalogos';
+import { PrecioInscripcion, TipoParticipante } from '@/application/dtos/CatalogosDTO';
 import { guardarPrecioAction, crearPrecioAction, eliminarPrecioAction, guardarTipoParticipanteAction, crearTipoParticipanteAction, eliminarTipoParticipanteAction } from './actions';
 
 function toDateInputValue(date: Date) {

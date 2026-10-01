@@ -1,7 +1,7 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
-import { TipoActividad } from '@/shared/types/catalogos';
+import { TipoActividad } from '@/application/dtos/CatalogosDTO';
 
 const include = {
   tipo_actividad: true,

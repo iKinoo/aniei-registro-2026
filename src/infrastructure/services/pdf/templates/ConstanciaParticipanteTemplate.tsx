@@ -78,7 +78,7 @@ export function ConstanciaParticipanteTemplate(props: ConstanciaParticipanteTemp
             por su participación en la {props.tipoActividad.toLowerCase()} titulada:
           </Text>
           <Text style={{ marginTop: 15, fontStyle: 'italic', fontWeight: 'bold' }}>
-            "{props.nombreActividad}"
+            &quot;{props.nombreActividad}&quot;
           </Text>
         </View>
 

@@ -1,4 +1,7 @@
-import { prisma } from '@/infrastructure/database/client';
+import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
+import { getCatalogoRepository } from '@/infrastructure/config/container';
+import { getRegistroQueryService } from '@/infrastructure/config/container';
+import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import Link from 'next/link';
 import { CompletarRegistroForm } from './CompletarRegistroForm';
 
@@ -30,22 +33,14 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
 
   if (!idUsuario) return <NotFoundUI />;
 
-  // Find group and verify user is in it and needs completion
-  const grupo = await prisma.grupos_registro.findUnique({
-    where: { token },
-    include: {
-      responsable: true,
-      miembros: {
-        where: { folio_registro: idUsuario }
-      },
-    },
-  });
+  const grupo = await new ConsultarRegistros(getRegistroQueryService()).obtenerGrupo(token);
+  const miembro = grupo?.miembros.find(m => m.folioRegistro === idUsuario);
 
-  if (!grupo || grupo.miembros.length === 0) {
+  if (!grupo || !miembro) {
     return <NotFoundUI />;
   }
 
-  const usuario = grupo.miembros[0];
+  const usuario = miembro;
   if (!usuario.correo.includes('@temp.aniei.org')) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -58,21 +53,10 @@ export default async function UsuarioCompletarPage(props: { params: Promise<{ to
     );
   }
 
-  // Load catalogs
-  const [dbTitulos, dbEstados, dbInstituciones] = await Promise.all([
-    prisma.titulos.findMany({ orderBy: { descripcion: 'asc' } }),
-    prisma.estados.findMany({ orderBy: { nombre: 'asc' } }),
-    prisma.instituciones.findMany({ orderBy: { nombre: 'asc' } }),
+  const catalogoRepo = new ConsultarCatalogos(getCatalogoRepository());
+  const [titulos, estados, instituciones] = await Promise.all([
+    catalogoRepo.obtenerTitulos(), catalogoRepo.obtenerEstados(), catalogoRepo.obtenerInstituciones(),
   ]);
-
-  const titulos = dbTitulos.map(T => ({ idTitulo: T.id_titulo, descripcion: T.descripcion }));
-  const estados = dbEstados.map(E => ({ idEntidadFederativa: E.id_entidad_federativa, nombre: E.nombre }));
-  const instituciones = dbInstituciones.map(I => ({ 
-    idInstitucion: I.id_institucion, 
-    nombre: I.nombre,
-    abreviatura: I.abreviatura
-  }));
-
   const catalogos = { titulos, estados, instituciones };
 
   return (

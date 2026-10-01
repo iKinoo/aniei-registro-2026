@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Estado } from '@/shared/types/catalogos';
+import { Estado } from '@/application/dtos/CatalogosDTO';
 import { DepositoWizard, FacturacionWizard } from '../RegistroForm';
 import { estadosToOptions } from '../SelectCatalogo';
 import { FormularioDeposito } from '../FormularioDeposito';

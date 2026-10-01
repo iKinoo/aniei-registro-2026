@@ -1,4 +1,4 @@
-import { PrecioInscripcion } from '@/shared/types/catalogos';
+import { PrecioInscripcion } from '@/application/dtos/CatalogosDTO';
 
 export interface CrearPrecioDTO {
   idTipoParticipante: number;

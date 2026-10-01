@@ -1,9 +1,10 @@
-import { Prisma, PrismaClient } from '@/generated/prisma/client';
+import { RegistroError } from '@/core/errors/RegistroError';
+import type { Prisma } from '@/generated/prisma/client';
 import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { InscritoDTO } from '@/application/dtos/ActividadDTO';
 
 export class PrismaInscripcionActividadRepository implements IInscripcionActividadRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: Prisma.TransactionClient) {}
 
   async obtenerPorActividad(idActividad: number): Promise<InscritoDTO[]> {
     const rows = await this.prisma.inscripcion_actividades.findMany({
@@ -43,93 +44,33 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     return rows.map((r) => r.id_actividad!).filter((id): id is number => id !== null);
   }
 
-  /**
-   * Inscribe al usuario en varias actividades con validación atómica de cupo.
-   *
-   * Por cada actividad:
-   *   1. Abre una transacción independiente.
-   *   2. Bloquea la fila de `actividades` con SELECT FOR UPDATE → serializa
-   *      cualquier inscripción concurrente a esa misma actividad.
-   *   3. Cuenta las inscripciones actuales dentro de la transacción bloqueada.
-   *   4. Si hay cupo → inserta; si no → registra como sinCupo sin abortar las demás.
-   *
-   * Cada actividad es una transacción separada para que el fallo de una
-   * no impida las demás (una actividad llena no bloquea las otras).
-   */
   async crearMuchasConValidacion(
     folioRegistro: string,
     idsActividades: number[],
   ): Promise<{ ok: number[]; sinCupo: number[] }> {
     const ok: number[] = [];
     const sinCupo: number[] = [];
-
-    for (const idActividad of idsActividades) {
-      try {
-        await this.prisma.$transaction(
-          async (tx) => {
-            // 1. Bloquear la fila de la actividad (SELECT FOR UPDATE)
-            //    Esto serializa inscripciones concurrentes a la misma actividad.
-            const [actividad] = await tx.$queryRaw<
-              Array<{ cupo_maximo: number | null }>
-            >`
-              SELECT cupo_maximo
-              FROM actividades
-              WHERE id_actividad = ${idActividad}
-              FOR UPDATE
-            `;
-
-            // Sin cupo_maximo o cupo_maximo = 0 → sin restricción
-            if (!actividad || !actividad.cupo_maximo) {
-              await tx.inscripcion_actividades.create({
-                data: {
-                  folio_registro: folioRegistro,
-                  id_actividad: idActividad,
-                  fecha_inscripcion: new Date(),
-                },
-              });
-              return;
-            }
-
-            // 2. Contar inscritos dentro de la transacción (dato fresco + bloqueado)
-            const [{ total }] = await tx.$queryRaw<Array<{ total: bigint }>>`
-              SELECT COUNT(*) AS total
-              FROM inscripcion_actividades
-              WHERE id_actividad = ${idActividad}
-            `;
-
-            if (Number(total) >= actividad.cupo_maximo) {
-              // Cupo lleno → lanzar para marcarla como sinCupo
-              throw new Error('SIN_CUPO');
-            }
-
-            await tx.inscripcion_actividades.create({
-              data: {
-                folio_registro: folioRegistro,
-                id_actividad: idActividad,
-                fecha_inscripcion: new Date(),
-              },
-            });
-          },
-          {
-            // Timeout de 8s para no bloquear indefinidamente
-            timeout: 8000,
-            isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-          },
-        );
-
-        ok.push(idActividad);
-      } catch (err) {
-        // Solo marcamos sinCupo si es error de cupo; otros errores se re-lanzan
-        const msg = err instanceof Error ? err.message : '';
-        if (msg === 'SIN_CUPO') {
-          sinCupo.push(idActividad);
-        } else {
-          // Error inesperado (Unique constraint por doble inscripción, etc.) → ignorar silenciosamente
-          console.warn(`inscripcion_actividades: error en id=${idActividad}:`, msg);
-        }
+    for (const idActividad of [...new Set(idsActividades)].sort((a, b) => a - b)) {
+      const [actividad] = await this.prisma.$queryRaw<Array<{ cupo_maximo: number | null }>>`
+        SELECT cupo_maximo FROM actividades WHERE id_actividad = ${idActividad} FOR UPDATE
+      `;
+      if (!actividad) throw new Error('Actividad no encontrada');
+      const existente = await this.prisma.inscripcion_actividades.findUnique({
+        where: { folio_registro_id_actividad: { folio_registro: folioRegistro, id_actividad: idActividad } },
+      });
+      if (existente) {
+        throw RegistroError.DATOS_INVALIDOS('Ya existe una inscripción en la actividad seleccionada');
       }
+      const total = await this.prisma.inscripcion_actividades.count({ where: { id_actividad: idActividad } });
+      if (actividad.cupo_maximo && total >= actividad.cupo_maximo) {
+        sinCupo.push(idActividad);
+        continue;
+      }
+      await this.prisma.inscripcion_actividades.create({
+        data: { folio_registro: folioRegistro, id_actividad: idActividad, fecha_inscripcion: new Date() },
+      });
+      ok.push(idActividad);
     }
-
     return { ok, sinCupo };
   }
 

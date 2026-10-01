@@ -1,4 +1,4 @@
-import { TipoActividad } from '@/shared/types/catalogos';
+import { TipoActividad } from '@/application/dtos/CatalogosDTO';
 import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
 
 export interface IActividadRepository {

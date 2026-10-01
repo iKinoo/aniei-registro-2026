@@ -14,13 +14,15 @@ Sistema web de inscripción al congreso ANIEI 2026: registro individual y grupal
 |-------|---------|
 | Desarrollo | `npm run dev` |
 | Build | `npm run build` |
-| Lint | `npm run lint` |
+| Lint y límites de capas | `npm run lint` |
+| Arquitectura | `npm run check:architecture` |
+| Regresiones de flujos | `npm run test:flows` |
 | Typecheck | `npx tsc --noEmit` |
 | Cliente Prisma | `npx prisma generate` (corre en `postinstall`) |
 | Estado de migraciones | `npx prisma migrate status` |
 | Aplicar migraciones | `npx prisma migrate deploy` |
 
-**No existe suite de tests** (ni vitest ni jest). La verificación de cualquier cambio es: `npx tsc --noEmit` + `npm run lint` + `npm run build` en verde, y probar el flujo real en `npm run dev`. Ejecuta los tres antes de dar una tarea por terminada.
+**Verificación obligatoria:** `npx tsc --noEmit` + `npm run lint` + `npm run build`, y probar el flujo afectado en `npm run dev`. `npm run lint` y el hook `prebuild` ejecutan el control de arquitectura antes de continuar. Hay regresiones con Node.js en `scripts/verificar-flujos.mjs` (`npm run test:flows`), sin Vitest/Jest; ejecutarlas al cambiar registro, transacciones, checkout, archivos o autenticación. No desactivar controles para lograr un resultado verde. Si Turbopack falla por restricciones del entorno, verificar también `npm run build -- --webpack` y comunicar qué build pasó.
 
 Variables de entorno en `.env.local` (gitignoreado); plantilla en `.env.example`.
 
@@ -35,19 +37,34 @@ src/application/              APLICACIÓN: ports (interfaces), use-cases, dtos
 src/infrastructure/           ADAPTADORES: database, repositories, mappers, services, config/container.ts
 src/app/                      PRESENTACIÓN: páginas, layouts, Server Actions (actúan como controllers)
 src/shared/                   Utilidades transversales: auth/requireAdmin.ts, security/password.ts,
-                              validation/registro.schema.ts, types/catalogos.ts, env.ts
+                              validation/registro.schema.ts, env.ts (types/catalogos.ts reexporta DTOs internos)
 src/generated/prisma/         Cliente Prisma generado — GITIGNOREADO, no editar a mano
 src/auth.ts, src/proxy.ts     NextAuth (credenciales) y middleware de protección de rutas
 ```
 
 Reglas de dependencia (no romperlas):
 
-- `core` y `application` **no** importan Next.js, Prisma, Zod ni nada externo. Solo TS puro y entre sí.
+- `core` solo depende de sí mismo y de TypeScript/ECMAScript estándar. `application` solo depende de `core` y de sí misma. Ninguna importa Next.js, React, Prisma, Zod, paquetes externos, módulos Node.js ni adaptadores, tampoco mediante `import()` dinámico o `import type`.
 - `application` define puertos (`IXxxRepository`, `IEmailService`, `IPdfService`, `IStorageService`, …); `infrastructure` los implementa.
 - `app/` no construye repositorios ni clientes a mano: obtiene dependencias de los getters de `src/infrastructure/config/container.ts` e instancia el use case.
-- Excepción conocida (deuda P2, no propagarla): algunas páginas de `app/` importan `prisma` directamente.
+- Los incumplimientos de imports directos y fallbacks Prisma detectados el 30.09.2026 se corrigieron. No reintroducirlos. Véase el seguimiento en `auditoria_arch_30.09.2026.md`.
 
 Flujo canónico: `[Client Component] → Server Action → Use Case → Domain + Ports ← Infrastructure`.
+
+### Cumplimiento obligatorio para agentes
+
+- Antes de editar, identificar la capa, sus dependencias permitidas y el flujo afectado. Revisar `docs/DESIGN.md` y la auditoría cuando el cambio afecte límites de capas.
+- Las dependencias de un use case se tipan con puertos de `application/ports` y se reciben por constructor. Prohibidos valores por defecto que creen adaptadores concretos, clientes, generadores criptográficos o servicios. Si falta un puerto, definirlo antes de implementar el adaptador.
+- Hashing, generación de contraseñas/IDs, almacenamiento, correo y PDF se resuelven mediante puertos. Los adaptadores de contraseñas reutilizan `generateSecurePassword`/`generateSecurePasswordAlnum`; los casos de uso no importan esas funciones de `shared`.
+- `container.ts` es la raíz de composición para los flujos de aplicación; reexporta los getters de `config/credenciales.ts`, una composición separada para evitar el ciclo con NextAuth: puede construir adaptadores y debe devolver interfaces explícitas. La infraestructura puede componer adaptadores internos, por ejemplo repositorios vinculados a una transacción. Instanciar entidades, value objects y use cases concretos es válido; no necesitan interfaces por el solo hecho de ser clases.
+- Pages, Server Actions y Route Handlers validan entrada, aplican guards, convierten datos de transporte, invocan casos de uso y adaptan respuestas. No acceden a Prisma/SQL, construyen adaptadores ni implementan reglas de negocio, transacciones o coordinación de persistencia/correo/PDF. Los Client Components no importan infraestructura ni secretos, directa o transitivamente.
+- Los tipos compartidos consumidos por dominio/aplicación pertenecen a `core` o `application/dtos`; `shared` no sirve como puente hacia frameworks. En nuevos contratos binarios usar `Uint8Array`; la conversión a `Buffer` pertenece a los adaptadores.
+- Operaciones multi-tabla requieren `ITransactionManager` inyectado y `TransactionContext` tipado, sin fallback a Prisma ni `any`. Un repositorio recibido dentro de una transacción debe reutilizarla, sin abrir otra transacción interactiva. Traducir errores Prisma a errores de dominio en infraestructura.
+- `auth.ts`, `auth.config.ts` y `proxy.ts` son integración con el framework: pueden depender de NextAuth/Next.js. Esto no permite trasladar consultas de persistencia o reglas de credenciales a `application`, ni importar infraestructura desde `core`.
+- Al tocar deuda arquitectónica, corregir el límite necesario para el cambio y documentar lo restante; no emprender una refactorización ajena al alcance. No presentar una deuda conocida como excepción permanente.
+- Antes de cerrar, revisar imports estáticos/dinámicos, tipos, constructores y dependencias transitivas de los archivos cambiados; ejecutar typecheck, lint y build. Si existen fallos previos o limitaciones del entorno, informar el resultado real y no declarar los controles en verde. Para cambios funcionales, verificar además el flujo real en desarrollo; para cambios exclusivamente documentales no hay un flujo funcional nuevo que probar.
+
+El control `scripts/check-architecture.mjs` revisa imports estáticos, dinámicos, de tipos y relativos, dependencias transitivas de Client Components y guards administrativos. Se ejecuta dentro de lint y no tiene excepciones para deuda histórica. No demuestra por sí solo que las reglas de negocio estén en la capa correcta: esa revisión sigue siendo obligatoria. No trasladar adaptadores a `shared` ni usar reexports para eludirlo. Leer la documentación local de Next.js en `node_modules/next/dist/docs/` antes de cambiar APIs del framework.
 
 ---
 
@@ -127,3 +144,13 @@ Las actions **no lanzan** errores al cliente: devuelven `{ success, data | error
 - `docs/PLAN_MIGRACION_MYSQL.md` — detalle de la migración PostgreSQL → MySQL.
 
 Idioma de documentación, commits y mensajes de error: **español**. Commits en formato conventional (`feat:`, `fix:`, `docs:`, `chore:`). No commitear sin que se pida explícitamente.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

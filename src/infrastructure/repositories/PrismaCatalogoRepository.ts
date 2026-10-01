@@ -1,6 +1,6 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
-import { Titulo, Estado, Institucion, TipoUsuario } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, TipoUsuario } from '@/application/dtos/CatalogosDTO';
 
 export class PrismaCatalogoRepository implements ICatalogoRepository {
   constructor(private readonly prisma: PrismaClient) {}

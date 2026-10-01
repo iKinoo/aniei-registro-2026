@@ -9,9 +9,7 @@ import { CrearEquipoDTO, ActualizarEquipoDTO } from '@/application/dtos/EquipoDT
 export async function getActividadesConEquiposAction() {
   try {
     await requireAdmin();
-    const actRepo = getActividadRepository();
-    const todas = await actRepo.listar();
-    const conEquipos = todas.filter((a) => a.tipoActividad?.manejaEquipos);
+    const conEquipos = await new GestionarActividades(getActividadRepository()).listarConEquipos();
     return { success: true as const, data: conEquipos };
   } catch (error) {
     console.error('Error en getActividadesConEquiposAction:', error);
@@ -85,8 +83,7 @@ export async function buscarUsuariosEquipoAction(query: string) {
 export async function getActividadDetalleAction(idActividad: number) {
   try {
     await requireAdmin();
-    const actRepo = getActividadRepository();
-    const actividad = await actRepo.obtenerPorId(idActividad);
+    const actividad = await new GestionarActividades(getActividadRepository()).obtenerPorId(idActividad);
     if (!actividad) {
       return { success: false as const, error: 'Actividad no encontrada' };
     }

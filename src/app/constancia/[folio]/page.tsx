@@ -1,6 +1,5 @@
 import { getUsuarioRepository, getCatalogoRepository, getPdfService } from '@/infrastructure/config/container';
-import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
-import { NextResponse } from 'next/server';
+import { ConsultarConstancia } from '@/application/use-cases/ConsultarConstancia';
 
 export default async function ConstanciaPage({
   params,
@@ -9,10 +8,12 @@ export default async function ConstanciaPage({
 }) {
   const { folio } = await params;
 
+  let usuario;
   try {
-    const usuarioRepo = getUsuarioRepository();
-    const folioVO = FolioRegistro.create(folio);
-    const usuario = await usuarioRepo.buscarPorFolio(folioVO);
+    usuario = await new ConsultarConstancia(getUsuarioRepository(), getCatalogoRepository(), getPdfService()).obtener(folio);
+  } catch {
+    usuario = null;
+  }
 
     if (!usuario) {
       return (
@@ -30,21 +31,6 @@ export default async function ConstanciaPage({
       );
     }
 
-    // Obtener datos de catálogos
-    const catalogoRepo = getCatalogoRepository();
-    const [instituciones, titulos] = await Promise.all([
-      catalogoRepo.obtenerInstituciones(),
-      catalogoRepo.obtenerTitulos(),
-    ]);
-
-    const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
-    const titulo = titulos.find((t) => t.idTitulo === usuario.idTitulo);
-
-    const fechaStr = usuario.fechaRegistro.toLocaleDateString('es-MX', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-
-    // Renderizar información de la constancia con opción de descarga PDF
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <div className="rounded-lg bg-white p-8 shadow-md">
@@ -60,15 +46,15 @@ export default async function ConstanciaPage({
             </div>
             <div className="flex justify-between border-b py-2">
               <span className="font-medium text-gray-600">Institución:</span>
-              <span>{institucion?.nombre ?? 'N/A'}</span>
+              <span>{usuario.institucion}</span>
             </div>
             <div className="flex justify-between border-b py-2">
               <span className="font-medium text-gray-600">Tipo:</span>
-              <span>{titulo?.descripcion ?? 'N/A'}</span>
+              <span>{usuario.tipoUsuario}</span>
             </div>
             <div className="flex justify-between py-2">
               <span className="font-medium text-gray-600">Fecha:</span>
-              <span>{fechaStr}</span>
+              <span>{usuario.fecha}</span>
             </div>
           </div>
           <a
@@ -85,17 +71,4 @@ export default async function ConstanciaPage({
         </div>
       </div>
     );
-  } catch {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <div className="rounded-lg bg-white p-8 shadow-md">
-          <h1 className="mb-2 text-xl font-bold text-red-800">Error</h1>
-          <p className="text-gray-600">Folio inválido o no encontrado.</p>
-          <a href="/registro" className="mt-4 inline-block text-sm text-blue-600 hover:underline">
-            ← Volver al registro
-          </a>
-        </div>
-      </div>
-    );
-  }
 }

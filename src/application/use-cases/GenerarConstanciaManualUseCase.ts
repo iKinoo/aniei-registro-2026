@@ -10,6 +10,8 @@ export class GenerarConstanciaManualUseCase {
     private readonly constanciaManualRepo: IConstanciaManualRepository,
   ) {}
 
+  obtenerTodas() { return this.constanciaManualRepo.obtenerTodas(); }
+
   async execute(dto: ConstanciaManualDTO): Promise<ConstanciaManualEntity> {
     const descripcion = this.generarDescripcion(dto);
     const tipoLabel = this.obtenerTipoLabel(dto.tipoConstancia);
@@ -20,7 +22,7 @@ export class GenerarConstanciaManualUseCase {
       day: 'numeric',
     });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaManual({
+    const pdfUint8Array = await this.pdfService.generarConstanciaManual({
       tipoConstancia: tipoLabel,
       destinatarios: dto.destinatarios,
       descripcion,
@@ -36,7 +38,7 @@ export class GenerarConstanciaManualUseCase {
       .substring(0, 30) ?? 'manual';
     const ruta = `constancias/manuales/${dto.tipoConstancia.toLowerCase()}-${nombreArchivo}-${timestamp}.pdf`;
 
-    await this.storageService.subir(ruta, pdfBuffer, 'application/pdf');
+    await this.storageService.subir(ruta, pdfUint8Array, 'application/pdf');
 
     const fileRef = parseFileReference(ruta);
     const urlPdf = await this.storageService.getAccess(fileRef);

@@ -12,7 +12,7 @@ export class AuthJsAuthService implements IAuthService {
         redirect: false,
       });
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof AuthError) {
         switch (error.type) {
           case 'CredentialsSignin':
@@ -33,7 +33,7 @@ export class AuthJsAuthService implements IAuthService {
   async signOut(): Promise<void> {
     try {
       await signOut({ redirect: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error && typeof error === 'object' && 'digest' in error && (error.digest as string).startsWith('NEXT_REDIRECT')) {
         return;
       }
@@ -44,12 +44,12 @@ export class AuthJsAuthService implements IAuthService {
   async getCurrentSession(): Promise<AuthSessionDTO | null> {
     const session = await auth();
 
-    if (!session || !session.user || !(session.user as any).folioRegistro) {
+    if (!session || !session.user || !session.user.folioRegistro) {
       return null;
     }
 
     return {
-      folioRegistro: (session.user as any).folioRegistro,
+      folioRegistro: session.user.folioRegistro,
       authId: session.user.id || null,
     };
   }

@@ -1,24 +1,30 @@
-import { prisma } from "./client";
-import type { ITransactionManager } from "@/application/ports/ITransactionManager";
-import { PrismaUsuarioRepository } from "@/infrastructure/repositories/PrismaUsuarioRepository";
-import { PrismaDepositoRepository } from "@/infrastructure/repositories/PrismaDepositoRepository";
-import { PrismaFacturacionRepository } from "@/infrastructure/repositories/PrismaFacturacionRepository";
-import { PrismaAccesoRepository } from "@/infrastructure/repositories/PrismaAccesoRepository";
-import { PrismaInscripcionActividadRepository } from "@/infrastructure/repositories/PrismaInscripcionActividadRepository";
-import { PrismaFolioGenerator } from "@/infrastructure/database/PrismaFolioGenerator";
+import { PrismaGrupoRepository } from '@/infrastructure/repositories/PrismaGrupoRepository';
+import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
+import { Prisma } from '@/generated/prisma/client';
+import { prisma } from './client';
+import type { ITransactionManager, TransactionContext } from '@/application/ports/ITransactionManager';
+import { PrismaUsuarioRepository } from '@/infrastructure/repositories/PrismaUsuarioRepository';
+import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDepositoRepository';
+import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
+import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAccesoRepository';
+import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
+import { PrismaFolioGenerator } from './PrismaFolioGenerator';
+import { mapPrismaError } from '@/infrastructure/errors/prismaErrorMapper';
 
 export class PrismaTransactionManager implements ITransactionManager {
-  async run<T>(fn: (ctx: Parameters<ITransactionManager["run"]>[0] extends (c: infer C) => Promise<T> ? C : never) => Promise<T>): Promise<T> {
-    return prisma.$transaction(async (tx) => {
-      const ctx = {
-        usuarioRepo: new PrismaUsuarioRepository(tx as any, new PrismaFolioGenerator(tx as any)),
-        depositoRepo: new PrismaDepositoRepository(tx as any),
-        accesoRepo: new PrismaAccesoRepository(tx as any),
-        facturacionRepo: new PrismaFacturacionRepository(tx as any),
-        inscripcionRepo: new PrismaInscripcionActividadRepository(tx as any),
-      };
-      // @ts-expect-error tx context
-      return fn(ctx);
-    }) as Promise<T>;
+  async run<T>(fn: (ctx: TransactionContext) => Promise<T>): Promise<T> {
+    try {
+      return await prisma.$transaction(async (tx) => fn({
+        grupoRepo: new PrismaGrupoRepository(tx),
+        ponentesRepo: new PrismaPonentesRepository(tx),
+        usuarioRepo: new PrismaUsuarioRepository(tx, new PrismaFolioGenerator(tx)),
+        depositoRepo: new PrismaDepositoRepository(tx),
+        accesoRepo: new PrismaAccesoRepository(tx),
+        facturacionRepo: new PrismaFacturacionRepository(tx),
+        inscripcionRepo: new PrismaInscripcionActividadRepository(tx),
+      }), { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 8000 });
+    } catch (error) {
+      throw mapPrismaError(error) ?? error;
+    }
   }
 }

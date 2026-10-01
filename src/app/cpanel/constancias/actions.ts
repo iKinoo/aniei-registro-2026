@@ -85,7 +85,7 @@ export async function obtenerConstanciasManualesAction(): Promise<
 > {
   try {
     await requireAdmin();
-    const repo = getConstanciaManualRepository();
+    const repo = new GenerarConstanciaManualUseCase(getPdfService(), getStorageService(), getConstanciaManualRepository());
     const entidades = await repo.obtenerTodas();
     return { success: true, data: entidades.map(entityToResponse) };
   } catch (error) {

@@ -6,6 +6,12 @@
 
 ---
 
+### Adecuación de límites — 30.09.2026
+
+Los catálogos compartidos se definen en `application/dtos/CatalogosDTO.ts` y los contratos binarios internos usan `Uint8Array`. Los controllers acceden a casos de uso con puertos resueltos desde `infrastructure/config/container.ts`; la composición de credenciales se separa en `config/credenciales.ts` para evitar ciclos con NextAuth. El manager transaccional entrega repositorios ligados a `Prisma.TransactionClient`; esos repositorios no abren transacciones anidadas. Perfil, grupos, detalles y reportes usan DTOs de consulta detrás de `IRegistroQueryService`.
+
+El seguimiento detallado de hallazgos, los cambios de comportamiento y la verificación están en [auditoria_arch_30.09.2026.md](../auditoria_arch_30.09.2026.md). Ejecutar `npm run check:architecture` y `npm run test:flows` para verificar límites y regresiones. Los fragmentos históricos de implementación de este documento no autorizan imports de infraestructura desde aplicación ni acceso Prisma desde presentación.
+
 ## Tabla de Contenidos
 
 1. [Visión General](#1-visión-general)

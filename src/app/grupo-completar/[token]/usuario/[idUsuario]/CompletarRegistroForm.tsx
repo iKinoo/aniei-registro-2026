@@ -2,8 +2,8 @@
 
 import { useActionState } from 'react';
 import { completarRegistroAction, CompletarActionState } from './actions';
-import { SelectCatalogo, titulosToOptions, estadosToOptions, institucionesToOptions } from '@/app/registro/components/SelectCatalogo';
-import { Titulo, Estado, Institucion } from '@/shared/types/catalogos';
+import { SelectCatalogo, titulosToOptions } from '@/app/registro/components/SelectCatalogo';
+import { Titulo, Estado, Institucion } from '@/application/dtos/CatalogosDTO';
 
 interface Props {
   token: string;
@@ -17,8 +17,8 @@ interface Props {
     nombre: string;
     apellido: string;
     dependencia: string | null;
-    id_institucion: number | null;
-    id_entidad_federativa: number | null;
+    idInstitucion: number | null;
+    idEntidadFederativa: number | null;
   };
 }
 
@@ -36,10 +36,10 @@ export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario
           Las instrucciones de acceso han sido enviadas a <strong>{state.correo}</strong>.
         </p>
         <p className="text-sm text-green-600 bg-green-100 rounded-lg px-4 py-3">
-          Verás tus actividades a continuación, serás redirigido brevemente o haz clic para continuar:
+          Verás tus actividad a continuación, serás redirigido brevemente o haz clic para continuar:
         </p>
-        <a href="/actividades" className="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg">
-          Ir a actividades
+        <a href="/actividad" className="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg">
+          Ir a actividad
         </a>
       </div>
     );
@@ -127,7 +127,7 @@ export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Institución</label>
             <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
-              {catalogos.instituciones.find(i => i.idInstitucion === usuario.id_institucion)?.nombre || 'N/A'}
+              {catalogos.instituciones.find(i => i.idInstitucion === usuario.idInstitucion)?.nombre || 'N/A'}
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -137,7 +137,7 @@ export function CompletarRegistroForm({ token, folioRegistro, catalogos, usuario
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Estado (Entidad Federativa)</label>
             <div className="text-sm font-medium text-gray-900 bg-white px-3 py-2 rounded-md border border-gray-200 shadow-sm">
-              {catalogos.estados.find(e => e.idEntidadFederativa === usuario.id_entidad_federativa)?.nombre || 'N/A'}
+              {catalogos.estados.find(e => e.idEntidadFederativa === usuario.idEntidadFederativa)?.nombre || 'N/A'}
             </div>
           </div>
         </div>

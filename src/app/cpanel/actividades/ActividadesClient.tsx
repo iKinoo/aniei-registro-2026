@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
-import { TipoActividad, Institucion } from '@/shared/types/catalogos';
+import { TipoActividad, Institucion } from '@/application/dtos/CatalogosDTO';
 import { getActividadesAction } from './actions';
 import { ActividadModal } from './ActividadModal';
 

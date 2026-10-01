@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Estado } from '@/shared/types/catalogos';
+import { Estado } from '@/application/dtos/CatalogosDTO';
 import { RegistroFormFields } from '../../actions/registrar-usuario.action';
 import { estadosToOptions } from '../SelectCatalogo';
 

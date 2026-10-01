@@ -30,7 +30,7 @@ export class GenerarConstancia {
       year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaInscripcion({
+    const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       folio,
@@ -40,7 +40,7 @@ export class GenerarConstancia {
     });
 
     const ruta = `constancias/${folio}.pdf`;
-    await this.storageService.subir(ruta, pdfBuffer, 'application/pdf');
+    await this.storageService.subir(ruta, pdfUint8Array, 'application/pdf');
 
     const fileRef = parseFileReference(ruta);
     return await this.storageService.getAccess(fileRef);

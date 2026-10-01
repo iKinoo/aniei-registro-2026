@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { prisma } from '@/infrastructure/database/client';
-import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
+import { getRegistroQueryService } from '@/infrastructure/config/container';
+import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import { HistorialDepositosUsuario } from '@/app/components/HistorialDepositosUsuario';
 import AutoLogout from './AutoLogout';
 import { CerrarSesionButton } from './CerrarSesionButton';
@@ -14,76 +14,14 @@ export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
 export default async function PerfilPage() {
   const session = await auth();
 
-  const folioRegistro = (session?.user as any)?.folioRegistro;
+  const folioRegistro = session?.user?.folioRegistro;
   if (!folioRegistro) {
     redirect('/login');
   }
 
-  const acceso = await prisma.accesos.findFirst({
-    where: { folio_registro: folioRegistro },
-    include: {
-      usuarios: {
-        include: {
-          instituciones: true,
-        },
-      },
-    },
-  });
-
-  if (!acceso || !acceso.usuarios) {
-    return <AutoLogout />;
-  }
-
-  const usuario = acceso.usuarios;
-
-  const inscripciones = acceso.folio_registro
-    ? await prisma.inscripcion_actividades.findMany({
-        where: { folio_registro: acceso.folio_registro },
-        include: {
-          actividades: {
-            include: {
-              tipo_actividad: true,
-              instituciones: true,
-            },
-          },
-        },
-        orderBy: { fecha_inscripcion: 'desc' },
-      })
-    : [];
-
-  const depositosRaw = acceso.folio_registro
-    ? await prisma.depositos.findMany({
-        where: { folio_registro: acceso.folio_registro },
-        orderBy: { fecha_registro: 'desc' },
-      })
-    : [];
-
-  const depositos: DepositoHistorialItem[] = depositosRaw.map((d) => ({
-    idDeposito: d.id_deposito,
-    proposito: d.proposito ?? 'EVENTO_PRINCIPAL',
-    monto: Number(d.monto),
-    referencia: d.referencia,
-    bancoSucursal: d.banco_sucursal,
-    ciudad: d.ciudad,
-    fechaDeposito: d.fecha_deposito,
-    fechaRegistro: d.fecha_registro ?? new Date(),
-    notas: d.notas,
-    archivoUrl: d.archivo_url,
-    archivoNombre: d.archivo_nombre,
-  }));
-
-  const equipos = acceso.folio_registro
-    ? await prisma.equipo_integrantes.findMany({
-        where: { folio_registro: acceso.folio_registro },
-        include: {
-          equipos: {
-            include: {
-              actividades: true,
-            },
-          },
-        },
-      })
-    : [];
+  const perfil = await new ConsultarRegistros(getRegistroQueryService()).obtenerPerfil(folioRegistro);
+  if (!perfil) return <AutoLogout />;
+  const { usuario, inscripciones, depositos, equipos } = perfil;
 
   return (
     <div className={styles.container}>
@@ -93,7 +31,7 @@ export default async function PerfilPage() {
             <p className={styles.headerSub}>Congreso ANIEI 2026</p>
             <h1 className={styles.title}>Mi Perfil</h1>
           </div>
-          <div className={styles.folioBadge}>{usuario.folio_registro || 'Sin folio'}</div>
+          <div className={styles.folioBadge}>{usuario.folioRegistro || 'Sin folio'}</div>
         </div>
 
         <div className={styles.content}>
@@ -109,13 +47,13 @@ export default async function PerfilPage() {
             </div>
             <div className={styles.field}>
               <span className={styles.label}>Institución</span>
-              <span className={styles.value}>{usuario.instituciones?.nombre || 'N/A'}</span>
+              <span className={styles.value}>{usuario.institucion?.nombre || 'N/A'}</span>
             </div>
             <div className={styles.field}>
               <span className={styles.label}>Fecha de Registro</span>
               <span className={styles.value}>
-                {usuario.fecha_registro
-                  ? new Date(usuario.fecha_registro).toLocaleDateString('es-MX', {
+                {usuario.fechaRegistro
+                  ? new Date(usuario.fechaRegistro).toLocaleDateString('es-MX', {
                       year: 'numeric', month: 'long', day: 'numeric',
                     })
                   : 'N/A'}
@@ -150,14 +88,14 @@ export default async function PerfilPage() {
           ) : (
             <div className={styles.actividadesList}>
               {inscripciones.map((insc) => {
-                const act = insc.actividades;
+                const act = insc.actividad;
                 if (!act) return null;
                 return (
-                  <div key={insc.id_inscripcion} className={styles.actividadCard}>
+                  <div key={insc.idInscripcion} className={styles.actividadCard}>
                     <div className={styles.actividadTop}>
-                      {act.tipo_actividad && (
+                      {act.tipoActividad && (
                         <span className={styles.tipoBadge}>
-                          {act.tipo_actividad.descripcion}
+                          {act.tipoActividad.descripcion}
                         </span>
                       )}
                       {act.costo && Number(act.costo) > 0 ? (
@@ -175,20 +113,20 @@ export default async function PerfilPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {new Date(act.fecha_inicio).toLocaleDateString('es-MX', {
+                        {new Date(act.fechaInicio).toLocaleDateString('es-MX', {
                           day: '2-digit', month: 'short', year: 'numeric',
-                        })} · {new Date(act.fecha_inicio).toLocaleTimeString('es-MX', {
+                        })} · {new Date(act.fechaInicio).toLocaleTimeString('es-MX', {
                           hour: '2-digit', minute: '2-digit',
                         })}
                       </span>
-                      {act.instituciones && (
+                      {act.institucion && (
                         <span className={styles.metaItem}>
                           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           </svg>
-                          {act.instituciones.abreviatura ?? act.instituciones.nombre}
-                          {act.id_sala != null && ` · Sala ${act.id_sala}`}
+                          {act.institucion.abreviatura ?? act.institucion.nombre}
+                          {act.idSala != null && ` · Sala ${act.idSala}`}
                         </span>
                       )}
                     </div>
@@ -206,21 +144,21 @@ export default async function PerfilPage() {
               </div>
               <div className={styles.actividadesList}>
                 {equipos.map((ei) => {
-                  const equipo = ei.equipos;
-                  const actividad = equipo.actividades;
+                  const equipo = ei.equipo;
+                  const actividad = equipo.actividad;
                   return (
-                    <div key={equipo.id_equipo} className={styles.actividadCard}>
+                    <div key={equipo.idEquipo} className={styles.actividadCard}>
                       <div className={styles.actividadTop}>
                         <span className={styles.tipoBadge}>
-                          Equipo #{equipo.numero_equipo}
+                          Equipo #{equipo.numeroEquipo}
                         </span>
-                        {ei.es_representante && (
+                        {ei.esRepresentante && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
                             Capitán
                           </span>
                         )}
                       </div>
-                      <h3 className={styles.actividadNombre}>{equipo.nombre_equipo}</h3>
+                      <h3 className={styles.actividadNombre}>{equipo.nombreEquipo}</h3>
                       <div className={styles.actividadMeta}>
                         <span className={styles.metaItem}>
                           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">

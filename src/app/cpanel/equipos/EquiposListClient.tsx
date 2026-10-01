@@ -73,7 +73,7 @@ export default function EquiposListClient({ actividades }: Props) {
             <p className="text-sm text-slate-500">
               No se encontraron actividades configuradas para manejar equipos.
               <br />
-              Crea un tipo de actividad con la opción "Maneja equipos" habilitada.
+              Crea un tipo de actividad con la opción &quot;Maneja equipos&quot; habilitada.
             </p>
           </div>
         ) : (

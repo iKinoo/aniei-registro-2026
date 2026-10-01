@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
-import { Estado } from '@/shared/types/catalogos';
+import { Estado } from '@/application/dtos/CatalogosDTO';
 import { SeccionFacturacion, FacturacionDefaults } from '@/app/registro/components/SeccionFacturacion';
-import { CampoArchivo } from '@/app/registro/components/CampoArchivo';
 import { FormularioDeposito, DepositoFormValues } from '@/app/registro/components/FormularioDeposito';
 import { confirmarInscripcionesAction, ConfirmacionInscripcionResult } from './actions';
 
@@ -15,9 +14,6 @@ function formatFecha(iso: string) {
     hour: '2-digit', minute: '2-digit',
   });
 }
-
-const inputCls =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition';
 
 // ---- Pantalla de confirmación exitosa ----
 function PantallaConfirmacion({ datos }: { datos: ConfirmacionInscripcionResult }) {

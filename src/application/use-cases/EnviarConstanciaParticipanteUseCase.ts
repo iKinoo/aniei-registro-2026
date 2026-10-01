@@ -28,7 +28,7 @@ export class EnviarConstanciaParticipanteUseCase {
       year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    const pdfBuffer = await this.pdfService.generarConstanciaParticipante({
+    const pdfUint8Array = await this.pdfService.generarConstanciaParticipante({
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       tipoActividad,
@@ -38,7 +38,7 @@ export class EnviarConstanciaParticipanteUseCase {
 
     await this.emailService.enviarConstanciaParticipante(
       usuario.correo.toString(),
-      pdfBuffer,
+      pdfUint8Array,
       `${usuario.nombre} ${usuario.apellido}`,
       actividad.nombre
     );

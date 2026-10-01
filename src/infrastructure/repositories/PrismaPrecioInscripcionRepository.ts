@@ -1,6 +1,6 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IPrecioInscripcionRepository, CrearPrecioDTO, ActualizarPrecioDTO } from '@/application/ports/IPrecioInscripcionRepository';
-import { PrecioInscripcion } from '@/shared/types/catalogos';
+import { PrecioInscripcion } from '@/application/dtos/CatalogosDTO';
 
 const toPrecioInscripcion = (row: {
   id: number;

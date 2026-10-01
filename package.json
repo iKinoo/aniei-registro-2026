@@ -6,8 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "postinstall": "prisma generate"
+    "lint": "npm run check:architecture && eslint",
+    "postinstall": "prisma generate",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "test:flows": "node scripts/verificar-flujos.mjs",
+    "prebuild": "npm run check:architecture"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.0",

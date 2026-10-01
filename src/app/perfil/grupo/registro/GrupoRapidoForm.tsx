@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useActionState } from 'react';
 import { registrarGrupoRapidoAction, GrupoRapidoActionState } from './actions';
-import { Titulo, Estado, Institucion, PrecioInscripcion, TipoParticipante } from '@/shared/types/catalogos';
+import { Titulo, Estado, Institucion, PrecioInscripcion, TipoParticipante } from '@/application/dtos/CatalogosDTO';
 import { MiembroWizard, DepositoWizard, FacturacionWizard } from '@/app/registro/components/RegistroForm';
 import { StepGrupo } from '@/app/registro/components/steps/StepGrupo';
 import { StepPago } from '@/app/registro/components/steps/StepPago';
-import { FormularioDeposito, DepositoFormValues } from '@/app/registro/components/FormularioDeposito';
 
 interface ResponsableData {
   nombre: string;
@@ -19,10 +18,10 @@ interface ResponsableData {
   genero: string | null;
   carrera: string | null;
   dependencia: string | null;
-  id_titulo: number | null;
-  id_tipo_participante: number | null;
-  id_institucion: number | null;
-  id_entidad_federativa: number | null;
+  idTitulo: number | null;
+  idTipoParticipante: number | null;
+  idInstitucion: number | null;
+  idEntidadFederativa: number | null;
 }
 
 interface GrupoRapidoFormProps {
@@ -54,10 +53,6 @@ const emptyFacturacion: FacturacionWizard = {
 
 const initialState: GrupoRapidoActionState = { success: false };
 
-function formatMXN(amount: number) {
-  return amount.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-}
-
 function obtenerPrecioVigente(
   idTipoParticipante: number,
   esAfiliada: boolean,
@@ -85,12 +80,12 @@ export function GrupoRapidoForm({
   const [step, setStep] = useState(1);
   const [grupoActivo, setGrupoActivo] = useState(false);
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
-  const [deposito, setDeposito] = useState<DepositoWizard>(emptyDeposito);
+  const [depositoIngresado, setDeposito] = useState<DepositoWizard>(emptyDeposito);
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
   const [montoTouched, setMontoTouched] = useState(false);
 
-  const idTipoParticipante = responsable.id_tipo_participante ?? 0;
-  const esAfiliada = !!responsable.id_institucion;
+  const idTipoParticipante = responsable.idTipoParticipante ?? 0;
+  const esAfiliada = !!responsable.idInstitucion;
 
   const precioResponsable = idTipoParticipante > 0
     ? obtenerPrecioVigente(idTipoParticipante, esAfiliada, precios)
@@ -106,13 +101,11 @@ export function GrupoRapidoForm({
 
   const total = costoBase + costoMiembros;
 
-  useEffect(() => {
-    if (!montoTouched) {
-      setDeposito((prev) => ({ ...prev, monto: total.toFixed(2) }));
-    }
-  }, [total, montoTouched]);
+  const deposito = montoTouched ? depositoIngresado : { ...depositoIngresado, monto: total.toFixed(2) };
+  const [respuestaAnterior, setRespuestaAnterior] = useState(state);
 
-  useEffect(() => {
+  if (state !== respuestaAnterior) {
+    setRespuestaAnterior(state);
     if (!state.success && state.fields) {
       const f = state.fields;
       setDeposito({
@@ -132,29 +125,29 @@ export function GrupoRapidoForm({
         }
       }
     }
-  }, [state]);
+  }
 
   function goTo(n: number) {
     setStep(n);
   }
 
   const getInstitucionNombre = () => {
-    const inst = catalogos.instituciones.find((i) => i.idInstitucion === responsable.id_institucion);
+    const inst = catalogos.instituciones.find((i) => i.idInstitucion === responsable.idInstitucion);
     return inst?.nombre || '—';
   };
 
   const getEstadoNombre = () => {
-    const est = catalogos.estados.find((e) => e.idEntidadFederativa === responsable.id_entidad_federativa);
+    const est = catalogos.estados.find((e) => e.idEntidadFederativa === responsable.idEntidadFederativa);
     return est?.nombre || '—';
   };
 
   const getTituloNombre = () => {
-    const tit = catalogos.titulos.find((t) => t.idTitulo === responsable.id_titulo);
+    const tit = catalogos.titulos.find((t) => t.idTitulo === responsable.idTitulo);
     return tit?.descripcion || '—';
   };
 
   const getTipoParticipanteNombre = () => {
-    const tipo = tiposParticipante.find((t) => t.idTipoParticipante === responsable.id_tipo_participante);
+    const tipo = tiposParticipante.find((t) => t.idTipoParticipante === responsable.idTipoParticipante);
     return tipo?.descripcion || '—';
   };
 
@@ -266,10 +259,10 @@ export function GrupoRapidoForm({
           <input type="hidden" name="responsableGenero" value={responsable.genero ?? ''} />
           <input type="hidden" name="responsableCarrera" value={responsable.carrera ?? ''} />
           <input type="hidden" name="responsableDependencia" value={responsable.dependencia ?? ''} />
-          <input type="hidden" name="responsableIdTitulo" value={responsable.id_titulo?.toString() ?? ''} />
-          <input type="hidden" name="responsableIdTipoParticipante" value={responsable.id_tipo_participante?.toString() ?? ''} />
-          <input type="hidden" name="responsableIdInstitucion" value={responsable.id_institucion?.toString() ?? ''} />
-          <input type="hidden" name="responsableIdEntidadFederativa" value={responsable.id_entidad_federativa?.toString() ?? ''} />
+          <input type="hidden" name="responsableIdTitulo" value={responsable.idTitulo?.toString() ?? ''} />
+          <input type="hidden" name="responsableIdTipoParticipante" value={responsable.idTipoParticipante?.toString() ?? ''} />
+          <input type="hidden" name="responsableIdInstitucion" value={responsable.idInstitucion?.toString() ?? ''} />
+          <input type="hidden" name="responsableIdEntidadFederativa" value={responsable.idEntidadFederativa?.toString() ?? ''} />
 
           <input type="hidden" name="grupoActivo" value={grupoActivo ? 'true' : 'false'} />
           <input type="hidden" name="numMiembros" value={miembros.length} />

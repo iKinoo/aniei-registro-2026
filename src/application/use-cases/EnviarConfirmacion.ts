@@ -17,18 +17,15 @@ export class EnviarConfirmacion {
       throw new Error(`Usuario con id ${folioRegistro} no encontrado`);
     }
 
-    const instituciones = await this.catalogoRepo.obtenerInstituciones();
-    const institucion = instituciones.find((i) => i.idInstitucion === usuario.idInstitucion);
-
     const folio = usuario.folioRegistro?.toString();
     if (!folio) {
       throw new Error(`El usuario con id ${folioRegistro} no tiene folio asignado`);
     }
 
     // Descargar el pdf de la constancia desde el storage
-    const pdfBuffer = await this.storageService.descargar(`constancias/${folio}.pdf`);
+    const pdfUint8Array = await this.storageService.descargar(`constancias/${folio}.pdf`);
 
     // Enviar constancia por correo
-    await this.emailService.enviarConstancia(usuario.correo.toString(), pdfBuffer, folio);
+    await this.emailService.enviarConstancia(usuario.correo.toString(), pdfUint8Array, folio);
   }
 }

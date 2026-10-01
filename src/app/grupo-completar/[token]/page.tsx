@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
-import { prisma } from '@/infrastructure/database/client';
+import { getRegistroQueryService } from '@/infrastructure/config/container';
+import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -9,13 +9,7 @@ export const metadata = { title: 'Completar Registro | ANIEI 2026' };
 export default async function GrupoCompletarPage(props: { params: Promise<{ token: string }> }) {
   const { token } = await props.params;
 
-  const grupo = await prisma.grupos_registro.findUnique({
-    where: { token },
-    include: {
-      responsable: true,
-      miembros: true,
-    },
-  });
+  const grupo = await new ConsultarRegistros(getRegistroQueryService()).obtenerGrupo(token);
 
   if (!grupo) {
     return (
@@ -60,7 +54,7 @@ export default async function GrupoCompletarPage(props: { params: Promise<{ toke
                 ) : (
                   <ul className="divide-y divide-gray-200 border rounded-md border-gray-200">
                     {pendientes.map((miembro) => (
-                      <li key={miembro.folio_registro} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
+                      <li key={miembro.folioRegistro} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
                         <div className="w-0 flex-1 flex items-center">
                           <span className="ml-2 flex-1 w-0 truncate">
                             {miembro.nombre} {miembro.apellido}
@@ -68,7 +62,7 @@ export default async function GrupoCompletarPage(props: { params: Promise<{ toke
                         </div>
                         <div className="ml-4 flex-shrink-0">
                           <Link
-                            href={`/grupo-completar/${token}/usuario/${miembro.folio_registro}`}
+                            href={`/grupo-completar/${token}/usuario/${miembro.folioRegistro}`}
                             className="font-medium text-indigo-600 hover:text-indigo-500 bg-indigo-50 px-3 py-1 pb-1.5 rounded-full"
                           >
                             Terminar registro
@@ -85,7 +79,7 @@ export default async function GrupoCompletarPage(props: { params: Promise<{ toke
                   <h4 className="text-md font-medium text-gray-900 mb-4">Integrantes con registro completado</h4>
                   <ul className="divide-y divide-gray-200 border rounded-md border-gray-200 bg-white">
                     {completados.map((miembro) => (
-                      <li key={miembro.folio_registro} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
+                      <li key={miembro.folioRegistro} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
                         <div className="w-0 flex-1 flex items-center text-green-600">
                           <svg className="flex-shrink-0 h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

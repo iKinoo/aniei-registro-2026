@@ -1,11 +1,14 @@
 'use server';
 
 import { getActividadRepository, getCatalogoRepository } from '@/infrastructure/config/container';
+import { requireAdmin } from '@/shared/auth/requireAdmin';
+import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
 
 export async function getActividadesAction() {
   try {
+    await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository());
     const data = await useCase.listar();
     return { success: true as const, data };
@@ -17,6 +20,7 @@ export async function getActividadesAction() {
 
 export async function getTiposActividadAction() {
   try {
+    await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository());
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
@@ -28,7 +32,8 @@ export async function getTiposActividadAction() {
 
 export async function getInstitucionesAction() {
   try {
-    const repo = getCatalogoRepository();
+    await requireAdmin();
+    const repo = new ConsultarCatalogos(getCatalogoRepository());
     const data = await repo.obtenerInstituciones();
     return { success: true as const, data };
   } catch (error) {
@@ -39,6 +44,7 @@ export async function getInstitucionesAction() {
 
 export async function crearActividadAction(data: CrearActividadDTO) {
   try {
+    await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository());
     const actividad = await useCase.crear(data);
     return { success: true as const, data: actividad };
@@ -51,6 +57,7 @@ export async function crearActividadAction(data: CrearActividadDTO) {
 
 export async function actualizarActividadAction(id: number, data: ActualizarActividadDTO) {
   try {
+    await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository());
     const actividad = await useCase.actualizar(id, data);
     return { success: true as const, data: actividad };
