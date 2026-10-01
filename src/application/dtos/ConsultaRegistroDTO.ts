@@ -73,11 +73,6 @@ export interface PerfilDTO extends DetalleUsuarioDTO {
   }>;
 }
 
-export interface GrupoConsultaDTO {
-  responsable: UsuarioConsultaDTO;
-  miembros: UsuarioConsultaDTO[];
-}
-
 export interface InstitucionReporteItem {
   idInstitucion: number;
   nombre: string;

@@ -13,16 +13,6 @@ export interface ActualizarUsuarioDTO {
   idEntidadFederativa: number | null;
 }
 
-export interface CompletarRegistroDTO {
-  correo: string;
-  telefono?: string;
-  lada?: string;
-  extension?: string;
-  genero: string;
-  carrera?: string;
-  idTitulo: number;
-}
-
 export interface RegistroPonenteDTO {
   nombre: string;
   apellido: string;

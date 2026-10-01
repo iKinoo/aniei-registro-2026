@@ -1,4 +1,4 @@
-import type { ActualizarUsuarioDTO, CompletarRegistroDTO } from '@/application/dtos/ActualizarUsuarioDTO';
+import type { ActualizarUsuarioDTO } from '@/application/dtos/ActualizarUsuarioDTO';
 import type { Prisma } from '@/generated/prisma/client';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IFolioGenerator } from '@/application/ports/IFolioGenerator';
@@ -18,13 +18,6 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
       nombre: d.nombre, apellido: d.apellido, correo: d.correo, telefono: d.telefono, lada: d.lada,
       extension: d.extension, genero: d.genero, carrera: d.carrera, dependencia: d.dependencia,
       id_titulo: d.idTitulo, id_institucion: d.idInstitucion, id_entidad_federativa: d.idEntidadFederativa,
-    } });
-  }
-
-  async completar(folio: string, d: CompletarRegistroDTO): Promise<void> {
-    await this.prisma.usuarios.update({ where: { folio_registro: folio }, data: {
-      correo: d.correo, telefono: d.telefono || null, lada: d.lada || null, extension: d.extension || null,
-      genero: d.genero, carrera: d.carrera || null, id_titulo: d.idTitulo,
     } });
   }
 

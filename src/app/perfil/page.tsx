@@ -195,9 +195,6 @@ export default async function PerfilPage() {
                 </a>
               </>
             )}
-            <a href="/perfil/grupo/registro" className={styles.btnPrimary}>
-              Registro Grupal
-            </a>
             <CerrarSesionButton />
           </div>
         </div>

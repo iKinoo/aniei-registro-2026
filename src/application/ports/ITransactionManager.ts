@@ -7,7 +7,6 @@ export interface ITransactionManager {
 }
 
 export interface TransactionContext {
-  grupoRepo: import("./IGrupoRepository").IGrupoRepository;
   ponentesRepo: import("./IPonentesRepository").IPonentesRepository;
   // Repos transaccionales — inyectados por la implementación
   usuarioRepo: import("./IUsuarioRepository").IUsuarioRepository;

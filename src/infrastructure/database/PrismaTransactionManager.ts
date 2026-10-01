@@ -1,4 +1,3 @@
-import { PrismaGrupoRepository } from '@/infrastructure/repositories/PrismaGrupoRepository';
 import { PrismaPonentesRepository } from '@/infrastructure/repositories/PrismaPonentesRepository';
 import { Prisma } from '@/generated/prisma/client';
 import { prisma } from './client';
@@ -15,7 +14,6 @@ export class PrismaTransactionManager implements ITransactionManager {
   async run<T>(fn: (ctx: TransactionContext) => Promise<T>): Promise<T> {
     try {
       return await prisma.$transaction(async (tx) => fn({
-        grupoRepo: new PrismaGrupoRepository(tx),
         ponentesRepo: new PrismaPonentesRepository(tx),
         usuarioRepo: new PrismaUsuarioRepository(tx, new PrismaFolioGenerator(tx)),
         depositoRepo: new PrismaDepositoRepository(tx),

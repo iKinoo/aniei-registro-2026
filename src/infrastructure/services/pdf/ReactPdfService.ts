@@ -1,9 +1,7 @@
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
-import QRCode from 'qrcode';
-import { IPdfService, ConstanciaData, ConstanciaPonenteData, HojaRegistroGrupoData, ConstanciaManualData, ListaParticipantesPdfData, ReporteInstitucionesPdfData } from '@/application/ports/IPdfService';
+import { IPdfService, ConstanciaData, ConstanciaPonenteData, ConstanciaManualData, ListaParticipantesPdfData, ReporteInstitucionesPdfData } from '@/application/ports/IPdfService';
 import { GenericConstanciaTemplate } from './templates/GenericConstanciaTemplate';
-import { HojaRegistroGrupoTemplate } from './templates/HojaRegistroGrupoTemplate';
 import { ManualConstanciaTemplate } from './templates/ManualConstanciaTemplate';
 import { ListaParticipantesTemplate } from './templates/ListaParticipantesTemplate';
 import { ReporteInstitucionesTemplate } from './templates/ReporteInstitucionesTemplate';
@@ -40,16 +38,6 @@ export class ReactPdfService implements IPdfService {
       description: '',
       location: '',
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buffer = await renderToBuffer(element as any);
-    return Buffer.from(buffer);
-  }
-
-  async generarHojaRegistroGrupo(datos: HojaRegistroGrupoData): Promise<Buffer> {
-    const qrUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://aniei-registro-2026.vercel.app/'}/grupo-completar/${datos.token}`;
-    const qrDataUrl = await QRCode.toDataURL(qrUrl);
-
-    const element = React.createElement(HojaRegistroGrupoTemplate, { ...datos, qrDataUrl });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
     return Buffer.from(buffer);

@@ -1,11 +1,10 @@
-import type { ActualizarUsuarioDTO, CompletarRegistroDTO } from '../dtos/ActualizarUsuarioDTO';
+import type { ActualizarUsuarioDTO } from '../dtos/ActualizarUsuarioDTO';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
 import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 
 export interface IUsuarioRepository {
   actualizar(folio: string, data: ActualizarUsuarioDTO): Promise<void>;
-  completar(folio: string, data: CompletarRegistroDTO): Promise<void>;
   eliminar(folio: string): Promise<string[]>;
   crear(usuario: Usuario): Promise<Usuario>;
   crearMuchos(usuarios: Usuario[]): Promise<Usuario[]>;

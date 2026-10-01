@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IRegistroQueryService } from '@/application/ports/IRegistroQueryService';
-import type { DetalleUsuarioDTO, PerfilDTO, GrupoConsultaDTO, InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 import { mapUsuarioConsulta, mapDepositoHistorial } from '@/infrastructure/mappers/ConsultaRegistroMapper';
 
 export class PrismaRegistroQueryService implements IRegistroQueryService {
@@ -67,11 +67,6 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
       equipo: { idEquipo: e.equipos.id_equipo, numeroEquipo: e.equipos.numero_equipo,
         nombreEquipo: e.equipos.nombre_equipo, actividad: { nombre: e.equipos.actividades.nombre } },
     })) };
-  }
-
-  async obtenerGrupo(token: string): Promise<GrupoConsultaDTO | null> {
-    const grupo = await this.prisma.grupos_registro.findUnique({ where: { token }, include: { responsable: true, miembros: true } });
-    return grupo ? { responsable: mapUsuarioConsulta(grupo.responsable), miembros: grupo.miembros.map(mapUsuarioConsulta) } : null;
   }
 
   async buscarUsuarios(query: string) {
