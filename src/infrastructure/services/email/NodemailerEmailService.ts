@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, ConfirmacionGrupoRapidoData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
@@ -6,7 +7,7 @@ import { renderConfirmacionActividadesHTML } from './templates/confirmacion-acti
 import { renderNotificacionPonenteHTML } from './templates/notificacion-ponente';
 
 export class NodemailerEmailService implements IEmailService {
-  private readonly transporter: nodemailer.Transporter;
+  private readonly transporter: Transporter;
   private readonly from: string;
 
   constructor(user: string, pass: string, from: string) {

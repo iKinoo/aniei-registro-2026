@@ -111,6 +111,23 @@
 
 ---
 
+## Overrides de seguridad en dependencias (30.09.2026)
+
+Tras `npm audit` quedaron vulnerabilidades en paquetes que Prisma fija a versiones exactas (`mariadb 3.4.5`, `mysql2 3.15.3`, `deepmerge-ts 7.1.5`), por lo que `npm audit fix` no podía resolverlos y `--force` solo ofrecía degradar Prisma 7→6. Se aplicaron `overrides` en `package.json`:
+
+| Paquete | Override | Motivo (GHSA) | Ámbito |
+|---------|----------|---------------|--------|
+| `mariadb` | `^3.5.4` | Fuga de contraseña MitM + SQLi en charsets no utf (3.4.0–3.4.5) | Driver de BD en runtime vía `@prisma/adapter-mariadb` |
+| `mysql2` | `^3.24.5` | Downgrade de auth plugin + decompression-bomb DoS (≤3.23.0) | Solo CLI de Prisma (migraciones), no runtime |
+| `deepmerge-ts` | `^8.0.2` | Stack exhaustion en objetos recursivos (<8.0.0) | `@prisma/config` — major bump, validar en cada upgrade de Prisma |
+| `nodemailer` | `^10.0.13` | Varios DoS/fuga TLS cross-tenant (≤10.0.8) | Envío de correo; requiere Node ≥20 |
+
+Resultado: `npm audit` → 0 vulnerabilidades. Efectos secundarios: `NodemailerEmailService.ts` pasó a `import type { Transporter }` (v10 ESM ya no exporta el namespace).
+
+**Pendiente / deuda:** retirar cada override cuando `prisma`/`@prisma/adapter-mariadb` fijen versiones parcheadas en sus dependencias directas; revisar en cada upgrade de Prisma (los overrides saltan el semver y no garantizan compatibilidad, en particular `deepmerge-ts` v8 con `@prisma/config` v7). Verificado: `tsc --noEmit` ✅, `lint` ✅, `build` ✅, `prisma migrate status` ✅, `prisma generate` ✅, carga runtime de `mariadb`/`nodemailer` ✅. `npm run test:flows` ❌ **falla de forma preexistente e independiente** (28.09 o antes): `scripts/verificar-flujos.mjs:31` carga `CompletarRegistroGrupo.ts`, use case que ya no existe en el repositorio (renombrado a `RegistrarGrupoRapido`). Requiere actualizar el script.
+
+---
+
 ## Changelog
 
 | Fecha | Autor | Cambio |
