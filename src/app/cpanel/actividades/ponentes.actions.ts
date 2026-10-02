@@ -8,6 +8,7 @@ import { GestionarPonentes, RegistrarPonente } from '@/application/use-cases/Ges
 import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import type { PonenteDTO } from '@/application/dtos/ActividadDTO';
 import type { RegistroPonenteDTO } from '@/application/dtos/ActualizarUsuarioDTO';
+import { RegistroError } from '@/core/errors/RegistroError';
 
 
 export interface UsuarioBusquedaResult {
@@ -92,6 +93,7 @@ export async function registrarPonenteAction(
     return { success: true, folioRegistro };
   } catch (e) {
     console.error('Error al registrar ponente:', e);
+    if (e instanceof RegistroError) return { success: false, error: e.message };
     return { success: false, error: 'Error al registrar ponente' };
   }
 }
