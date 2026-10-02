@@ -54,13 +54,14 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => {
+    if (search === debouncedSearch) return;
     const handler = setTimeout(() => {
       setLoading(true);
       setDebouncedSearch(search);
       setPage(1);
     }, 500);
     return () => clearTimeout(handler);
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -85,6 +86,9 @@ export default function AdminPanel() {
         setTotalPages(result.data.totalPages);
       }
       setLoading(false);
+    }).catch((err) => {
+      console.error('Error al cargar usuarios:', err);
+      if (activo) setLoading(false);
     });
     return () => { activo = false; };
   }, [page, limit, debouncedSearch, filtroInstitucion]);
