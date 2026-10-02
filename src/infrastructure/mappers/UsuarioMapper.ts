@@ -40,11 +40,11 @@ export class UsuarioMapper {
       genero: usuario.genero as string,
       carrera: usuario.carrera,
       dependencia: usuario.dependencia,
-      id_titulo: usuario.idTitulo,
-      id_tipo_participante: usuario.idTipoParticipante,
+      id_titulo: usuario.idTitulo || null,
+      id_tipo_participante: usuario.idTipoParticipante || null,
       id_institucion: usuario.idInstitucion,
       institucion_externa: usuario.institucionExterna,
-      id_entidad_federativa: usuario.idEntidadFederativa,
+      id_entidad_federativa: usuario.idEntidadFederativa || null,
       verificado: usuario.verificado,
     };
   }
