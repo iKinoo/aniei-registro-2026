@@ -23,7 +23,7 @@ export default async function GrupoRegistroPage() {
     getPrecioInscripcionRepository(), getTipoParticipanteRepository()).execute();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <GrupoRapidoForm
         responsable={usuario}
         catalogos={catalogos}

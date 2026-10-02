@@ -185,14 +185,14 @@ export function GrupoRapidoForm({
           <span className="w-2 h-2 bg-indigo-500 rounded-full" />
           <span className="text-indigo-600 text-sm font-medium">Congreso ANIEI 2026</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
           Registro Grupal
         </h1>
-        <p className="text-slate-500 mt-2 text-base">Registra a los miembros de tu grupo</p>
+        <p className="text-slate-300 mt-2 text-base">Registra a los miembros de tu grupo</p>
       </div>
 
       {/* Sticky stepper + total */}
-      <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-sm py-4 shadow-sm">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm py-4 shadow-sm">
         {/* Progress stepper */}
         <div className="max-w-2xl mx-auto px-4 mb-4">
           <div className="flex items-center justify-between relative">

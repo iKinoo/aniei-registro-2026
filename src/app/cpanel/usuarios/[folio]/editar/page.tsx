@@ -41,14 +41,14 @@ export default async function UsuarioEditarPage({ params }: { params: Promise<{ 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
       <div>
-        <Link href={`/cpanel/usuarios/${folio}`} className="text-sm text-slate-500 hover:text-slate-800 mb-2 inline-block">
+        <Link href={`/cpanel/usuarios/${folio}`} className="text-sm text-slate-300 hover:text-white mb-2 inline-block">
           ← Volver al detalle
         </Link>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-extrabold text-white tracking-tight">
           Editar usuario
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Folio: <span className="font-mono font-medium text-slate-700">{usuario.folioRegistro}</span>
+        <p className="text-slate-300 text-sm mt-1">
+          Folio: <span className="font-mono font-medium text-white">{usuario.folioRegistro}</span>
         </p>
       </div>
 

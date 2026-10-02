@@ -46,16 +46,16 @@ interface Props {
 
 export default function EquiposListClient({ actividades }: Props) {
   return (
-    <div className="p-8 font-sans min-h-screen bg-slate-50">
+    <div className="p-8 font-sans min-h-screen bg-background">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Administrar Equipos</h1>
-            <p className="text-sm text-slate-500 mt-1">Selecciona una actividad para gestionar sus equipos</p>
+            <h1 className="text-2xl font-bold text-white">Administrar Equipos</h1>
+            <p className="text-sm text-slate-300 mt-1">Selecciona una actividad para gestionar sus equipos</p>
           </div>
           <Link
             href="/cpanel"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

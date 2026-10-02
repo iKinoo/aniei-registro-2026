@@ -152,28 +152,28 @@ export default function EquiposManagerClient({ actividad, initialEquipos }: Prop
   }
 
   return (
-    <div className="p-8 font-sans min-h-screen bg-slate-50">
+    <div className="p-8 font-sans min-h-screen bg-background">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Link
                 href="/cpanel/equipos"
-                className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                className="inline-flex items-center gap-1 text-sm text-slate-300 hover:text-white transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Equipos
               </Link>
-              <span className="text-slate-300">/</span>
-              <span className="text-sm text-slate-600 font-medium">{actividad.nombre}</span>
+              <span className="text-slate-500">/</span>
+              <span className="text-sm text-slate-300 font-medium">{actividad.nombre}</span>
             </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">Gestión de Equipos</h1>
+              <h1 className="text-2xl font-bold text-white">Gestión de Equipos</h1>
               <TipoBadge tipo={actividad.tipoActividad} />
             </div>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-300 mt-1">
               {formatFecha(actividad.fechaInicio)} · {equipos.length} equipo{equipos.length !== 1 ? 's' : ''} registrado{equipos.length !== 1 ? 's' : ''}
             </p>
           </div>

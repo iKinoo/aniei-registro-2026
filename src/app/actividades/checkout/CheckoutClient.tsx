@@ -18,7 +18,7 @@ function formatFecha(iso: string) {
 // ---- Pantalla de confirmación exitosa ----
 function PantallaConfirmacion({ datos }: { datos: ConfirmacionInscripcionResult }) {
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-950 via-indigo-900 to-violet-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
         {/* Header */}
         <div className="bg-linear-to-r from-indigo-600 to-violet-600 px-8 py-8 text-center text-white">
@@ -146,7 +146,7 @@ export default function CheckoutClient({ actividades, estados, facturacionDefaul
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       {/* Hero */}
       <div className="bg-linear-to-br from-indigo-900 to-violet-900 text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">

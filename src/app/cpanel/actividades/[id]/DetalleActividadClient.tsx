@@ -166,16 +166,16 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
 
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link href="/cpanel/actividades" className="text-slate-400 hover:text-slate-600 transition-colors">
+          <Link href="/cpanel/actividades" className="text-slate-300 hover:text-white transition-colors">
             ← Volver
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{actividad.nombre}</h1>
-            <p className="text-slate-500 mt-1">{nombreTipo}</p>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">{actividad.nombre}</h1>
+            <p className="text-slate-300 mt-1">{nombreTipo}</p>
           </div>
           <button
             onClick={() => setIsEditOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-sm font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
           >
             <EditIcon /> Editar
           </button>

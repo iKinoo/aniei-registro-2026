@@ -113,8 +113,8 @@ export default function AdminPanel() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Panel de Administración</h1>
-            <p className="text-slate-500 mt-1">Gestiona los registros, verifica depósitos y reenvía constancias.</p>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Panel de Administración</h1>
+            <p className="text-slate-300 mt-1">Gestiona los registros, verifica depósitos y reenvía constancias.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -152,7 +152,7 @@ export default function AdminPanel() {
         </div>
 
         {/* Data Table */}
-        <div className="rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="rounded-2xl shadow-xl border border-slate-100 bg-white overflow-hidden">
           <div className="overflow-x-auto">
             <table className="  w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">

@@ -142,12 +142,12 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/cpanel" className="text-sm text-slate-500 hover:text-slate-800 mb-2 inline-block">
+          <Link href="/cpanel" className="text-sm text-slate-300 hover:text-white mb-2 inline-block">
             Volver al panel
           </Link>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{nombreCompleto}</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Folio: <span className="font-mono font-medium text-slate-700">{usuario.folioRegistro}</span> · {usuario.correo}
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">{nombreCompleto}</h1>
+          <p className="text-slate-300 text-sm mt-1">
+            Folio: <span className="font-mono font-medium text-white">{usuario.folioRegistro}</span> · {usuario.correo}
           </p>
         </div>
         <div className="flex items-center gap-3">

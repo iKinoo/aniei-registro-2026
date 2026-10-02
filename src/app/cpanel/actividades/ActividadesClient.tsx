@@ -94,8 +94,8 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Actividades</h1>
-            <p className="text-slate-500 mt-1">Crea y administra las actividades del congreso ANIEI.</p>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Actividades</h1>
+            <p className="text-slate-300 mt-1">Crea y administra las actividades del congreso ANIEI.</p>
           </div>
           <button
             id="btn-nueva-actividad"
@@ -134,7 +134,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
           </div>
         </div>
 
-        <div className="rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="rounded-2xl shadow-xl border border-slate-100 bg-white overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">

@@ -63,8 +63,8 @@ export function ReportesClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Reportes</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-xl font-bold text-white">Reportes</h2>
+          <p className="text-sm text-slate-300 mt-1">
             Genera reportes y estadísticas del congreso.
           </p>
         </div>

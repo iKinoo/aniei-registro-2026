@@ -72,8 +72,8 @@ export function ConstanciasManualesClient() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Constancias Manuales</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="text-xl font-bold text-white">Constancias Manuales</h2>
+          <p className="text-sm text-slate-300 mt-1">
             Genere constancias para personas que no están registradas en el sistema.
           </p>
         </div>

@@ -18,8 +18,8 @@ export default async function ConfiguracionPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="mb-2">
-        <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-white">Configuración</h1>
+        <p className="mt-1 text-sm text-slate-300">
           Administra los parámetros del sistema.
         </p>
       </div>

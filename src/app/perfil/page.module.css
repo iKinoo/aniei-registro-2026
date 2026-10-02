@@ -3,7 +3,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
+  background: #001741;
   padding: 2rem 1rem;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
