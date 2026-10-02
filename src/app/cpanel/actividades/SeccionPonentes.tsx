@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PonenteDTO } from '@/application/dtos/ActividadDTO';
 import {
   buscarUsuariosAction,
@@ -28,6 +29,7 @@ function ModalRegistroPonente({ idActividad, rol, onSuccess, onClose }: ModalReg
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
     if (!form.nombre.trim() || !form.apellido.trim() || !form.correo.trim()) {
       setError('Nombre, apellido y correo son obligatorios.');
       return;
@@ -50,7 +52,7 @@ function ModalRegistroPonente({ idActividad, rol, onSuccess, onClose }: ModalReg
     });
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
@@ -98,7 +100,8 @@ function ModalRegistroPonente({ idActividad, rol, onSuccess, onClose }: ModalReg
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
