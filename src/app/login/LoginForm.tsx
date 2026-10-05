@@ -18,17 +18,25 @@ export function LoginForm() {
       
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="folioRegistro">
-            Folio de Registro
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="numeroFolio">
+            Folio de Registro <span className="font-medium text-slate-400">(solo el número)</span>
           </label>
-          <input
-            id="folioRegistro"
-            name="folioRegistro"
-            type="text"
-            required
-            placeholder="ANI26-0001"
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm text-slate-900 shadow-sm"
-          />
+          <div className="flex">
+            <span className="inline-flex items-center rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 select-none shadow-sm">
+              ANI26-
+            </span>
+            <input
+              id="numeroFolio"
+              name="numeroFolio"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              required
+              placeholder="0001"
+              className="w-full rounded-r-xl border border-slate-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-sm text-slate-900 shadow-sm"
+            />
+          </div>
         </div>
         
         <div>
