@@ -152,7 +152,7 @@ export default function EquiposManagerClient({ actividad, initialEquipos }: Prop
   }
 
   return (
-    <div className="p-8 font-sans min-h-screen bg-background">
+    <div className="p-8 font-sans min-h-full bg-background">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <div>

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import SiteHeader from "./components/SiteHeader";
+import SiteVersion from "./components/SiteVersion";
 import "./globals.css";
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +31,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div className="flex min-h-screen flex-col">
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+        </div>
+        <SiteVersion />
       </body>
     </html>
   );

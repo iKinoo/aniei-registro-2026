@@ -161,7 +161,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
   };
 
   return (
-    <div className="p-8 font-sans min-h-screen">
+    <div className="p-8 font-sans min-h-full">
       <div className="max-w-5xl mx-auto space-y-8">
 
         {/* Header */}

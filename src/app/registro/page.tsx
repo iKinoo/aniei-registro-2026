@@ -7,7 +7,7 @@ export default async function RegistroPage() {
     getPrecioInscripcionRepository(), getTipoParticipanteRepository()).execute();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-full bg-background">
       <RegistroForm
         catalogos={catalogos}
         precios={precios}

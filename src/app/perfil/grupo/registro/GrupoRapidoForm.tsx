@@ -153,7 +153,7 @@ export function GrupoRapidoForm({
 
   if (state.success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-full flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-6 bg-white rounded-3xl border border-slate-200 shadow-xl p-8">
           <div className="w-20 h-20 bg-emerald-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto">
             <svg className="w-10 h-10 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ export function GrupoRapidoForm({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-full">
       {/* Header */}
       <div className="pt-10 pb-6 px-4 text-center">
         <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-4 py-1.5 mb-4">
@@ -196,7 +196,7 @@ export function GrupoRapidoForm({
         {/* Progress stepper */}
         <div className="max-w-2xl mx-auto px-4 mb-4">
           <div className="flex items-center justify-between relative">
-            <div className="absolute top-5 left-0 right-0 h-0.5 bg-slate-200" />
+            <div className="absolute top-5 left-0 right-0 h-0.5 bg-white/20" />
             <div
               className="absolute top-5 left-0 h-0.5 bg-indigo-500 transition-all duration-500"
               style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
@@ -212,13 +212,13 @@ export function GrupoRapidoForm({
                     onClick={() => clickable && goTo(s.id)}
                     title={clickable ? `Volver a ${s.label}` : s.label}
                     className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 focus:outline-none
-                      ${done ? 'bg-emerald-50 border-emerald-300 text-emerald-600 hover:bg-emerald-100 cursor-pointer' :
-                        active ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 scale-110' :
+                      ${done ? 'bg-emerald-400 border-emerald-400 text-[#001741] hover:bg-emerald-300 cursor-pointer' :
+                        active ? 'bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-900/50 scale-110' :
                         'bg-white border-slate-200 text-slate-400 cursor-default'}`}
                   >
                     {done ? '✓' : s.icon}
                   </button>
-                  <span className={`text-xs font-medium hidden sm:block ${active ? 'text-indigo-600' : done ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-medium hidden sm:block ${active ? 'text-white' : done ? 'text-emerald-300' : 'text-white/60'}`}>
                     {s.label}
                   </span>
                 </div>
