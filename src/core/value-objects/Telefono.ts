@@ -10,7 +10,11 @@ export class Telefono {
     if (!trimmed) {
       throw new Error('El número de teléfono es requerido');
     }
-    if (!/^\d[\d\s\-]{5,19}$/.test(trimmed)) {
+    if (!/^(?:\+?\d|\(\d)[\d\s\-().]*$/.test(trimmed)) {
+      throw new Error(`Formato de teléfono inválido: ${trimmed}`);
+    }
+    const normalizado = trimmed.replace(/[\s\-().]/g, '');
+    if (!/^\+?\d{7,15}$/.test(normalizado)) {
       throw new Error(`Formato de teléfono inválido: ${trimmed}`);
     }
     return new Telefono(trimmed, lada?.trim() || null, extension?.trim() || null);

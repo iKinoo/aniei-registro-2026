@@ -4,7 +4,15 @@ export const registroSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(125),
   apellido: z.string().min(1, 'El apellido es requerido').max(256),
   correo: z.email('Formato de correo inválido'),
-  telefono: z.string().max(20).optional().or(z.literal('')),
+  telefono: z
+    .string()
+    .max(20)
+    .refine(
+      (v) => /^(?:\+?\d|\(\d)[\d\s\-().]*$/.test(v) && /^\+?\d{7,15}$/.test(v.replace(/[\s\-().]/g, '')),
+      'Formato de teléfono inválido (mínimo 7 dígitos, ej. 997 110 5996 o +52 997 110 5996)'
+    )
+    .optional()
+    .or(z.literal('')),
   lada: z.string().max(10).optional().or(z.literal('')),
   extension: z.string().max(10).optional().or(z.literal('')),
   genero: z.enum(['M', 'F', 'O'], { message: 'Seleccione un género' }),
