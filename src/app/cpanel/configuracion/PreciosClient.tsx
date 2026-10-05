@@ -260,7 +260,7 @@ export default function PreciosClient({ initialPrecios, initialTiposParticipante
                             type="date"
                             value={toDateInputValue(precio.fechaLimite)}
                             onChange={(e) => updatePrecioField(precio.id, 'fechaLimite', e.target.value)}
-                            className="flex-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500"
+                            className="flex-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
                           />
                           <div className="relative w-24">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
@@ -269,7 +269,7 @@ export default function PreciosClient({ initialPrecios, initialTiposParticipante
                               step="0.01"
                               value={precio.costo}
                               onChange={(e) => updatePrecioField(precio.id, 'costo', parseFloat(e.target.value) || 0)}
-                              className="w-full bg-white border border-slate-300 rounded pl-5 pr-2 py-1 text-xs focus:outline-none focus:border-indigo-500"
+                              className="w-full bg-white border border-slate-300 rounded pl-5 pr-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
                             />
                           </div>
                           <button
@@ -308,7 +308,7 @@ export default function PreciosClient({ initialPrecios, initialTiposParticipante
                             type="date"
                             value={toDateInputValue(precio.fechaLimite)}
                             onChange={(e) => updatePrecioField(precio.id, 'fechaLimite', e.target.value)}
-                            className="flex-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500"
+                            className="flex-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
                           />
                           <div className="relative w-24">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
@@ -317,7 +317,7 @@ export default function PreciosClient({ initialPrecios, initialTiposParticipante
                               step="0.01"
                               value={precio.costo}
                               onChange={(e) => updatePrecioField(precio.id, 'costo', parseFloat(e.target.value) || 0)}
-                              className="w-full bg-white border border-slate-300 rounded pl-5 pr-2 py-1 text-xs focus:outline-none focus:border-indigo-500"
+                              className="w-full bg-white border border-slate-300 rounded pl-5 pr-2 py-1 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
                             />
                           </div>
                           <button
