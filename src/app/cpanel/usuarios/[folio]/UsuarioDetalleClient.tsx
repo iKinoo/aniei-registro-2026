@@ -7,6 +7,7 @@ import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
 import { HistorialDepositosAdmin } from '@/app/components/HistorialDepositosAdmin';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { eliminarUsuarioAction, reenviarConstanciaAction, obtenerUrlArchivoAction } from '@/app/cpanel/actions';
+import { cambiarContrasenaAction, type CambiarContrasenaResultado } from './actions';
 
 interface UsuarioData {
   folioRegistro: string;
@@ -63,6 +64,46 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
   const [loadingConstanciaFiscal, setLoadingConstanciaFiscal] = useState(false);
   const [loadingActivityConstancia, setLoadingActivityConstancia] = useState<number | null>(null);
   const [resending, setResending] = useState(false);
+  const [passwordDialog, setPasswordDialog] = useState(false);
+  const [passwordCustom, setPasswordCustom] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordResult, setPasswordResult] = useState<Extract<CambiarContrasenaResultado, { success: true }> | null>(null);
+
+  const abrirDialogoContrasena = () => {
+    setPasswordCustom('');
+    setPasswordResult(null);
+    setPasswordDialog(true);
+  };
+
+  const handleClosePasswordDialog = () => {
+    if (changingPassword) return;
+    setPasswordDialog(false);
+    setPasswordResult(null);
+    setPasswordCustom('');
+  };
+
+  const handleCambiarContrasena = async () => {
+    setChangingPassword(true);
+    try {
+      const result = await cambiarContrasenaAction(usuario.folioRegistro, passwordCustom || undefined);
+      if (result.success) {
+        setPasswordResult(result);
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleCopiarContrasena = async () => {
+    if (!passwordResult) return;
+    try {
+      await navigator.clipboard.writeText(passwordResult.password);
+    } catch {
+      alert('No se pudo copiar al portapapeles');
+    }
+  };
 
   const handleEliminar = async () => {
     setIsDeleting(true);
@@ -155,6 +196,16 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
             {usuario.titulo || 'Sin titulo'}
           </span>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={abrirDialogoContrasena}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Cambiar contraseña
+            </button>
             <button
               type="button"
               onClick={() => router.push(`/cpanel/usuarios/${usuario.folioRegistro}/editar`)}
@@ -393,6 +444,85 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
           </div>
         )}
       </div>
+
+      {passwordDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClosePasswordDialog} />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            {passwordResult ? (
+              <>
+                <h3 className="text-lg font-semibold text-slate-900">Contraseña actualizada</h3>
+                <div className="mt-4 flex items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                  <span className="font-mono text-xl font-bold tracking-widest text-slate-900">{passwordResult.password}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopiarContrasena}
+                    className="px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+                  >
+                    Copiar
+                  </button>
+                </div>
+                <p className="mt-3 text-sm text-slate-600">
+                  {passwordResult.correoEnviado && passwordResult.destinatario
+                    ? `La nueva contraseña se envió al correo ${passwordResult.destinatario}.`
+                    : 'No se pudo enviar el correo. Comunica la contraseña al usuario por otro medio.'}
+                </p>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleClosePasswordDialog}
+                    className="px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-slate-900">Cambiar contraseña</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Escribe una contraseña para {nombreCompleto} o deja el campo vacío para generarla automáticamente.
+                  Se enviará al correo del usuario.
+                </p>
+                <input
+                  type="text"
+                  value={passwordCustom}
+                  onChange={(e) => setPasswordCustom(e.target.value)}
+                  minLength={5}
+                  maxLength={72}
+                  placeholder="Autogenerar (5 caracteres)"
+                  className="mt-4 w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  disabled={changingPassword}
+                />
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClosePasswordDialog}
+                    disabled={changingPassword}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCambiarContrasena}
+                    disabled={changingPassword || (passwordCustom.trim().length > 0 && passwordCustom.trim().length < 5)}
+                    className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {changingPassword && (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    )}
+                    Guardar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={deleteDialog}

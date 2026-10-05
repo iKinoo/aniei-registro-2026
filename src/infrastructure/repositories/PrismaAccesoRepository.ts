@@ -34,6 +34,12 @@ export class PrismaAccesoRepository implements IAccesoRepository {
     await this.prisma.accesos.update({ where: { id_acceso: acceso.id_acceso }, data: { email: correo, password: passwordHash } });
   }
 
+  async actualizarPassword(folio: string, passwordHash: string): Promise<void> {
+    const acceso = await this.prisma.accesos.findFirst({ where: { folio_registro: folio }, select: { id_acceso: true } });
+    if (!acceso) throw new Error('Acceso no encontrado');
+    await this.prisma.accesos.update({ where: { id_acceso: acceso.id_acceso }, data: { password: passwordHash } });
+  }
+
   async crear(
     passwordHash: string,
     rol: string,

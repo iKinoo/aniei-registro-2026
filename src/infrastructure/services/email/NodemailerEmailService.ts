@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
-import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, ConfirmacionGrupoRapidoData } from '@/application/ports/IEmailService';
+import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, CambioContrasenaData, ConfirmacionGrupoRapidoData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
 import { renderConfirmacionActividadesHTML } from './templates/confirmacion-actividades';
 import { renderNotificacionPonenteHTML } from './templates/notificacion-ponente';
+import { renderCambioContrasenaHTML } from './templates/cambio-contrasena';
 
 export class NodemailerEmailService implements IEmailService {
   private readonly transporter: Transporter;
@@ -71,6 +72,17 @@ export class NodemailerEmailService implements IEmailService {
       from: this.from,
       to: destinatario,
       subject: `Has sido registrado como Ponente — ANIEI 2026`,
+      html,
+    });
+  }
+
+  async enviarCambioContrasena(destinatario: string, datos: CambioContrasenaData): Promise<void> {
+    const html = renderCambioContrasenaHTML(datos);
+
+    await this.transporter.sendMail({
+      from: this.from,
+      to: destinatario,
+      subject: `Cambio de contraseña — ANIEI 2026 (Folio: ${datos.folio})`,
       html,
     });
   }
