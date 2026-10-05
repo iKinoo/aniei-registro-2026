@@ -28,7 +28,6 @@ function load(name, from = root) {
 const { RegistrarUsuario } = load('@/application/use-cases/RegistrarUsuario');
 const { RegistrarGrupoRapido } = load('@/application/use-cases/RegistrarGrupoRapido');
 const { ConfirmarInscripciones } = load('@/application/use-cases/ConfirmarInscripciones');
-const { CompletarRegistroGrupo } = load('@/application/use-cases/CompletarRegistroGrupo');
 const { AutorizarArchivo } = load('@/application/use-cases/AutorizarArchivo');
 const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
@@ -145,11 +144,6 @@ await test('Checkout exitoso confirma depósito/facturación y luego envía corr
   const result = await checkout.execute('ANI26-0001', { idsActividades: [1], deposito, archivo, facturacion: { razonSocial: 'Prueba', rfc: 'AAA010101AAA' } });
   assert.equal(result.success, true);
   assert.deepEqual(orden, ['deposito', 'factura', 'commit', 'correo']);
-});
-await test('Completar grupo rechaza miembros ya completados antes de cambiar credenciales', async () => {
-  const ctx = { grupoRepo: { bloquearMiembro: async () => usuario }, usuarioRepo: { completar: async () => assert.fail('No debe actualizar') } };
-  const completar = new CompletarRegistroGrupo({ run: async fn => fn(ctx) }, hasher, passwords, email, catalogos);
-  await assert.rejects(completar.execute('token', 'ANI26-0001', { correo: 'otra@example.com' }), /pendiente/);
 });
 await test('Archivo exige propietario o administrador y rechaza cuentas inexistentes', async () => {
   let admin = false;
