@@ -1,7 +1,7 @@
 'use server';
 
 import { getActividadRepository, getUsuarioRepository, getTransactionManager, getStorageService,
-  getCatalogoRepository, getEmailService, getIdGenerator } from '@/infrastructure/config/container';
+  getCatalogoRepository, getEmailService, getIdGenerator, reportarErrorEnAccion } from '@/infrastructure/config/container';
 import { requireUser } from '@/shared/auth/requireAdmin';
 import { depositoSchema, facturacionSchema, validarArchivo } from '@/shared/validation/registro.schema';
 import { ConfirmarInscripciones } from '@/application/use-cases/ConfirmarInscripciones';
@@ -18,7 +18,7 @@ export async function getActividadesPorIdsAction(ids: number[]) {
     const data = await new GestionarActividades(getActividadRepository()).obtenerPorIds(ids);
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error al cargar carrito:', error);
+    reportarErrorEnAccion('Error al cargar carrito', error);
     return { success: false as const, error: 'Error al cargar actividades del carrito' };
   }
 }
@@ -29,7 +29,7 @@ export async function getEstadosCheckoutAction() {
     const data = await new ConsultarCatalogos(getCatalogoRepository()).obtenerEstados();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error al cargar estados:', error);
+    reportarErrorEnAccion('Error al cargar estados', error);
     return { success: false as const, error: 'Error al cargar estados' };
   }
 }
@@ -63,7 +63,7 @@ export async function confirmarInscripcionesAction(formData: FormData, idsActivi
     return await new ConfirmarInscripciones(getActividadRepository(), getUsuarioRepository(), getTransactionManager(),
       getStorageService(), getEmailService(), getIdGenerator()).execute(folioRegistro, dto);
   } catch (error) {
-    console.error('Error al confirmar inscripciones:', error);
+    reportarErrorEnAccion('Error al confirmar inscripciones', error);
     return { success: false, errors: { _form: error instanceof RegistroError ? error.message : 'Error al confirmar las inscripciones' } };
   }
 }

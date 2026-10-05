@@ -1,7 +1,7 @@
 'use server';
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
-import { getActividadRepository, getEquipoRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getEquipoRepository } from '@/infrastructure/config/container';
 import { GestionarEquipos } from '@/application/use-cases/GestionarEquipos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { CrearEquipoDTO, ActualizarEquipoDTO } from '@/application/dtos/EquipoDTO';
@@ -12,7 +12,7 @@ export async function getActividadesConEquiposAction() {
     const conEquipos = await new GestionarActividades(getActividadRepository()).listarConEquipos();
     return { success: true as const, data: conEquipos };
   } catch (error) {
-    console.error('Error en getActividadesConEquiposAction:', error);
+    reportarErrorEnAccion('Error en getActividadesConEquiposAction', error);
     return { success: false as const, error: 'Error al cargar actividades' };
   }
 }
@@ -24,7 +24,7 @@ export async function getEquiposAction(idActividad: number) {
     const equipos = await useCase.listarPorActividad(idActividad);
     return { success: true as const, data: equipos };
   } catch (error) {
-    console.error('Error en getEquiposAction:', error);
+    reportarErrorEnAccion('Error en getEquiposAction', error);
     return { success: false as const, error: 'Error al cargar equipos' };
   }
 }
@@ -36,7 +36,7 @@ export async function crearEquipoAction(data: CrearEquipoDTO) {
     const equipo = await useCase.crearEquipo(data);
     return { success: true as const, data: equipo };
   } catch (error) {
-    console.error('Error en crearEquipoAction:', error);
+    reportarErrorEnAccion('Error en crearEquipoAction', error);
     const message = error instanceof Error ? error.message : 'Error al crear equipo';
     return { success: false as const, error: message };
   }
@@ -49,7 +49,7 @@ export async function actualizarEquipoAction(idEquipo: number, data: ActualizarE
     const equipo = await useCase.actualizarEquipo(idEquipo, data);
     return { success: true as const, data: equipo };
   } catch (error) {
-    console.error('Error en actualizarEquipoAction:', error);
+    reportarErrorEnAccion('Error en actualizarEquipoAction', error);
     const message = error instanceof Error ? error.message : 'Error al actualizar equipo';
     return { success: false as const, error: message };
   }
@@ -62,7 +62,7 @@ export async function eliminarEquipoAction(idEquipo: number) {
     await useCase.eliminarEquipo(idEquipo);
     return { success: true as const };
   } catch (error) {
-    console.error('Error en eliminarEquipoAction:', error);
+    reportarErrorEnAccion('Error en eliminarEquipoAction', error);
     const message = error instanceof Error ? error.message : 'Error al eliminar equipo';
     return { success: false as const, error: message };
   }
@@ -75,7 +75,7 @@ export async function buscarUsuariosEquipoAction(query: string) {
     const usuarios = await useCase.buscarUsuarios(query);
     return { success: true as const, data: usuarios };
   } catch (error) {
-    console.error('Error en buscarUsuariosEquipoAction:', error);
+    reportarErrorEnAccion('Error en buscarUsuariosEquipoAction', error);
     return { success: false as const, error: 'Error al buscar usuarios', data: [] };
   }
 }
@@ -89,7 +89,7 @@ export async function getActividadDetalleAction(idActividad: number) {
     }
     return { success: true as const, data: actividad };
   } catch (error) {
-    console.error('Error en getActividadDetalleAction:', error);
+    reportarErrorEnAccion('Error en getActividadDetalleAction', error);
     return { success: false as const, error: 'Error al cargar actividad' };
   }
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { getStorageService, getAuthService, getAccesoRepository, getDepositoRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getStorageService, getAuthService, getAccesoRepository, getDepositoRepository } from '@/infrastructure/config/container';
 import { ObtenerAccesoArchivo } from '@/application/use-cases/ObtenerAccesoArchivo';
 import { requireUser } from '@/shared/auth/requireAdmin';
 
@@ -11,7 +11,7 @@ export async function obtenerUrlComprobanteAction(ruta: string): Promise<{ succe
       getDepositoRepository()).execute(ruta);
     return { success: true, url };
   } catch (error) {
-    console.error('Error al obtener comprobante:', error);
+    reportarErrorEnAccion('Error al obtener comprobante', error);
     return { success: false, error: 'Error al obtener acceso al comprobante' };
   }
 }

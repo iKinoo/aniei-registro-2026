@@ -131,6 +131,7 @@ Las actions **no lanzan** errores al cliente: devuelven `{ success, data | error
 - `STORAGE_PROVIDER=filesystem` (default) → `LocalFilesystemStorageService` sobre `./storage/{comprobantes,constancias}`. `supabase` → `SupabaseStorageService` (legacy, solo transición). Todo acceso vía `IStorageService` / `getStorageService()`.
 - Comprobantes: png/jpeg/pdf, máx. 5 MB (`src/core/value-objects/ArchivoComprobante.ts`).
 - Correo: `NodemailerEmailService` (Gmail SMTP, `GMAIL_USER` / `GMAIL_APP_PASSWORD` / `EMAIL_FROM`); plantillas HTML en `src/infrastructure/services/email/templates/`.
+- Alertas de error: cliente SMTP independiente `NodemailerAlertaErrorService` (`ALERTA_EMAIL_USER` / `ALERTA_EMAIL_APP_PASSWORD` / `ALERTA_EMAIL_FROM` / `ALERTA_EMAIL_TO`) compuesto en `config/alertas.ts` vía `getAlertaErrorService()`. Solo producción; sin variables, es no-op. Las Server Actions registran errores con `reportarErrorEnAccion(contexto, error)` (exportado por el contenedor); `src/instrumentation.ts` captura con `onRequestError` los errores no manejados. Throttle por tipo de error con `ALERTA_ERROR_WINDOW_SECONDS` (default 300s, resumen acumulado). No alertar `RegistroError` ni errores de clientes.
 - PDF: `ReactPdfService` + plantillas en `src/infrastructure/services/pdf/templates/`.
 
 ---

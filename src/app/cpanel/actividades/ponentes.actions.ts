@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { getPonentesRepository, getActividadRepository, getRegistroQueryService, getEmailService,
-  getTransactionManager, getPasswordHasher, getPasswordGenerator } from '@/infrastructure/config/container';
+  getTransactionManager, getPasswordHasher, getPasswordGenerator, reportarErrorEnAccion } from '@/infrastructure/config/container';
 import { GestionarPonentes, RegistrarPonente } from '@/application/use-cases/GestionarPonentes';
 import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
 import type { PonenteDTO } from '@/application/dtos/ActividadDTO';
@@ -92,7 +92,7 @@ export async function registrarPonenteAction(
 
     return { success: true, folioRegistro };
   } catch (e) {
-    console.error('Error al registrar ponente:', e);
+    reportarErrorEnAccion('Error al registrar ponente', e);
     if (e instanceof RegistroError) return { success: false, error: e.message };
     return { success: false, error: 'Error al registrar ponente' };
   }

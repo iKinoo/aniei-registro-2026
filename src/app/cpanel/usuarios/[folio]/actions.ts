@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import {
+  reportarErrorEnAccion,
   getTransactionManager,
   getPasswordHasher,
   getPasswordGenerator,
@@ -44,7 +45,7 @@ export async function cambiarContrasenaAction(
       correoEnviado: resultado.correoEnviado,
     };
   } catch (error) {
-    console.error(`Error in cambiarContrasenaAction for folio ${folioRegistro}:`, error);
+    reportarErrorEnAccion(`Error in cambiarContrasenaAction for folio ${folioRegistro}`, error);
     if (error instanceof CredencialesError) return { success: false, error: error.message };
     return { success: false, error: 'Ocurrió un error al cambiar la contraseña' };
   }

@@ -1,6 +1,6 @@
 'use server';
 
-import { getActividadRepository, getCatalogoRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getCatalogoRepository } from '@/infrastructure/config/container';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
@@ -13,7 +13,7 @@ export async function getActividadesAction() {
     const data = await useCase.listar();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en getActividadesAction:', error);
+    reportarErrorEnAccion('Error en getActividadesAction', error);
     return { success: false as const, error: 'Error al obtener las actividades' };
   }
 }
@@ -25,7 +25,7 @@ export async function getTiposActividadAction() {
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en getTiposActividadAction:', error);
+    reportarErrorEnAccion('Error en getTiposActividadAction', error);
     return { success: false as const, error: 'Error al obtener tipos de actividad' };
   }
 }
@@ -37,7 +37,7 @@ export async function getInstitucionesAction() {
     const data = await repo.obtenerInstituciones();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en getInstitucionesAction:', error);
+    reportarErrorEnAccion('Error en getInstitucionesAction', error);
     return { success: false as const, error: 'Error al obtener instituciones' };
   }
 }
@@ -49,7 +49,7 @@ export async function crearActividadAction(data: CrearActividadDTO) {
     const actividad = await useCase.crear(data);
     return { success: true as const, data: actividad };
   } catch (error) {
-    console.error('Error en crearActividadAction:', error);
+    reportarErrorEnAccion('Error en crearActividadAction', error);
     const msg = error instanceof Error ? error.message : 'Error al crear la actividad';
     return { success: false as const, error: msg };
   }
@@ -62,7 +62,7 @@ export async function actualizarActividadAction(id: number, data: ActualizarActi
     const actividad = await useCase.actualizar(id, data);
     return { success: true as const, data: actividad };
   } catch (error) {
-    console.error('Error en actualizarActividadAction:', error);
+    reportarErrorEnAccion('Error en actualizarActividadAction', error);
     const msg = error instanceof Error ? error.message : 'Error al actualizar la actividad';
     return { success: false as const, error: msg };
   }

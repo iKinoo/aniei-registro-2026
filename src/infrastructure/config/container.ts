@@ -62,6 +62,8 @@ export function getCatalogoRepository(): ICatalogoRepository {
 
 export { getAccesoRepository, getPasswordHasher } from './credenciales';
 
+export { getAlertaErrorService, reportarErrorEnAccion } from './alertas';
+
 export function getActividadRepository(): IActividadRepository {
   return new PrismaActividadRepository(prisma);
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStorageService, getAuthService, getAccesoRepository, getDepositoRepository,
-  getEnlaceArchivoService } from '@/infrastructure/config/container';
+  getEnlaceArchivoService, reportarErrorEnAccion } from '@/infrastructure/config/container';
 import { DescargarArchivo } from '@/application/use-cases/DescargarArchivo';
 import { ArchivoAccesoError } from '@/core/errors/ArchivoAccesoError';
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const status = { ENLACE_INVALIDO: 401, ENLACE_EXPIRADO: 410, SIN_SESION: 401, PROHIBIDO: 403, NO_ENCONTRADO: 404 }[error.motivo];
       return NextResponse.json({ error: error.message }, { status });
     }
-    console.error('Error al descargar archivo:', error);
+    reportarErrorEnAccion('Error al descargar archivo', error);
     return NextResponse.json({ error: 'Error al obtener archivo' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@
 import { requireUser } from '@/shared/auth/requireAdmin';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import {
+  reportarErrorEnAccion,
   getPasswordHasher,
   getIdGenerator,
   getPasswordGenerator,
@@ -152,7 +153,7 @@ export async function registrarGrupoRapidoAction(
       data: { folioPadre: folioRegistro }
     };
   } catch (error) {
-    console.error('Error en registrarGrupoRapidoAction:', error);
+    reportarErrorEnAccion('Error en registrarGrupoRapidoAction', error);
     const message = error instanceof Error ? error.message : 'Error al registrar el grupo';
     return {
       success: false,

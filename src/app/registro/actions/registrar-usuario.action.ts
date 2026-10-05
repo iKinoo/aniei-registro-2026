@@ -10,6 +10,7 @@ import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapi
 import { Genero } from '@/core/enums/Genero';
 import { signIn } from '@/auth';
 import {
+  reportarErrorEnAccion,
   getPasswordHasher,
   getIdGenerator,
   getPasswordGenerator,
@@ -255,7 +256,7 @@ export async function registrarUsuarioAction(
         redirect: false,
       });
     } catch (error) {
-      console.error('Error al iniciar sesión tras registro:', error);
+      reportarErrorEnAccion('Error al iniciar sesión tras registro', error);
     }
 
     return {
@@ -275,6 +276,7 @@ export async function registrarUsuarioAction(
         meta: anyErr.meta,
         stack: error instanceof Error ? error.stack?.slice(0, 800) : undefined,
       });
+      reportarErrorEnAccion('[registro] Error en registro', error, { codigo: anyErr.code ?? anyErr.cause?.code });
     }
     const savedFieldsOnError: RegistroFormFields = {
       nombre: formData.get('nombre') as string,

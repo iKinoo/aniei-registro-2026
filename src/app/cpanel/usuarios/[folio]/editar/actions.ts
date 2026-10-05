@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
-import { getTransactionManager, getStorageService } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getTransactionManager, getStorageService } from '@/infrastructure/config/container';
 import { GestionarUsuarios } from '@/application/use-cases/GestionarUsuarios';
 
 export type { ActualizarUsuarioDTO as UsuarioEditarData } from '@/application/dtos/ActualizarUsuarioDTO';
@@ -30,7 +30,7 @@ export async function actualizarUsuarioAction(
 
     return { success: true, message: 'Usuario actualizado correctamente' };
   } catch (error) {
-    console.error(`Error in actualizarUsuarioAction for folio ${folioRegistro}:`, error);
+    reportarErrorEnAccion(`Error in actualizarUsuarioAction for folio ${folioRegistro}`, error);
     return { success: false, error: 'Ocurrió un error al actualizar el usuario' };
   }
 }

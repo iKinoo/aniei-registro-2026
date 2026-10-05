@@ -1,6 +1,7 @@
 'use server';
 
 import { 
+  reportarErrorEnAccion,
   getActividadRepository, 
   getPonentesRepository, 
   getInscripcionActividadRepository,
@@ -30,7 +31,7 @@ export async function getDetalleActividadAction(idActividadStr: string) {
       getInscripcionActividadRepository(), getCatalogoRepository(), getPdfService()).obtener(idActividad);
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en getDetalleActividadAction:', error);
+    reportarErrorEnAccion('Error en getDetalleActividadAction', error);
     return { success: false as const, error: 'Error al cargar los detalles' };
   }
 }
@@ -49,7 +50,7 @@ export async function generarConstanciaPonenteAction(idActividad: number, folioR
     const url = await useCase.execute(idActividad, folioRegistro);
     return { success: true as const, url };
   } catch (error) {
-    console.error('Error en generarConstanciaPonenteAction:', error);
+    reportarErrorEnAccion('Error en generarConstanciaPonenteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar' };
   }
 }
@@ -67,7 +68,7 @@ export async function enviarConstanciaPonenteAction(idActividad: number, folioRe
     await useCase.execute(idActividad, folioRegistro);
     return { success: true as const };
   } catch (error) {
-    console.error('Error en enviarConstanciaPonenteAction:', error);
+    reportarErrorEnAccion('Error en enviarConstanciaPonenteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al enviar por correo' };
   }
 }
@@ -86,7 +87,7 @@ export async function generarConstanciaParticipanteAction(idActividad: number, f
     const url = await useCase.execute(idActividad, folioRegistro);
     return { success: true as const, url };
   } catch (error) {
-    console.error('Error en generarConstanciaParticipanteAction:', error);
+    reportarErrorEnAccion('Error en generarConstanciaParticipanteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar' };
   }
 }
@@ -104,7 +105,7 @@ export async function enviarConstanciaParticipanteAction(idActividad: number, fo
     await useCase.execute(idActividad, folioRegistro);
     return { success: true as const };
   } catch (error) {
-    console.error('Error en enviarConstanciaParticipanteAction:', error);
+    reportarErrorEnAccion('Error en enviarConstanciaParticipanteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al enviar por correo' };
   }
 }
@@ -133,7 +134,7 @@ export async function generarConstanciaParticipanteBatchAction(idActividad: numb
     
     return { success: true as const, resultados };
   } catch (error) {
-    console.error('Error en generarConstanciaParticipanteBatchAction:', error);
+    reportarErrorEnAccion('Error en generarConstanciaParticipanteBatchAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar lote' };
   }
 }
@@ -147,7 +148,7 @@ export async function generarListaParticipantesPdfAction(idActividad: number) {
       base64: Buffer.from(resultado.buffer).toString('base64'), nombreArchivo: resultado.nombreArchivo,
     } };
   } catch (error) {
-    console.error('Error en generarListaParticipantesPdfAction:', error);
+    reportarErrorEnAccion('Error en generarListaParticipantesPdfAction', error);
     return { success: false as const, error: 'Error al generar la lista de participantes' };
   }
 }

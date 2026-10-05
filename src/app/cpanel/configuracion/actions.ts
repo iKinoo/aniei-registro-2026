@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getActividadRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { GestionarPrecios } from '@/application/use-cases/GestionarPrecios';
@@ -16,7 +16,7 @@ export async function getTiposActividadAction() {
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en getTiposActividadAction:', error);
+    reportarErrorEnAccion('Error en getTiposActividadAction', error);
     return { success: false as const, error: 'Error al obtener tipos de actividad' };
   }
 }
@@ -28,7 +28,7 @@ export async function obtenerPreciosAction() {
     const data = await useCase.obtenerPrecios();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en obtenerPreciosAction:', error);
+    reportarErrorEnAccion('Error en obtenerPreciosAction', error);
     return { success: false as const, error: 'Error al obtener precios' };
   }
 }
@@ -41,7 +41,7 @@ export async function guardarPrecioAction(id: number, data: ActualizarPrecioDTO)
     revalidatePath('/cpanel/configuracion');
     return { success: true as const, data: precio };
   } catch (error) {
-    console.error('Error en guardarPrecioAction:', error);
+    reportarErrorEnAccion('Error en guardarPrecioAction', error);
     const msg = error instanceof Error ? error.message : 'Error al guardar el precio';
     return { success: false as const, error: msg };
   }
@@ -55,7 +55,7 @@ export async function crearPrecioAction(data: CrearPrecioDTO) {
     revalidatePath('/cpanel/configuracion');
     return { success: true as const, data: precio };
   } catch (error) {
-    console.error('Error en crearPrecioAction:', error);
+    reportarErrorEnAccion('Error en crearPrecioAction', error);
     const msg = error instanceof Error ? error.message : 'Error al crear el precio';
     return { success: false as const, error: msg };
   }
@@ -69,7 +69,7 @@ export async function eliminarPrecioAction(id: number) {
     revalidatePath('/cpanel/configuracion');
     return { success: true as const };
   } catch (error) {
-    console.error('Error en eliminarPrecioAction:', error);
+    reportarErrorEnAccion('Error en eliminarPrecioAction', error);
     const msg = error instanceof Error ? error.message : 'Error al eliminar el precio';
     return { success: false as const, error: msg };
   }
@@ -82,7 +82,7 @@ export async function obtenerTiposParticipanteAction() {
     const data = await useCase.obtenerTodos();
     return { success: true as const, data };
   } catch (error) {
-    console.error('Error en obtenerTiposParticipanteAction:', error);
+    reportarErrorEnAccion('Error en obtenerTiposParticipanteAction', error);
     return { success: false as const, error: 'Error al obtener tipos de participante' };
   }
 }
@@ -95,7 +95,7 @@ export async function guardarTipoParticipanteAction(id: number, data: Actualizar
     revalidatePath('/cpanel/configuracion');
     return { success: true as const, data: tipo };
   } catch (error) {
-    console.error('Error en guardarTipoParticipanteAction:', error);
+    reportarErrorEnAccion('Error en guardarTipoParticipanteAction', error);
     const msg = error instanceof Error ? error.message : 'Error al guardar el tipo de participante';
     return { success: false as const, error: msg };
   }
@@ -109,7 +109,7 @@ export async function crearTipoParticipanteAction(data: CrearTipoParticipanteDTO
     revalidatePath('/cpanel/configuracion');
     return { success: true as const, data: tipo };
   } catch (error) {
-    console.error('Error en crearTipoParticipanteAction:', error);
+    reportarErrorEnAccion('Error en crearTipoParticipanteAction', error);
     const msg = error instanceof Error ? error.message : 'Error al crear el tipo de participante';
     return { success: false as const, error: msg };
   }
@@ -123,7 +123,7 @@ export async function eliminarTipoParticipanteAction(id: number) {
     revalidatePath('/cpanel/configuracion');
     return { success: true as const };
   } catch (error) {
-    console.error('Error en eliminarTipoParticipanteAction:', error);
+    reportarErrorEnAccion('Error en eliminarTipoParticipanteAction', error);
     const msg = error instanceof Error ? error.message : 'Error al eliminar el tipo de participante';
     return { success: false as const, error: msg };
   }

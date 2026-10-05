@@ -1,7 +1,7 @@
 'use server';
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
-import { getPdfService, getStorageService, getConstanciaManualRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getPdfService, getStorageService, getConstanciaManualRepository } from '@/infrastructure/config/container';
 import { GenerarConstanciaManualUseCase } from '@/application/use-cases/GenerarConstanciaManualUseCase';
 import { ConstanciaManualDTO, TipoConstanciaManual, TIPOS_CONSTANCIA } from '@/application/dtos/ConstanciaManualDTO';
 import { ConstanciaManualEntity } from '@/application/ports/IConstanciaManualRepository';
@@ -75,7 +75,7 @@ export async function generarConstanciaManualAction(
 
     return { success: true, data: entityToResponse(entity) };
   } catch (error) {
-    console.error('Error in generarConstanciaManualAction:', error);
+    reportarErrorEnAccion('Error in generarConstanciaManualAction', error);
     return { success: false, error: 'Ocurrió un error al generar la constancia' };
   }
 }
@@ -89,7 +89,7 @@ export async function obtenerConstanciasManualesAction(): Promise<
     const entidades = await repo.obtenerTodas();
     return { success: true, data: entidades.map(entityToResponse) };
   } catch (error) {
-    console.error('Error in obtenerConstanciasManualesAction:', error);
+    reportarErrorEnAccion('Error in obtenerConstanciasManualesAction', error);
     return { success: false, error: 'Ocurrió un error al obtener las constancias' };
   }
 }
