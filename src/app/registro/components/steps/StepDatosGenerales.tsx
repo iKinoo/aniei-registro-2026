@@ -60,12 +60,9 @@ export function StepDatosGenerales({ catalogos, tiposParticipante, datos, errors
         <input id="s1-correo" type="email" className={inputCls} placeholder="correo@ejemplo.com" value={datos.correo} onChange={(e) => set('correo', e.target.value)} />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Field label="Lada">
-          <input id="s1-lada" className={inputCls} placeholder="52" maxLength={10} value={datos.lada} onChange={(e) => set('lada', e.target.value)} />
-        </Field>
-        <Field label="Teléfono">
-          <input id="s1-tel" className={inputCls} placeholder="5512345678" maxLength={20} value={datos.telefono} onChange={(e) => set('telefono', e.target.value)} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Teléfono" error={errors?.telefono}>
+          <input id="s1-tel" className={inputCls} placeholder="+52 997 110 5996" maxLength={20} value={datos.telefono} onChange={(e) => set('telefono', e.target.value)} />
         </Field>
         <Field label="Extensión">
           <input id="s1-ext" className={inputCls} placeholder="100" maxLength={10} value={datos.extension} onChange={(e) => set('extension', e.target.value)} />

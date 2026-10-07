@@ -8,7 +8,6 @@ import type { RegistroPonenteDTO } from '../dtos/ActualizarUsuarioDTO';
 import { Usuario } from '@/core/entities/Usuario';
 import { Email } from '@/core/value-objects/Email';
 import { Genero } from '@/core/enums/Genero';
-import { RegistroError } from '@/core/errors/RegistroError';
 
 export class GestionarPonentes {
   constructor(private readonly repo: IPonentesRepository) {}
@@ -33,8 +32,6 @@ export class RegistrarPonente {
     const password = this.passwords.generar();
     const hash = await this.hasher.hash(password);
     const folio = await this.tx.run(async ctx => {
-      const existente = await ctx.usuarioRepo.buscarPorCorreo(usuario.correo);
-      if (existente) throw RegistroError.CORREO_DUPLICADO(datos.correo);
       const creado = await ctx.usuarioRepo.crear(usuario);
       const folio = creado.folioRegistro!;
       await ctx.accesoRepo.crear(hash, 'USER', folio, `${datos.nombre} ${datos.apellido}`, datos.correo);

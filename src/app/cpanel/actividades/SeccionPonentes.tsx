@@ -221,33 +221,24 @@ export function SeccionPonentes({ idActividad, ponentesIniciales, onChange }: Pr
                 <span className="text-slate-400 text-xs truncate max-w-[180px]">{r.correo}</span>
               </button>
             ))}
-            <div className="border-t border-slate-100 px-4 py-2.5 flex justify-between items-center bg-slate-50">
-              <span className="text-xs text-slate-500">¿No está en la lista?</span>
-              <button
-                type="button"
-                onClick={() => { setResultados([]); setShowRegistro(true); }}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-              >
-                + Registrar nuevo ponente
-              </button>
-            </div>
           </div>
         )}
 
         {/* Sin resultados */}
         {query.trim().length >= 2 && resultados.length === 0 && !buscando && (
-          <div className=" top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-10 px-4 py-3">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-10 px-4 py-3">
             <p className="text-sm text-slate-500">No se encontraron usuarios.</p>
-            <button
-              type="button"
-              onClick={() => { setResultados([]); setShowRegistro(true); }}
-              className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 mt-1 transition-colors"
-            >
-              + Registrar nuevo ponente
-            </button>
           </div>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={() => { setResultados([]); setShowRegistro(true); }}
+        className="flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+      >
+        + Registrar nuevo ponente
+      </button>
 
       {error && <p className="text-xs text-rose-600">{error}</p>}
 

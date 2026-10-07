@@ -92,8 +92,8 @@ export async function registrarPonenteAction(
 
     return { success: true, folioRegistro };
   } catch (e) {
-    reportarErrorEnAccion('Error al registrar ponente', e);
     if (e instanceof RegistroError) return { success: false, error: e.message };
+    reportarErrorEnAccion('Error al registrar ponente', e);
     return { success: false, error: 'Error al registrar ponente' };
   }
 }
