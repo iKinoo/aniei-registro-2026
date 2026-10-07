@@ -7,8 +7,9 @@ import styles from './page.module.css';
 export function LogoutClient() {
   const router = useRouter();
 
-  const handleConfirm = () => {
-    signOut({ callbackUrl: '/login' });
+  const handleConfirm = async () => {
+    await signOut({ redirect: false });
+    window.location.assign('/');
   };
 
   const handleCancel = () => {

@@ -5,7 +5,9 @@ import { useEffect } from 'react';
 
 export default function AutoLogout() {
   useEffect(() => {
-    signOut({ callbackUrl: '/login?error=PerfilIncompleto' });
+    signOut({ redirect: false }).then(() => {
+      window.location.assign('/');
+    });
   }, []);
 
   return (

@@ -7,5 +7,5 @@ export async function handleLogout() {
   await requireAdmin();
   const authService = getAuthService();
   await authService.signOut();
-  redirect('/login');
+  redirect('/');
 }

@@ -20,17 +20,14 @@ export const registroSchema = z.object({
   dependencia: z.string().max(128).optional().or(z.literal('')),
   idTitulo: z.coerce.number().int().positive('Seleccione un título'),
   idTipoParticipante: z.coerce.number().int().positive('Seleccione un tipo de participante'),
-  idInstitucion: z.coerce.number().int().positive().optional(),
+  idInstitucion: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.coerce.number().int().positive('Seleccione una institución').optional()
+  ),
   institucionExterna: z.string().max(150).optional().or(z.literal('')),
   noAfiliada: z.string().transform((val) => val === 'true'),
   idEntidadFederativa: z.coerce.number().int().positive('Seleccione un estado'),
-}).refine(
-  (data) => data.noAfiliada || data.idInstitucion,
-  { message: 'Seleccione una institución', path: ['idInstitucion'] }
-).refine(
-  (data) => !data.noAfiliada || (data.institucionExterna && data.institucionExterna.trim().length > 0),
-  { message: 'Ingrese el nombre de su institución', path: ['institucionExterna'] }
-);
+});
 
 export const depositoSchema = z.object({
   bancoSucursal: z.string().max(100).optional().or(z.literal('')),

@@ -95,7 +95,7 @@ export function StepDatosGenerales({ catalogos, tiposParticipante, datos, errors
         </select>
       </Field>
 
-      <Field label="Institución" required={noAfiliada ? false : true} error={errors?.idInstitucion || errors?.institucionExterna}>
+      <Field label="Institución" error={errors?.idInstitucion || errors?.institucionExterna}>
         <div className="space-y-3">
           <select id="s1-inst" className={selectCls} value={datos.idInstitucion} onChange={(e) => set('idInstitucion', e.target.value)} disabled={noAfiliada}>
             <option value="">Seleccione...</option>
@@ -114,7 +114,7 @@ export function StepDatosGenerales({ catalogos, tiposParticipante, datos, errors
       </Field>
 
       {noAfiliada && (
-        <Field label="Nombre de la institución" required error={errors?.institucionExterna}>
+        <Field label="Nombre de la institución" error={errors?.institucionExterna}>
           <input id="s1-inst-ext" className={inputCls} placeholder="Ej. Universidad XYZ" maxLength={150} value={datos.institucionExterna} onChange={(e) => set('institucionExterna', e.target.value)} />
         </Field>
       )}
