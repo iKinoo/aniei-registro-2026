@@ -18,6 +18,11 @@ export class NodemailerEmailService implements IEmailService {
         user,
         pass,
       },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+      maxConnections: 1,
+      pool: false,
     });
     this.from = from;
   }

@@ -4,6 +4,7 @@ import { IEmailService } from '@/application/ports/IEmailService';
 import type { TransactionContext, ITransactionManager } from '@/application/ports/ITransactionManager';
 import { RegistrarGrupoRapidoDTO } from '@/application/dtos/RegistrarGrupoRapidoDTO';
 import { ResultadoRegistroGrupo } from '@/application/dtos/ResultadoRegistroGrupo';
+import type { NotificacionGrupoData } from '@/application/dtos/NotificacionRegistro';
 import { Deposito } from '@/core/entities/Deposito';
 import { Monto } from '@/core/value-objects/Monto';
 import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
@@ -99,38 +100,66 @@ export class RegistrarGrupoRapido {
     }
 
     const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-    for (let i = 0; i < dto.miembros.length; i++) {
-      const miembro = dto.miembros[i];
-      try {
-        await this.emailService.enviarConfirmacionRegistro(miembro.correo, {
-          nombre: miembro.nombre,
-          apellido: miembro.apellido,
-          folio: folios[i],
-          institucion: responsable.idInstitucion?.toString() ?? 'N/A',
-          fecha: fechaStr,
-          password: miembrosMapeados[i].passwordPlana,
-        });
-      } catch (e) {
-        console.error(`Error al enviar correo a miembro ${miembro.correo}:`, e);
-      }
-    }
-
-    try {
-      await this.emailService.enviarConfirmacionGrupoRapido(
-        responsable.correo.toString(),
-        {
-          nombreResponsable: responsable.nombre,
-          apellidoResponsable: responsable.apellido,
-          token,
-          totalMiembros: dto.miembros.length,
-        },
-      );
-    } catch (error) { console.error('Error al enviar confirmación de grupo:', error); }
 
     return {
       success: true,
       totalRegistrados: usuariosIds.length,
       folios,
+      notificacion: {
+        miembros: dto.miembros.map((miembro, i) => ({
+          nombre: miembro.nombre,
+          apellido: miembro.apellido,
+          correo: miembro.correo,
+          folio: folios[i],
+          institucion: responsable.idInstitucion?.toString() ?? 'N/A',
+          fecha: fechaStr,
+          password: miembrosMapeados[i].passwordPlana,
+        })),
+        responsableNombre: responsable.nombre,
+        responsableApellido: responsable.apellido,
+        responsableCorreo: responsable.correo.toString(),
+        token,
+        totalMiembros: dto.miembros.length,
+      },
     };
+  }
+
+  async notificar(datos: NotificacionGrupoData): Promise<void> {
+    const fallidos: string[] = [];
+
+    for (const miembro of datos.miembros) {
+      try {
+        await this.emailService.enviarConfirmacionRegistro(miembro.correo, {
+          nombre: miembro.nombre,
+          apellido: miembro.apellido,
+          folio: miembro.folio,
+          institucion: miembro.institucion,
+          fecha: miembro.fecha,
+          password: miembro.password,
+        });
+      } catch (e) {
+        console.error(`Error al enviar correo a miembro ${miembro.correo}:`, e);
+        fallidos.push(miembro.correo);
+      }
+    }
+
+    try {
+      await this.emailService.enviarConfirmacionGrupoRapido(
+        datos.responsableCorreo,
+        {
+          nombreResponsable: datos.responsableNombre,
+          apellidoResponsable: datos.responsableApellido,
+          token: datos.token,
+          totalMiembros: datos.totalMiembros,
+        },
+      );
+    } catch (error) {
+      console.error('Error al enviar confirmación de grupo:', error);
+      fallidos.push('responsable');
+    }
+
+    if (fallidos.length > 0) {
+      throw new Error(`Correos de registro grupal no enviados: ${fallidos.join(', ')}`);
+    }
   }
 }

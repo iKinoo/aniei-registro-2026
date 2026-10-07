@@ -74,30 +74,55 @@ await test('Registro compensa el comprobante si falla la segunda subida', async 
   await assert.rejects(registro.execute({ ...dto, facturacion: { razonSocial: 'Prueba', rfc: 'AAA010101AAA', archivoConstancia: archivo } }), /subida/);
   assert.equal(disk.files.size, 0);
 });
-await test('Registro confirmado sigue siendo exitoso si falla generar PDF', async () => {
+await test('Registro individual no envía notificaciones hasta notificar y sobrevive a PDF fallido', async () => {
   const disk = storage();
   let enviado = false;
-  const ctx = { usuarioRepo: { crear: async () => ({ folioRegistro: 'ANI26-0001' }) }, accesoRepo: { crear: async () => {} }, depositoRepo: { crear: async () => {} } };
+  const ctx = { usuarioRepo: { crear: async () => ({ folioRegistro: 'ANI26-0001' }) }, accesoRepo: { crear: async () => {} }, depositoRepo: { crear: async () => {} }, facturacionRepo: { crear: async () => {} }, inscripcionRepo: { crearMuchasConValidacion: async () => {} } };
   const registro = new RegistrarUsuario(disk, { enviarConfirmacionRegistro: async () => { enviado = true; } },
     { generarConstanciaInscripcion: async () => { throw new Error('PDF'); } }, catalogos, hasher, ids, passwords, { run: async fn => fn(ctx) });
   const result = await registro.execute(dto);
   assert.equal(result.folio, 'ANI26-0001');
+  assert.equal(enviado, false);
+  assert.equal(disk.files.size, 1);
+  await registro.notificar(result.notificacion);
   assert.equal(enviado, true);
   assert.equal(disk.files.size, 1);
+});
+await test('notificar individual propaga el fallo del correo de credenciales', async () => {
+  const disk = storage();
+  const datos = { nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com', folio: 'ANI26-0001', institucion: 'UdeG', tipoUsuario: 'Alumno', fecha: 'hoy', password: 'x' };
+  const registro = new RegistrarUsuario(disk, { enviarConfirmacionRegistro: async () => { throw new Error('SMTP'); } },
+    { generarConstanciaInscripcion: async () => new Uint8Array([1]) }, catalogos, hasher, ids, passwords, { run: async () => {} });
+  await assert.rejects(registro.notificar(datos), /SMTP/);
 });
 await test('Grupo conserva correspondencia contraseña/miembro cuando los hashes terminan fuera de orden', async () => {
   let next = 0;
   let mapped;
-  const enviados = [];
   const ctx = { depositoRepo: { crear: async () => {} }, usuarioRepo: { crearGrupo: async d => { mapped = d.miembros; return { folios: ['ANI26-0002', 'ANI26-0003'], usuariosIds: ['ANI26-0002', 'ANI26-0003'] }; } } };
-  const registro = new RegistrarGrupoRapido(usuarios, storage(), { ...email, enviarConfirmacionRegistro: async (correo, datos) => enviados.push({ correo, datos }) },
+  const registro = new RegistrarGrupoRapido(usuarios, storage(), email,
     { hash: async p => { if (p === 'clave-1') await new Promise(resolve => setTimeout(resolve, 10)); return `hash:${p}`; } },
     ids, { generar: () => `clave-${++next}` }, { run: async fn => fn(ctx) });
-  await registro.execute({ responsableId: 'ANI26-0001', deposito, archivo, miembros: [
+  const result = await registro.execute({ responsableId: 'ANI26-0001', deposito, archivo, miembros: [
     { nombre: 'Uno', apellido: 'Prueba', correo: 'uno@example.com' }, { nombre: 'Dos', apellido: 'Prueba', correo: 'dos@example.com' },
   ] });
-  assert.equal(mapped[0].passwordHash, `hash:${enviados[0].datos.password}`);
-  assert.equal(mapped[1].passwordHash, `hash:${enviados[1].datos.password}`);
+  assert.equal(mapped[0].passwordHash, `hash:${result.notificacion.miembros[0].password}`);
+  assert.equal(mapped[1].passwordHash, `hash:${result.notificacion.miembros[1].password}`);
+});
+await test('notificar grupal resume los correos que no pudieron enviarse', async () => {
+  const disk = storage();
+  const datos = {
+    miembros: [
+      { nombre: 'Uno', apellido: 'Prueba', correo: 'uno@example.com', folio: 'ANI26-0002', institucion: '1', fecha: 'hoy', password: 'x' },
+      { nombre: 'Dos', apellido: 'Prueba', correo: 'dos@example.com', folio: 'ANI26-0003', institucion: '1', fecha: 'hoy', password: 'y' },
+    ],
+    responsableNombre: 'Ana', responsableApellido: 'Pérez', responsableCorreo: 'ana@example.com', token: 'tok', totalMiembros: 2,
+  };
+  const fallados = new Set(['dos@example.com']);
+  const registro = new RegistrarGrupoRapido(usuarios, disk, {
+    enviarConfirmacionRegistro: async correo => { if (fallados.has(correo)) throw new Error('SMTP'); },
+    enviarConfirmacionGrupoRapido: async () => {},
+  }, hasher, ids, passwords, { run: async () => assert.fail('No debe iniciar transacción') });
+  await assert.rejects(registro.notificar(datos), /dos@example\.com/);
 });
 await test('Repositorio grupal utiliza el cliente transaccional sin abrir otra transacción', async () => {
   let created = 0;

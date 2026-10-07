@@ -9,6 +9,7 @@ import { RegistrarUsuario } from '@/application/use-cases/RegistrarUsuario';
 import { RegistrarGrupoRapido } from '@/application/use-cases/RegistrarGrupoRapido';
 import { Genero } from '@/core/enums/Genero';
 import { signIn } from '@/auth';
+import { after } from 'next/server';
 import {
   reportarErrorEnAccion,
   getPasswordHasher,
@@ -200,7 +201,7 @@ export async function registrarUsuarioAction(
     const idInstitucion = parsed.data.noAfiliada !== true ? (parsed.data.idInstitucion ?? null) : null;
     const institucionExterna = parsed.data.noAfiliada === true ? (parsed.data.institucionExterna || null) : null;
 
-    const resultado = await useCase.execute({
+    const inscripcion = await useCase.execute({
       ...parsed.data,
       telefono: parsed.data.telefono || null,
       lada: parsed.data.lada || null,
@@ -249,10 +250,19 @@ export async function registrarUsuarioAction(
           : null,
     }, miembros.map(m => ({ nombre: m.nombre, apellido: m.apellido, correo: m.correo })));
 
+    after(async () => {
+      try {
+        await useCase.notificar(inscripcion);
+      } catch (error) {
+        console.error('[registro] Error en notificación diferida:', error);
+        reportarErrorEnAccion('[registro] Correos de confirmación no enviados', error);
+      }
+    });
+
     try {
       await signIn('credentials', {
-        folioRegistro: resultado.folio,
-        password: resultado.passwordPlana,
+        folioRegistro: inscripcion.responsable.folio,
+        password: inscripcion.responsable.passwordPlana,
         redirect: false,
       });
     } catch (error) {
@@ -261,8 +271,8 @@ export async function registrarUsuarioAction(
 
     return {
       success: true,
-      folio: resultado.folio,
-      correo: resultado.correo,
+      folio: inscripcion.responsable.folio,
+      correo: inscripcion.responsable.correo,
     };
   } catch (error) {
     const anyErr = error as { code?: string; cause?: { code?: string; message?: string }; meta?: unknown; stack?: string };

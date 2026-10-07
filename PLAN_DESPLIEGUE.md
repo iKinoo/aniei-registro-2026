@@ -317,10 +317,13 @@ sudo tee /etc/nginx/sites-available/aniei > /dev/null <<'NGINX'
 server {
   listen 80;
   server_name TU-DOMINIO;
-  client_max_body_size 12m;   # comprobantes PDF/imagen
+  client_max_body_size 20m;   # comprobante + constancia fiscal (5 MB c/u)
   location / {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 120s;
+    proxy_send_timeout 120s;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

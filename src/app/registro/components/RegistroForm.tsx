@@ -208,7 +208,7 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
             </p>
           </div>
           <p className="text-sm text-slate-500 bg-slate-50 rounded-xl px-5 py-4 border border-slate-200 text-left">
-            📬 Revisa tu correo <strong className="text-slate-800">{state.correo}</strong> — ahí encontrarás tu contraseña de acceso y la confirmación de registro.
+            📬 Te enviaremos la confirmación y tu contraseña de acceso a <strong className="text-slate-800">{state.correo}</strong> en unos minutos. Si no quieres esperar, ya puedes ir a tu perfil con el botón de abajo.
           </p>
           <div className="flex flex-col gap-3">
             <a href="/perfil" className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all active:scale-95">

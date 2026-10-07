@@ -5,6 +5,7 @@ import { ICatalogoRepository } from '@/application/ports/ICatalogoRepository';
 import type { TransactionContext, ITransactionManager } from '@/application/ports/ITransactionManager';
 import { RegistroUsuarioDTO } from '@/application/dtos/RegistroUsuarioDTO';
 import { ResultadoRegistro } from '@/application/dtos/ResultadoRegistro';
+import type { NotificacionIndividualData } from '@/application/dtos/NotificacionRegistro';
 import { Usuario } from '@/core/entities/Usuario';
 import { Deposito } from '@/core/entities/Deposito';
 import { Facturacion } from '@/core/entities/Facturacion';
@@ -150,42 +151,52 @@ export class RegistrarUsuario {
 
     const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    let urlConstancia = `constancias/${folio}.pdf`;
-    try {
-      const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
+    return {
+      success: true,
+      folio,
+      urlConstancia: `constancias/${folio}.pdf`,
+      correo: dto.correo,
+      passwordPlana: generatedPassword,
+      notificacion: {
         nombre: dto.nombre,
         apellido: dto.apellido,
+        correo: dto.correo,
         folio,
         institucion: institucion?.nombre ?? 'N/A',
         tipoUsuario: titulo?.descripcion ?? 'N/A',
         fecha: fechaStr,
-      });
+        password: generatedPassword,
+      },
+    };
+  }
 
-      const constanciaRuta = `constancias/${folio}.pdf`;
-      urlConstancia = await this.storageService.subir(constanciaRuta, pdfUint8Array, 'application/pdf');
+  async notificar(datos: NotificacionIndividualData): Promise<void> {
+    try {
+      const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
+        nombre: datos.nombre,
+        apellido: datos.apellido,
+        folio: datos.folio,
+        institucion: datos.institucion,
+        tipoUsuario: datos.tipoUsuario,
+        fecha: datos.fecha,
+      });
+      await this.storageService.subir(`constancias/${datos.folio}.pdf`, pdfUint8Array, 'application/pdf');
     } catch (error) {
       console.error('Error al generar o subir constancia, se regenerará en CPanel:', error);
     }
 
     try {
-      await this.emailService.enviarConfirmacionRegistro(dto.correo, {
-        nombre: dto.nombre,
-        apellido: dto.apellido,
-        folio,
-        institucion: institucion?.nombre ?? 'N/A',
-        fecha: fechaStr,
-        password: generatedPassword,
+      await this.emailService.enviarConfirmacionRegistro(datos.correo, {
+        nombre: datos.nombre,
+        apellido: datos.apellido,
+        folio: datos.folio,
+        institucion: datos.institucion,
+        fecha: datos.fecha,
+        password: datos.password,
       });
-    } catch (e) {
-      console.error('Error al enviar correo confirmación:', e);
+    } catch (error) {
+      console.error('Error al enviar correo confirmación:', error);
+      throw error;
     }
-
-    return {
-      success: true,
-      folio,
-      urlConstancia,
-      correo: dto.correo,
-      passwordPlana: generatedPassword,
-    };
   }
 }
