@@ -79,7 +79,7 @@ await test('Registro confirmado sigue siendo exitoso si falla generar PDF', asyn
   let enviado = false;
   const ctx = { usuarioRepo: { crear: async () => ({ folioRegistro: 'ANI26-0001' }) }, accesoRepo: { crear: async () => {} }, depositoRepo: { crear: async () => {} } };
   const registro = new RegistrarUsuario(disk, { enviarConfirmacionRegistro: async () => { enviado = true; } },
-    { generarConstanciaInscripcion: async () => { throw new Error('PDF'); } }, catalogos, hasher, ids, passwords, { run: async fn => fn(ctx) });
+    { generarConstancia: async () => { throw new Error('PDF'); } }, catalogos, hasher, ids, passwords, { run: async fn => fn(ctx) });
   const result = await registro.execute(dto);
   assert.equal(result.folio, 'ANI26-0001');
   assert.equal(enviado, true);

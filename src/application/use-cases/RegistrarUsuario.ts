@@ -15,6 +15,7 @@ import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import type { IPasswordHasher } from '@/application/ports/IPasswordHasher';
 import type { IIdGenerator } from '@/application/ports/IIdGenerator';
 import type { IPasswordGenerator } from '@/application/ports/IPasswordGenerator';
+import { contenidoParticipacionGeneral } from '@/application/services/RedactorConstancia';
 
 export class RegistrarUsuario {
   constructor(
@@ -51,12 +52,8 @@ export class RegistrarUsuario {
     const passwordHash = await this.passwordHasher.hash(generatedPassword);
 
     const monto = Monto.create(dto.deposito.monto);
-    const [instituciones, titulos] = await Promise.all([
-      this.catalogoRepo.obtenerInstituciones(),
-      this.catalogoRepo.obtenerTitulos(),
-    ]);
+    const instituciones = await this.catalogoRepo.obtenerInstituciones();
     const institucion = instituciones.find((i) => i.idInstitucion === dto.idInstitucion);
-    const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
     const ext = dto.archivo.nombre.split('.').pop() || 'bin';
     const archivoRuta = `comprobantes/${this.idGenerator.uuid()}.${ext}`;
     let constanciaRuta: string | null = null;
@@ -152,14 +149,9 @@ export class RegistrarUsuario {
 
     let urlConstancia = `constancias/${folio}.pdf`;
     try {
-      const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
-        nombre: dto.nombre,
-        apellido: dto.apellido,
-        folio,
-        institucion: institucion?.nombre ?? 'N/A',
-        tipoUsuario: titulo?.descripcion ?? 'N/A',
-        fecha: fechaStr,
-      });
+      const pdfUint8Array = await this.pdfService.generarConstancia(
+        contenidoParticipacionGeneral(`${dto.nombre} ${dto.apellido}`),
+      );
 
       const constanciaRuta = `constancias/${folio}.pdf`;
       urlConstancia = await this.storageService.subir(constanciaRuta, pdfUint8Array, 'application/pdf');

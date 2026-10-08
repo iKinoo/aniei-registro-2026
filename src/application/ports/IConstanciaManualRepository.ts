@@ -1,11 +1,11 @@
-import { TipoConstanciaManual } from '@/application/dtos/ConstanciaManualDTO';
+import { TipoConstanciaManual, ConstanciaManualArchivo } from '@/application/dtos/ConstanciaManualDTO';
 
 export interface ConstanciaManualEntity {
   idConstancia: number;
   tipoConstancia: TipoConstanciaManual;
   destinatarios: string[];
   descripcion: string;
-  urlPdf: string;
+  archivos: ConstanciaManualArchivo[];
   fechaGeneracion: Date;
 }
 

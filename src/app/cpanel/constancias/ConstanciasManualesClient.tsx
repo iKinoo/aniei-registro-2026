@@ -3,16 +3,12 @@
 import { useState, useEffect } from 'react';
 import { ConstanciaManualModal } from './ConstanciaManualModal';
 import { obtenerConstanciasManualesAction, ConstanciaManualResponse } from './actions';
+import { obtenerUrlArchivoAction } from '@/app/cpanel/actions';
+import { extraerRutaArchivo } from '@/shared/utils/archivos';
 
 const PlusIcon = () => (
   <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-
-const DownloadIcon = () => (
-  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
   </svg>
 );
 
@@ -31,6 +27,8 @@ export function ConstanciasManualesClient() {
   const [constancias, setConstancias] = useState<ConstanciaManualResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [archivosExpandidos, setArchivosExpandidos] = useState<Set<number>>(new Set());
+  const [abriendo, setAbriendo] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -45,8 +43,32 @@ export function ConstanciasManualesClient() {
   const handleSuccess = (data: ConstanciaManualResponse) => {
     setConstancias((prev) => [data, ...prev]);
     setIsModalOpen(false);
-    setSuccessMessage('Constancia generada exitosamente');
+    setSuccessMessage(`Constancia generada: ${data.archivos.length} PDF${data.archivos.length === 1 ? '' : 's'}`);
     setTimeout(() => setSuccessMessage(''), 5000);
+  };
+
+  const abrirConstancia = async (ruta: string) => {
+    const limpia = extraerRutaArchivo(ruta);
+    setAbriendo(ruta);
+    try {
+      const result = await obtenerUrlArchivoAction(limpia);
+      if (result.success) {
+        window.open(result.url, '_blank');
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setAbriendo(null);
+    }
+  };
+
+  const toggleArchivos = (id: number) => {
+    setArchivosExpandidos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const formatDate = (isoString: string) => {
@@ -131,7 +153,7 @@ export function ConstanciasManualesClient() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {constancias.map((c) => (
-                  <tr key={c.idConstancia} className="hover:bg-slate-50 transition-colors">
+                  <tr key={c.idConstancia} className="hover:bg-slate-50 transition-colors align-top">
                     <td className="px-6 py-4 text-slate-600 text-sm whitespace-nowrap">
                       {formatDate(c.fechaGeneracion)}
                     </td>
@@ -152,25 +174,47 @@ export function ConstanciasManualesClient() {
                       {c.descripcion}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="inline-flex gap-2">
-                        <a
-                          href={c.urlPdf}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors"
-                        >
-                          <ExternalLinkIcon />
-                          Abrir
-                        </a>
-                        <a
-                          href={c.urlPdf}
-                          download
-                          className="inline-flex items-center px-3 py-1.5 border border-indigo-200 shadow-sm text-xs font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
-                        >
-                          <DownloadIcon />
-                          Descargar
-                        </a>
-                      </div>
+                      {c.archivos.length <= 2 ? (
+                        <div className="inline-flex flex-col gap-1 items-end">
+                          {c.archivos.map((archivo) => (
+                            <button
+                              key={archivo.ruta}
+                              onClick={() => abrirConstancia(archivo.ruta)}
+                              disabled={abriendo === archivo.ruta}
+                              className="inline-flex items-center px-3 py-1.5 border border-indigo-200 shadow-sm text-xs font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                            >
+                              <ExternalLinkIcon />
+                              {abriendo === archivo.ruta
+                                ? 'Abriendo...'
+                                : (archivo.destinatario ? `Abrir: ${archivo.destinatario}` : 'Abrir constancia')}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="inline-flex flex-col gap-1 items-end">
+                          <button
+                            onClick={() => toggleArchivos(c.idConstancia)}
+                            className="inline-flex items-center px-3 py-1.5 border border-indigo-200 shadow-sm text-xs font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                          >
+                            <ExternalLinkIcon />
+                            {archivosExpandidos.has(c.idConstancia) ? 'Ocultar PDFs' : `Ver PDFs (${c.archivos.length})`}
+                          </button>
+                          {archivosExpandidos.has(c.idConstancia) && (
+                            <div className="max-h-48 overflow-y-auto w-64 mt-1 border border-slate-200 rounded-lg bg-white shadow-sm">
+                              {c.archivos.map((archivo) => (
+                                <button
+                                  key={archivo.ruta}
+                                  onClick={() => abrirConstancia(archivo.ruta)}
+                                  disabled={abriendo === archivo.ruta}
+                                  className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 border-b border-slate-100 last:border-b-0 disabled:opacity-50"
+                                >
+                                  {abriendo === archivo.ruta ? 'Abriendo...' : (archivo.destinatario ?? 'Constancia única')}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

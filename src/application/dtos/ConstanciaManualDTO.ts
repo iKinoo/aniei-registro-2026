@@ -7,9 +7,17 @@ export type TipoConstanciaManual =
   | 'HACKATHON'
   | 'TESIS';
 
+export type RolConstanciaManual = 'IMPARTE' | 'PARTICIPA' | 'EXPONENTE' | 'AUTORES';
+
+export interface ConstanciaManualArchivo {
+  destinatario: string | null;
+  ruta: string;
+}
+
 export interface ConstanciaManualDTO {
   tipoConstancia: TipoConstanciaManual;
   destinatarios: string[];
+  rol?: RolConstanciaManual;
   nombreActividad?: string;
   nombrePonencia?: string;
   nombreEquipo?: string;

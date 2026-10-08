@@ -1,9 +1,37 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { IConstanciaManualRepository, ConstanciaManualEntity } from '@/application/ports/IConstanciaManualRepository';
-import { TipoConstanciaManual } from '@/application/dtos/ConstanciaManualDTO';
+import { ConstanciaManualArchivo, TipoConstanciaManual } from '@/application/dtos/ConstanciaManualDTO';
+
+function parsearArchivos(valor: string): ConstanciaManualArchivo[] {
+  if (valor.trim().startsWith('[')) {
+    try {
+      const listado = JSON.parse(valor) as ConstanciaManualArchivo[];
+      if (Array.isArray(listado)) return listado;
+    } catch { /* valor heredado: se trata como ruta única */ }
+  }
+  return [{ destinatario: null, ruta: valor }];
+}
 
 export class PrismaConstanciaManualRepository implements IConstanciaManualRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private mapear(record: {
+    id_constancia: number;
+    tipo_constancia: string;
+    destinatarios: string;
+    descripcion: string;
+    url_pdf: string;
+    fecha_generacion: Date;
+  }): ConstanciaManualEntity {
+    return {
+      idConstancia: record.id_constancia,
+      tipoConstancia: record.tipo_constancia as TipoConstanciaManual,
+      destinatarios: JSON.parse(record.destinatarios),
+      descripcion: record.descripcion,
+      archivos: parsearArchivos(record.url_pdf),
+      fechaGeneracion: record.fecha_generacion,
+    };
+  }
 
   async guardar(data: Omit<ConstanciaManualEntity, 'idConstancia' | 'fechaGeneracion'>): Promise<ConstanciaManualEntity> {
     const record = await this.prisma.constancias_manuales.create({
@@ -11,18 +39,11 @@ export class PrismaConstanciaManualRepository implements IConstanciaManualReposi
         tipo_constancia: data.tipoConstancia,
         destinatarios: JSON.stringify(data.destinatarios),
         descripcion: data.descripcion,
-        url_pdf: data.urlPdf,
+        url_pdf: JSON.stringify(data.archivos),
       },
     });
 
-    return {
-      idConstancia: record.id_constancia,
-      tipoConstancia: record.tipo_constancia as TipoConstanciaManual,
-      destinatarios: JSON.parse(record.destinatarios),
-      descripcion: record.descripcion,
-      urlPdf: record.url_pdf,
-      fechaGeneracion: record.fecha_generacion,
-    };
+    return this.mapear(record);
   }
 
   async obtenerTodas(): Promise<ConstanciaManualEntity[]> {
@@ -30,14 +51,7 @@ export class PrismaConstanciaManualRepository implements IConstanciaManualReposi
       orderBy: { fecha_generacion: 'desc' },
     });
 
-    return records.map((r) => ({
-      idConstancia: r.id_constancia,
-      tipoConstancia: r.tipo_constancia as TipoConstanciaManual,
-      destinatarios: JSON.parse(r.destinatarios),
-      descripcion: r.descripcion,
-      urlPdf: r.url_pdf,
-      fechaGeneracion: r.fecha_generacion,
-    }));
+    return records.map((r) => this.mapear(r));
   }
 
   async obtenerPorId(id: number): Promise<ConstanciaManualEntity | null> {
@@ -47,13 +61,6 @@ export class PrismaConstanciaManualRepository implements IConstanciaManualReposi
 
     if (!record) return null;
 
-    return {
-      idConstancia: record.id_constancia,
-      tipoConstancia: record.tipo_constancia as TipoConstanciaManual,
-      destinatarios: JSON.parse(record.destinatarios),
-      descripcion: record.descripcion,
-      urlPdf: record.url_pdf,
-      fechaGeneracion: record.fecha_generacion,
-    };
+    return this.mapear(record);
   }
 }

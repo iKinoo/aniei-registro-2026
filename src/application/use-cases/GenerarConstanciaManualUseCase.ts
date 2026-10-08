@@ -1,7 +1,10 @@
 import { IPdfService } from '@/application/ports/IPdfService';
-import { IStorageService, parseFileReference } from '@/application/ports/IStorageService';
+import { IStorageService } from '@/application/ports/IStorageService';
 import { IConstanciaManualRepository, ConstanciaManualEntity } from '@/application/ports/IConstanciaManualRepository';
-import { ConstanciaManualDTO, TipoConstanciaManual } from '@/application/dtos/ConstanciaManualDTO';
+import { ConstanciaManualDTO, ConstanciaManualArchivo, TipoConstanciaManual } from '@/application/dtos/ConstanciaManualDTO';
+import { contenidoParaManual, textoPlanoContenido, unirNombres } from '@/application/services/RedactorConstancia';
+
+const TIPOS_EQUIPO: TipoConstanciaManual[] = ['PONENTE', 'TESIS', 'HACKATHON', 'CONCURSO_PROGRAMACION'];
 
 export class GenerarConstanciaManualUseCase {
   constructor(
@@ -13,84 +16,60 @@ export class GenerarConstanciaManualUseCase {
   obtenerTodas() { return this.constanciaManualRepo.obtenerTodas(); }
 
   async execute(dto: ConstanciaManualDTO): Promise<ConstanciaManualEntity> {
-    const descripcion = this.generarDescripcion(dto);
-    const tipoLabel = this.obtenerTipoLabel(dto.tipoConstancia);
+    const esEquipo = TIPOS_EQUIPO.includes(dto.tipoConstancia);
+    const timestamp = Date.now();
+    const archivos: ConstanciaManualArchivo[] = [];
+    const subidos: string[] = [];
+    let descripcion = '';
 
-    const fechaStr = new Date().toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    try {
+      if (esEquipo) {
+        const contenido = contenidoParaManual(dto, unirNombres(dto.destinatarios));
+        descripcion = textoPlanoContenido(contenido);
+        const pdf = await this.pdfService.generarConstancia(contenido);
+        const ruta = `constancias/manuales/${this.slugBase(dto)}-${timestamp}.pdf`;
+        await this.storageService.subir(ruta, pdf, 'application/pdf');
+        subidos.push(ruta);
+        archivos.push({ destinatario: null, ruta });
+      } else {
+        for (let i = 0; i < dto.destinatarios.length; i++) {
+          const destinatario = dto.destinatarios[i];
+          const contenido = contenidoParaManual(dto, destinatario);
+          if (i === 0) {
+            descripcion = textoPlanoContenido(contenido);
+            if (dto.destinatarios.length > 1) descripcion += ` (+${dto.destinatarios.length - 1} destinatarios más)`;
+          }
+          const pdf = await this.pdfService.generarConstancia(contenido);
+          const ruta = `constancias/manuales/${this.slugBase(dto)}-${timestamp}-${i + 1}.pdf`;
+          await this.storageService.subir(ruta, pdf, 'application/pdf');
+          subidos.push(ruta);
+          archivos.push({ destinatario, ruta });
+        }
+      }
+    } catch (error) {
+      for (const ruta of subidos) {
+        try { await this.storageService.eliminar(ruta); } catch (cleanupError) { console.error('Error al compensar constancia manual:', cleanupError); }
+      }
+      throw error;
+    }
 
-    const pdfUint8Array = await this.pdfService.generarConstanciaManual({
-      tipoConstancia: tipoLabel,
+    return this.constanciaManualRepo.guardar({
+      tipoConstancia: dto.tipoConstancia,
       destinatarios: dto.destinatarios,
       descripcion,
-      fecha: fechaStr,
+      archivos,
     });
+  }
 
-    const timestamp = Date.now();
-    const nombreArchivo = dto.destinatarios[0]
+  private slugBase(dto: ConstanciaManualDTO): string {
+    const base = dto.tipoConstancia.toLowerCase();
+    if (TIPOS_EQUIPO.includes(dto.tipoConstancia)) return `${base}-equipo`;
+    const nombre = dto.destinatarios[0]
       ?.normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\w]/g, '_')
       .replace(/_+/g, '_')
-      .substring(0, 30) ?? 'manual';
-    const ruta = `constancias/manuales/${dto.tipoConstancia.toLowerCase()}-${nombreArchivo}-${timestamp}.pdf`;
-
-    await this.storageService.subir(ruta, pdfUint8Array, 'application/pdf');
-
-    const fileRef = parseFileReference(ruta);
-    const urlPdf = await this.storageService.getAccess(fileRef);
-
-    const constancia = await this.constanciaManualRepo.guardar({
-      tipoConstancia: dto.tipoConstancia,
-      destinatarios: dto.destinatarios,
-      descripcion,
-      urlPdf,
-    });
-
-    return constancia;
-  }
-
-  private generarDescripcion(dto: ConstanciaManualDTO): string {
-    switch (dto.tipoConstancia) {
-      case 'PARTICIPANTE':
-        return 'Por haber participado en el Congreso ANIEI, edición 2026.';
-
-      case 'TALLER':
-        return `Por haber participado en el taller "${dto.nombreActividad}" dentro del marco del Congreso ANIEI 2026.`;
-
-      case 'CONFERENCIA_MAGISTRAL':
-        return `Por haber impartido la Conferencia Magistral "${dto.nombreActividad}" dentro del marco del Congreso ANIEI 2026.`;
-
-      case 'PONENTE':
-        return `Por haber presentado la ponencia "${dto.nombrePonencia}" dentro del marco del Congreso ANIEI 2026.`;
-
-      case 'CONCURSO_PROGRAMACION':
-        return `Por haber participado en el Concurso de Programación del Congreso ANIEI 2026, obteniendo el ${dto.lugar ?? 'reconocimiento correspondiente'}.`;
-
-      case 'HACKATHON':
-        return `Por haber participado en el Hackathon del Congreso ANIEI 2026, obteniendo el ${dto.lugar ?? 'reconocimiento correspondiente'}.`;
-
-      case 'TESIS':
-        return `Por haber presentado la tesis "${dto.nombreTesis}" en el Concurso de Tesis del Congreso ANIEI 2026, logrando el ${dto.lugar ?? 'reconocimiento correspondiente'}.`;
-
-      default:
-        return 'Por su participación en el Congreso ANIEI 2026.';
-    }
-  }
-
-  private obtenerTipoLabel(tipo: TipoConstanciaManual): string {
-    const labels: Record<TipoConstanciaManual, string> = {
-      PARTICIPANTE: 'Constancia de Participación',
-      TALLER: 'Constancia de Taller',
-      CONFERENCIA_MAGISTRAL: 'Constancia de Conferencia Magistral',
-      PONENTE: 'Constancia de Ponente',
-      CONCURSO_PROGRAMACION: 'Constancia de Concurso de Programación',
-      HACKATHON: 'Constancia de Hackathon',
-      TESIS: 'Constancia de Concurso de Tesis',
-    };
-    return labels[tipo] ?? 'Constancia';
+      .substring(0, 30);
+    return `${base}-${nombre ?? 'manual'}`;
   }
 }

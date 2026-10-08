@@ -7,6 +7,7 @@ import { DepositoHistorialItem } from '@/app/components/HistorialDepositos';
 import { HistorialDepositosAdmin } from '@/app/components/HistorialDepositosAdmin';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { eliminarUsuarioAction, reenviarConstanciaAction, obtenerUrlArchivoAction } from '@/app/cpanel/actions';
+import { extraerRutaArchivo } from '@/shared/utils/archivos';
 import { cambiarContrasenaAction, type CambiarContrasenaResultado } from './actions';
 
 interface UsuarioData {
@@ -151,7 +152,7 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
   const handleVerConstanciaActividad = async (urlConstancia: string, idInscripcion: number) => {
     setLoadingActivityConstancia(idInscripcion);
     try {
-      const result = await obtenerUrlArchivoAction(urlConstancia);
+      const result = await obtenerUrlArchivoAction(extraerRutaArchivo(urlConstancia));
       if (result.success) {
         window.open(result.url, '_blank');
       } else {

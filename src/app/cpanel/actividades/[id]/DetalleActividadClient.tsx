@@ -13,6 +13,8 @@ import {
   generarConstanciaParticipanteBatchAction,
   generarListaParticipantesPdfAction
 } from './actions';
+import { obtenerUrlArchivoAction } from '@/app/cpanel/actions';
+import { extraerRutaArchivo } from '@/shared/utils/archivos';
 import { ActividadModal } from '../ActividadModal';
 
 interface Props {
@@ -43,6 +45,19 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
   );
   const [loadingBatch, setLoadingBatch] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [abriendoConstancia, setAbriendoConstancia] = useState<string | null>(null);
+
+  const handleAbrirConstancia = async (valor: string) => {
+    const ruta = extraerRutaArchivo(valor);
+    setAbriendoConstancia(ruta);
+    try {
+      const res = await obtenerUrlArchivoAction(ruta);
+      if (res.success) window.open(res.url, '_blank');
+      else alert(res.error);
+    } finally {
+      setAbriendoConstancia(null);
+    }
+  };
 
   const refreshPage = useCallback(() => {
     startTransition(() => router.refresh());
@@ -225,21 +240,13 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
 
                     {p.urlConstancia && (
                       <>
-                        <a
-                          href={p.urlConstancia}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                        <button
+                          onClick={() => handleAbrirConstancia(p.urlConstancia!)}
+                          disabled={abriendoConstancia === extraerRutaArchivo(p.urlConstancia)}
+                          className="px-3 py-1.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
                         >
-                          Ver constancia
-                        </a>
-                        <a
-                          href={p.urlConstancia}
-                          download
-                          className="px-3 py-1.5 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                        >
-                          Descargar
-                        </a>
+                          {abriendoConstancia === extraerRutaArchivo(p.urlConstancia) ? 'Abriendo...' : 'Ver constancia'}
+                        </button>
                         <button
                           onClick={() => handleEnviar(p.folioRegistro)}
                           disabled={loadingSend === p.folioRegistro}
@@ -358,14 +365,13 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
 
                             {i.urlConstancia && (
                               <>
-                                <a
-                                  href={i.urlConstancia}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-1.5 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                                <button
+                                  onClick={() => handleAbrirConstancia(i.urlConstancia!)}
+                                  disabled={abriendoConstancia === extraerRutaArchivo(i.urlConstancia)}
+                                  className="px-3 py-1.5 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 min-w-max"
                                 >
-                                  Ver/Descargar
-                                </a>
+                                  {abriendoConstancia === extraerRutaArchivo(i.urlConstancia) ? 'Abriendo...' : 'Ver/Descargar'}
+                                </button>
                                 <button
                                   onClick={() => handleEnviarParticipante(i.folioRegistro)}
                                   disabled={loadingSend === i.folioRegistro || loadingBatch}

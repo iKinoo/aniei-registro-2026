@@ -1,6 +1,8 @@
 import type { IUsuarioRepository } from '../ports/IUsuarioRepository';
 import type { ICatalogoRepository } from '../ports/ICatalogoRepository';
-import type { IPdfService, ConstanciaData } from '../ports/IPdfService';
+import type { IPdfService } from '../ports/IPdfService';
+import type { ConstanciaData } from '../dtos/ConstanciaDTO';
+import { contenidoParticipacionGeneral } from '../services/RedactorConstancia';
 import { FolioRegistro } from '@/core/value-objects/FolioRegistro';
 
 export class ConsultarConstancia {
@@ -20,6 +22,6 @@ export class ConsultarConstancia {
 
   async descargar(folio: string): Promise<Uint8Array | null> {
     const datos = await this.obtener(folio);
-    return datos ? this.pdf.generarConstanciaInscripcion(datos) : null;
+    return datos ? this.pdf.generarConstancia(contenidoParticipacionGeneral(`${datos.nombre} ${datos.apellido}`)) : null;
   }
 }
