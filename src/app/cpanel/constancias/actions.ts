@@ -3,7 +3,7 @@
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { reportarErrorEnAccion, getPdfService, getStorageService, getConstanciaManualRepository } from '@/infrastructure/config/container';
 import { GenerarConstanciaManualUseCase } from '@/application/use-cases/GenerarConstanciaManualUseCase';
-import { ConstanciaManualDTO, TipoConstanciaManual, TIPOS_CONSTANCIA } from '@/application/dtos/ConstanciaManualDTO';
+import { ConstanciaManualDTO, ConstanciaManualArchivo, RolConstanciaManual, TipoConstanciaManual, TIPOS_CONSTANCIA } from '@/application/dtos/ConstanciaManualDTO';
 import { ConstanciaManualEntity } from '@/application/ports/IConstanciaManualRepository';
 
 export interface ConstanciaManualResponse {
@@ -12,7 +12,7 @@ export interface ConstanciaManualResponse {
   tipoConstanciaLabel: string;
   destinatarios: string[];
   descripcion: string;
-  urlPdf: string;
+  archivos: ConstanciaManualArchivo[];
   fechaGeneracion: string;
 }
 
@@ -24,7 +24,7 @@ function entityToResponse(entity: ConstanciaManualEntity): ConstanciaManualRespo
     tipoConstanciaLabel: tipoLabel,
     destinatarios: entity.destinatarios,
     descripcion: entity.descripcion,
-    urlPdf: entity.urlPdf,
+    archivos: entity.archivos,
     fechaGeneracion: entity.fechaGeneracion.toISOString(),
   };
 }
@@ -36,6 +36,7 @@ export async function generarConstanciaManualAction(
     await requireAdmin();
 
     const tipoConstancia = formData.get('tipoConstancia') as TipoConstanciaManual;
+    const rol = (formData.get('rol') as string | null) ?? '';
     const destinatariosRaw = formData.get('destinatarios') as string;
     const nombreActividad = formData.get('nombreActividad') as string | null;
     const nombrePonencia = formData.get('nombrePonencia') as string | null;
@@ -47,6 +48,10 @@ export async function generarConstanciaManualAction(
       return { success: false, error: 'Tipo de constancia y destinatarios son requeridos' };
     }
 
+    if (!TIPOS_CONSTANCIA.some((t) => t.value === tipoConstancia)) {
+      return { success: false, error: 'Tipo de constancia no válido' };
+    }
+
     const destinatarios = destinatariosRaw
       .split('\n')
       .map((n) => n.trim())
@@ -56,9 +61,26 @@ export async function generarConstanciaManualAction(
       return { success: false, error: 'Debe ingresar al menos un destinatario' };
     }
 
+    if ((tipoConstancia === 'TALLER' || tipoConstancia === 'CONFERENCIA_MAGISTRAL') && !nombreActividad?.trim()) {
+      return { success: false, error: 'El nombre de la actividad es obligatorio' };
+    }
+    if (tipoConstancia === 'PONENTE' && !nombrePonencia?.trim()) {
+      return { success: false, error: 'El nombre de la ponencia o artículo es obligatorio' };
+    }
+    if (tipoConstancia === 'TESIS' && (!nombreTesis?.trim() || !lugar?.trim())) {
+      return { success: false, error: 'El nombre de la tesis y el lugar obtenido son obligatorios' };
+    }
+    if (tipoConstancia === 'HACKATHON' && (!nombreEquipo?.trim() || !lugar?.trim())) {
+      return { success: false, error: 'El nombre del proyecto y el lugar obtenido son obligatorios' };
+    }
+    if (tipoConstancia === 'CONCURSO_PROGRAMACION' && !lugar?.trim()) {
+      return { success: false, error: 'El lugar obtenido es obligatorio' };
+    }
+
     const dto: ConstanciaManualDTO = {
       tipoConstancia,
       destinatarios,
+      rol: (rol || undefined) as RolConstanciaManual | undefined,
       nombreActividad: nombreActividad ?? undefined,
       nombrePonencia: nombrePonencia ?? undefined,
       nombreEquipo: nombreEquipo ?? undefined,

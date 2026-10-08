@@ -16,6 +16,7 @@ import { ArchivoComprobante } from '@/core/value-objects/ArchivoComprobante';
 import type { IPasswordHasher } from '@/application/ports/IPasswordHasher';
 import type { IIdGenerator } from '@/application/ports/IIdGenerator';
 import type { IPasswordGenerator } from '@/application/ports/IPasswordGenerator';
+import { contenidoParticipacionGeneral } from '@/application/services/RedactorConstancia';
 
 export class RegistrarUsuario {
   constructor(
@@ -52,12 +53,8 @@ export class RegistrarUsuario {
     const passwordHash = await this.passwordHasher.hash(generatedPassword);
 
     const monto = Monto.create(dto.deposito.monto);
-    const [instituciones, titulos] = await Promise.all([
-      this.catalogoRepo.obtenerInstituciones(),
-      this.catalogoRepo.obtenerTitulos(),
-    ]);
+    const instituciones = await this.catalogoRepo.obtenerInstituciones();
     const institucion = instituciones.find((i) => i.idInstitucion === dto.idInstitucion);
-    const titulo = titulos.find((t) => t.idTitulo === dto.idTitulo);
     const ext = dto.archivo.nombre.split('.').pop() || 'bin';
     const archivoRuta = `comprobantes/${this.idGenerator.uuid()}.${ext}`;
     let constanciaRuta: string | null = null;
@@ -163,7 +160,6 @@ export class RegistrarUsuario {
         correo: dto.correo,
         folio,
         institucion: institucion?.nombre ?? 'N/A',
-        tipoUsuario: titulo?.descripcion ?? 'N/A',
         fecha: fechaStr,
         password: generatedPassword,
       },
@@ -172,14 +168,9 @@ export class RegistrarUsuario {
 
   async notificar(datos: NotificacionIndividualData): Promise<void> {
     try {
-      const pdfUint8Array = await this.pdfService.generarConstanciaInscripcion({
-        nombre: datos.nombre,
-        apellido: datos.apellido,
-        folio: datos.folio,
-        institucion: datos.institucion,
-        tipoUsuario: datos.tipoUsuario,
-        fecha: datos.fecha,
-      });
+      const pdfUint8Array = await this.pdfService.generarConstancia(
+        contenidoParticipacionGeneral(`${datos.nombre} ${datos.apellido}`),
+      );
       await this.storageService.subir(`constancias/${datos.folio}.pdf`, pdfUint8Array, 'application/pdf');
     } catch (error) {
       console.error('Error al generar o subir constancia, se regenerará en CPanel:', error);

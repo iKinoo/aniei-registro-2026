@@ -4,7 +4,6 @@ export interface NotificacionIndividualData {
   correo: string;
   folio: string;
   institucion: string;
-  tipoUsuario: string;
   fecha: string;
   password: string;
 }

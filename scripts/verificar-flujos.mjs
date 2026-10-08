@@ -79,7 +79,7 @@ await test('Registro individual no envía notificaciones hasta notificar y sobre
   let enviado = false;
   const ctx = { usuarioRepo: { crear: async () => ({ folioRegistro: 'ANI26-0001' }) }, accesoRepo: { crear: async () => {} }, depositoRepo: { crear: async () => {} }, facturacionRepo: { crear: async () => {} }, inscripcionRepo: { crearMuchasConValidacion: async () => {} } };
   const registro = new RegistrarUsuario(disk, { enviarConfirmacionRegistro: async () => { enviado = true; } },
-    { generarConstanciaInscripcion: async () => { throw new Error('PDF'); } }, catalogos, hasher, ids, passwords, { run: async fn => fn(ctx) });
+    { generarConstancia: async () => { throw new Error('PDF'); } }, catalogos, hasher, ids, passwords, { run: async fn => fn(ctx) });
   const result = await registro.execute(dto);
   assert.equal(result.folio, 'ANI26-0001');
   assert.equal(enviado, false);
@@ -90,9 +90,9 @@ await test('Registro individual no envía notificaciones hasta notificar y sobre
 });
 await test('notificar individual propaga el fallo del correo de credenciales', async () => {
   const disk = storage();
-  const datos = { nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com', folio: 'ANI26-0001', institucion: 'UdeG', tipoUsuario: 'Alumno', fecha: 'hoy', password: 'x' };
+  const datos = { nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com', folio: 'ANI26-0001', institucion: 'UdeG', fecha: 'hoy', password: 'x' };
   const registro = new RegistrarUsuario(disk, { enviarConfirmacionRegistro: async () => { throw new Error('SMTP'); } },
-    { generarConstanciaInscripcion: async () => new Uint8Array([1]) }, catalogos, hasher, ids, passwords, { run: async () => {} });
+    { generarConstancia: async () => new Uint8Array([1]) }, catalogos, hasher, ids, passwords, { run: async () => {} });
   await assert.rejects(registro.notificar(datos), /SMTP/);
 });
 await test('Grupo conserva correspondencia contraseña/miembro cuando los hashes terminan fuera de orden', async () => {

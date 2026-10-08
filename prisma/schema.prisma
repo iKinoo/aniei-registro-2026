@@ -273,7 +273,7 @@ model constancias_manuales {
   tipo_constancia  String   @db.VarChar(50)
   destinatarios    String   @db.Text
   descripcion      String   @db.Text
-  url_pdf          String   @db.VarChar(500)
+  url_pdf          String   @db.Text
   fecha_generacion DateTime @default(now()) @db.DateTime(6)
 
   @@index([tipo_constancia])

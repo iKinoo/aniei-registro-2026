@@ -1,8 +1,9 @@
 import { IPdfService } from '@/application/ports/IPdfService';
-import { IStorageService, parseFileReference } from '@/application/ports/IStorageService';
+import { IStorageService } from '@/application/ports/IStorageService';
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
+import { contenidoPorTipoActividad } from '@/application/services/RedactorConstancia';
 
 export class GenerarConstanciaPonenteUseCase {
   constructor(
@@ -24,28 +25,23 @@ export class GenerarConstanciaPonenteUseCase {
     }
 
     const tipos = await this.actividadRepo.obtenerTiposActividad();
-    const tipoActividad = tipos.find(t => t.idTipoActividad === actividad.idTipoActividad)?.descripcion ?? 'Actividad';
+    const tipo = tipos.find((t) => t.idTipoActividad === actividad.idTipoActividad);
 
-    const fechaStr = new Date().toLocaleDateString('es-MX', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
-
-    const pdfUint8Array = await this.pdfService.generarConstanciaPonente({
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      tipoActividad,
-      nombreActividad: actividad.nombre,
-      fecha: fechaStr,
-    });
+    const pdfUint8Array = await this.pdfService.generarConstancia(
+      contenidoPorTipoActividad({
+        destinatario: `${usuario.nombre} ${usuario.apellido}`,
+        claveTipo: tipo?.clave ?? null,
+        descripcionTipo: tipo?.descripcion ?? 'Actividad',
+        nombreActividad: actividad.nombre,
+        esPonente: true,
+      }),
+    );
 
     const ruta = `constancias/ponente-act-${idActividad}-usr-${folioRegistro}.pdf`;
     await this.storageService.subir(ruta, pdfUint8Array, 'application/pdf');
 
-    const fileRef = parseFileReference(ruta);
-    const publicUrl = await this.storageService.getAccess(fileRef);
+    await this.ponentesRepo.actualizarUrlConstancia(idActividad, folioRegistro, ruta);
 
-    await this.ponentesRepo.actualizarUrlConstancia(idActividad, folioRegistro, publicUrl);
-
-    return publicUrl;
+    return ruta;
   }
 }

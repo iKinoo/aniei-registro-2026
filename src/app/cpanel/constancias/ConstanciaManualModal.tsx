@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { TipoConstanciaManual, TIPOS_CONSTANCIA } from '@/application/dtos/ConstanciaManualDTO';
+import { RolConstanciaManual, TipoConstanciaManual, TIPOS_CONSTANCIA } from '@/application/dtos/ConstanciaManualDTO';
 import { generarConstanciaManualAction, ConstanciaManualResponse } from './actions';
 
 const XIcon = () => (
@@ -19,6 +19,8 @@ const CheckIcon = () => (
 const inputCls =
   'w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition';
 
+const TIPOS_EQUIPO: TipoConstanciaManual[] = ['PONENTE', 'TESIS', 'HACKATHON', 'CONCURSO_PROGRAMACION'];
+
 interface Props {
   onClose: () => void;
   onSuccess: (data: ConstanciaManualResponse) => void;
@@ -26,6 +28,7 @@ interface Props {
 
 export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
   const [tipoConstancia, setTipoConstancia] = useState<TipoConstanciaManual>('PARTICIPANTE');
+  const [rol, setRol] = useState<RolConstanciaManual>('PARTICIPA');
   const [destinatarios, setDestinatarios] = useState('');
   const [nombreActividad, setNombreActividad] = useState('');
   const [nombrePonencia, setNombrePonencia] = useState('');
@@ -37,10 +40,11 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
 
   const necesitaActividad = tipoConstancia === 'TALLER' || tipoConstancia === 'CONFERENCIA_MAGISTRAL';
   const necesitaPonencia = tipoConstancia === 'PONENTE';
-  const necesitaEquipo = tipoConstancia === 'CONCURSO_PROGRAMACION' || tipoConstancia === 'HACKATHON';
+  const necesitaProyecto = tipoConstancia === 'HACKATHON';
   const necesitaTesis = tipoConstancia === 'TESIS';
   const necesitaLugar = tipoConstancia === 'CONCURSO_PROGRAMACION' || tipoConstancia === 'HACKATHON' || tipoConstancia === 'TESIS';
-  const esMultiple = tipoConstancia === 'PONENTE' || tipoConstancia === 'CONCURSO_PROGRAMACION' || tipoConstancia === 'HACKATHON';
+  const esEquipo = TIPOS_EQUIPO.includes(tipoConstancia);
+  const tieneRol = tipoConstancia === 'TALLER' || tipoConstancia === 'PONENTE';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,10 +53,10 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
     const formData = new FormData();
     formData.set('tipoConstancia', tipoConstancia);
     formData.set('destinatarios', destinatarios);
-
+    if (tieneRol) formData.set('rol', rol);
     if (necesitaActividad) formData.set('nombreActividad', nombreActividad);
     if (necesitaPonencia) formData.set('nombrePonencia', nombrePonencia);
-    if (necesitaEquipo) formData.set('nombreEquipo', nombreEquipo);
+    if (necesitaProyecto) formData.set('nombreEquipo', nombreEquipo);
     if (necesitaTesis) formData.set('nombreTesis', nombreTesis);
     if (necesitaLugar) formData.set('lugar', lugar);
 
@@ -92,7 +96,11 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
             <select
               className={inputCls}
               value={tipoConstancia}
-              onChange={(e) => setTipoConstancia(e.target.value as TipoConstanciaManual)}
+              onChange={(e) => {
+                const nuevo = e.target.value as TipoConstanciaManual;
+                setTipoConstancia(nuevo);
+                setRol(nuevo === 'TALLER' ? 'PARTICIPA' : 'EXPONENTE');
+              }}
             >
               {TIPOS_CONSTANCIA.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -102,33 +110,46 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
             </select>
           </div>
 
+          {tieneRol && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-slate-700">
+                {tipoConstancia === 'TALLER' ? 'Participación en el taller' : 'Participación en la ponencia'}{' '}
+                <span className="text-rose-500">*</span>
+              </label>
+              <select
+                className={inputCls}
+                value={rol}
+                onChange={(e) => setRol(e.target.value as RolConstanciaManual)}
+              >
+                {tipoConstancia === 'TALLER' ? (
+                  <>
+                    <option value="PARTICIPA">Participó en el taller</option>
+                    <option value="IMPARTE">Impartió el taller</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="EXPONENTE">Expositor de la ponencia</option>
+                    <option value="AUTORES">Autores del artículo</option>
+                  </>
+                )}
+              </select>
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-slate-700">
-              {esMultiple ? 'Destinatarios (uno por línea)' : 'Nombre del destinatario'}{' '}
+              {esEquipo
+                ? 'Nombres de los destinatarios (uno por línea; comparten una sola constancia)'
+                : 'Destinatarios (uno por línea; se genera una constancia por persona)'}{' '}
               <span className="text-rose-500">*</span>
             </label>
-            {esMultiple ? (
-              <textarea
-                className={`${inputCls} min-h-[100px] resize-y`}
-                placeholder={
-                  tipoConstancia === 'PONENTE'
-                    ? 'Juan Pérez García\nMaría López Hernández'
-                    : 'Equipo Alpha\nEquipo Beta'
-                }
-                value={destinatarios}
-                onChange={(e) => setDestinatarios(e.target.value)}
-                required
-              />
-            ) : (
-              <input
-                type="text"
-                className={inputCls}
-                placeholder="Ej. Juan Pérez García"
-                value={destinatarios}
-                onChange={(e) => setDestinatarios(e.target.value)}
-                required
-              />
-            )}
+            <textarea
+              className={`${inputCls} min-h-[100px] resize-y`}
+              placeholder={'Juan Pérez García\nMaría López Hernández'}
+              value={destinatarios}
+              onChange={(e) => setDestinatarios(e.target.value)}
+              required
+            />
           </div>
 
           {necesitaActividad && (
@@ -155,7 +176,8 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
           {necesitaPonencia && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">
-                Nombre de la Ponencia <span className="text-rose-500">*</span>
+                {rol === 'AUTORES' ? 'Título del Artículo' : 'Título de la Ponencia'}{' '}
+                <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -168,15 +190,15 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
             </div>
           )}
 
-          {necesitaEquipo && (
+          {necesitaProyecto && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">
-                Nombre del Equipo <span className="text-rose-500">*</span>
+                Nombre del Proyecto <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 className={inputCls}
-                placeholder="Ej. Code Warriors"
+                placeholder="Ej. RutaSegura"
                 value={nombreEquipo}
                 onChange={(e) => setNombreEquipo(e.target.value)}
                 required
@@ -187,7 +209,7 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
           {necesitaTesis && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">
-                Nombre de la Tesis <span className="text-rose-500">*</span>
+                Título de la Tesis <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -203,16 +225,12 @@ export function ConstanciaManualModal({ onClose, onSuccess }: Props) {
           {necesitaLugar && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-slate-700">
-                Lugar / Posición <span className="text-rose-500">*</span>
+                Lugar obtenido <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 className={inputCls}
-                placeholder={
-                  tipoConstancia === 'TESIS'
-                    ? 'Ej. 1er lugar'
-                    : 'Ej. 1er lugar, 2do lugar'
-                }
+                placeholder="Ej. primer lugar"
                 value={lugar}
                 onChange={(e) => setLugar(e.target.value)}
                 required

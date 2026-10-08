@@ -1,26 +1,4 @@
-export interface ConstanciaData {
-  nombre: string;
-  apellido: string;
-  folio: string;
-  institucion: string;
-  tipoUsuario: string;
-  fecha: string;
-}
-
-export interface ConstanciaPonenteData {
-  nombre: string;
-  apellido: string;
-  tipoActividad: string;
-  nombreActividad: string;
-  fecha: string;
-}
-
-export interface ConstanciaManualData {
-  tipoConstancia: string;
-  destinatarios: string[];
-  descripcion: string;
-  fecha: string;
-}
+import type { ContenidoConstancia } from '@/application/dtos/ConstanciaDTO';
 
 export interface ListaParticipantesPdfData {
   nombreActividad: string;
@@ -45,10 +23,7 @@ export interface ReporteInstitucionesPdfData {
 }
 
 export interface IPdfService {
-  generarConstanciaInscripcion(datos: ConstanciaData): Promise<Uint8Array>;
-  generarConstanciaPonente(datos: ConstanciaPonenteData): Promise<Uint8Array>;
-  generarConstanciaParticipante(datos: ConstanciaPonenteData): Promise<Uint8Array>;
-  generarConstanciaManual(datos: ConstanciaManualData): Promise<Uint8Array>;
+  generarConstancia(datos: ContenidoConstancia): Promise<Uint8Array>;
   generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Uint8Array>;
   generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Uint8Array>;
 }
