@@ -97,7 +97,6 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
   const [depositoIngresado, setDeposito] = useState<DepositoWizard>(emptyDeposito);
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
-  const [montoTouched, setMontoTouched] = useState(false);
 
   const idTipoParticipante = parseInt(datos.idTipoParticipante) || 0;
   const esAfiliada = datos.noAfiliada !== 'true';
@@ -129,7 +128,7 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
     .filter((p) => p.activo && p.idTipoParticipante === idTipoParticipante && p.esAfiliada === esAfiliada && new Date(p.fechaLimite) > new Date())
     .sort((a, b) => new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime());
 
-  const deposito = montoTouched ? depositoIngresado : { ...depositoIngresado, monto: total.toFixed(2) };
+  const deposito = { ...depositoIngresado, monto: total.toFixed(2) };
   const [respuestaAnterior, setRespuestaAnterior] = useState(state);
 
   if (state !== respuestaAnterior) {
@@ -399,7 +398,6 @@ export function RegistroForm({ catalogos, precios, tiposParticipante }: Registro
               errors={state.errors}
               isPending={isPending}
               onDepositoChange={(d) => setDeposito(d)}
-              onMontoTouch={() => setMontoTouched(true)}
               onFacturacionChange={(f) => setFacturacion(f)}
               onBack={() => goTo(2)}
             />

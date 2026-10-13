@@ -15,7 +15,6 @@ interface Props {
   errors?: Record<string, string>;
   isPending: boolean;
   onDepositoChange: (d: DepositoWizard) => void;
-  onMontoTouch: () => void;
   onFacturacionChange: (f: FacturacionWizard) => void;
   onBack: () => void;
 }
@@ -95,7 +94,7 @@ function ConstanciaFiscalUpload({ error }: { error?: string }) {
 
 export function StepPago({
   total, desglose, deposito, facturacion, estados, errors,
-  isPending, onDepositoChange, onMontoTouch, onFacturacionChange, onBack,
+  isPending, onDepositoChange, onFacturacionChange, onBack,
 }: Props) {
   function setD(key: keyof DepositoWizard, val: string) {
     onDepositoChange({ ...deposito, [key]: val });
@@ -142,10 +141,7 @@ export function StepPago({
         <FormularioDeposito
           variant="light"
           values={deposito}
-          onChange={(field, val) => {
-            if (field === 'monto') onMontoTouch();
-            setD(field, val);
-          }}
+          onChange={(field, val) => setD(field, val)}
           errors={errors}
           showFileUpload
           fileInputName="comprobante"

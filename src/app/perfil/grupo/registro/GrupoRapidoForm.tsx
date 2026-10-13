@@ -82,7 +82,6 @@ export function GrupoRapidoForm({
   const [miembros, setMiembros] = useState<MiembroWizard[]>([]);
   const [depositoIngresado, setDeposito] = useState<DepositoWizard>(emptyDeposito);
   const [facturacion, setFacturacion] = useState<FacturacionWizard>(emptyFacturacion);
-  const [montoTouched, setMontoTouched] = useState(false);
 
   const idTipoParticipante = responsable.idTipoParticipante ?? 0;
   const esAfiliada = !!responsable.idInstitucion;
@@ -101,7 +100,7 @@ export function GrupoRapidoForm({
 
   const total = costoBase + costoMiembros;
 
-  const deposito = montoTouched ? depositoIngresado : { ...depositoIngresado, monto: total.toFixed(2) };
+  const deposito = { ...depositoIngresado, monto: total.toFixed(2) };
   const [respuestaAnterior, setRespuestaAnterior] = useState(state);
 
   if (state !== respuestaAnterior) {
@@ -377,7 +376,6 @@ export function GrupoRapidoForm({
               errors={state.errors as Record<string, string> | undefined}
               isPending={isPending}
               onDepositoChange={(d) => setDeposito(d)}
-              onMontoTouch={() => setMontoTouched(true)}
               onFacturacionChange={(f) => setFacturacion(f)}
               onBack={() => goTo(2)}
             />
