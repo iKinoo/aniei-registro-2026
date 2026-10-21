@@ -8,8 +8,12 @@ import {
   getPasswordHasher,
   getPasswordGenerator,
   getEmailService,
+  getPdfService,
+  getStorageService,
+  getUsuarioRepository,
 } from '@/infrastructure/config/container';
 import { CambiarContrasenaUsuario } from '@/application/use-cases/CambiarContrasenaUsuario';
+import { RegenerarConstanciaGeneral } from '@/application/use-cases/RegenerarConstanciaGeneral';
 import { CredencialesError } from '@/core/errors/CredencialesError';
 
 const cambiarContrasenaSchema = z.object({
@@ -48,5 +52,21 @@ export async function cambiarContrasenaAction(
     reportarErrorEnAccion(`Error in cambiarContrasenaAction for folio ${folioRegistro}`, error);
     if (error instanceof CredencialesError) return { success: false, error: error.message };
     return { success: false, error: 'Ocurrió un error al cambiar la contraseña' };
+  }
+}
+
+export async function regenerarConstanciaGeneralAction(
+  folioRegistro: string,
+): Promise<{ success: true; ruta: string } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+
+    const useCase = new RegenerarConstanciaGeneral(getPdfService(), getStorageService(), getUsuarioRepository());
+    const ruta = await useCase.execute(folioRegistro);
+
+    return { success: true, ruta };
+  } catch (error) {
+    reportarErrorEnAccion(`Error in regenerarConstanciaGeneralAction for folio ${folioRegistro}`, error);
+    return { success: false, error: 'Ocurrió un error al regenerar la constancia' };
   }
 }
