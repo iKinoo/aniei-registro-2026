@@ -181,11 +181,19 @@ export function FormularioDeposito({
             step="0.01"
             min="0.01"
             required={!readOnly}
-            className={inputCls}
+            className={`${inputCls} ${
+              isDark
+                ? 'bg-white/5 border-white/5 text-slate-400 cursor-not-allowed focus:border-white/5'
+                : 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed focus:border-slate-200 focus:ring-0'
+            }`}
             value={values.monto}
-            onChange={(e) => handleChange('monto', e.target.value)}
-            readOnly={readOnly}
+            readOnly
+            tabIndex={-1}
+            aria-readonly="true"
           />
+          <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            Se llena automáticamente con el total mostrado y no puede modificarse
+          </p>
         </Field>
         <Field label="Fecha del depósito" required error={errors?.fechaDeposito} variant={variant}>
           <input
