@@ -15,7 +15,7 @@ export type { ConfirmacionInscripcionResult } from '@/application/dtos/CheckoutD
 export async function getActividadesPorIdsAction(ids: number[]) {
   try {
     await requireUser();
-    const data = await new GestionarActividades(getActividadRepository()).obtenerPorIds(ids);
+    const data = await new GestionarActividades(getActividadRepository(), getTransactionManager()).obtenerPorIds(ids);
     return { success: true as const, data };
   } catch (error) {
     reportarErrorEnAccion('Error al cargar carrito', error);

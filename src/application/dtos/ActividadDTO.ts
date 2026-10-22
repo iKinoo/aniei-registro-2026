@@ -46,6 +46,13 @@ export interface ResultadoEnvioListasDTO {
   error?: string;
 }
 
+export type ModalidadActividad = 'PRESENCIAL' | 'VIRTUAL';
+
+export interface HorarioActividadDTO {
+  fechaInicio: string; // ISO string
+  fechaFin: string;    // ISO string
+}
+
 export interface ActividadDTO {
   idActividad: number;
   nombre: string;
@@ -56,7 +63,10 @@ export interface ActividadDTO {
   fechaFin: string;    // ISO string
   idTipoActividad: number | null;
   idInstitucionSede: number | null;
-  idSala: number | null;
+  sala: string | null;
+  modalidad: ModalidadActividad;
+  enlaceSesion: string | null;
+  horarios: HorarioActividadDTO[];
   // Relations
   tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean; generaConstanciaParticipante: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
@@ -68,11 +78,15 @@ export interface ActividadDTO {
 export interface CrearActividadDTO {
   nombre: string;
   cupoMaximo?: number;
+  /** Rango de la actividad. Si se envían horarios, se recalcula como mínimo/máximo de estos. */
   fechaInicio: string;
   fechaFin: string;
   idTipoActividad?: number;
   idInstitucionSede?: number;
-  idSala?: number;
+  sala?: string;
+  modalidad?: ModalidadActividad;
+  enlaceSesion?: string | null;
+  horarios?: HorarioActividadDTO[];
   // Optional detail sections
   costo?: number;
 }

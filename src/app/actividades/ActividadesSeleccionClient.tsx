@@ -61,6 +61,28 @@ function TipoBadge({ tipo }: { tipo: ActividadDTO['tipoActividad'] }) {
   );
 }
 
+function ModalidadBadge({ modalidad }: { modalidad: ActividadDTO['modalidad'] }) {
+  const virtual = modalidad === 'VIRTUAL';
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${virtual ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'}`}>
+      {virtual ? '🖥 Virtual' : '📍 Presencial'}
+    </span>
+  );
+}
+
+function ResumenHorarios({ a }: { a: ActividadDTO }) {
+  if (a.horarios.length === 0) {
+    return <>{formatFechaCorta(a.fechaInicio)} · {formatHora(a.fechaInicio)}{a.fechaInicio !== a.fechaFin && `–${formatHora(a.fechaFin)}`}</>;
+  }
+  const primero = a.horarios[0];
+  return (
+    <>
+      {formatFechaCorta(primero.fechaInicio)} · {formatHora(primero.fechaInicio)}–{formatHora(primero.fechaFin)}
+      {a.horarios.length > 1 && ` (+${a.horarios.length - 1} horario${a.horarios.length - 1 === 1 ? '' : 's'})`}
+    </>
+  );
+}
+
 // ---- Cart summary (sticky sidebar) ----
 interface CartProps {
   selected: ActividadDTO[];
@@ -164,6 +186,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-wrap gap-1.5">
             <TipoBadge tipo={a.tipoActividad} />
+            <ModalidadBadge modalidad={a.modalidad} />
             {lleno && !isInscrita && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
                 🔴 Cupo lleno
@@ -198,7 +221,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            {formatFechaCorta(a.fechaInicio)} · {formatHora(a.fechaInicio)}{a.fechaInicio !== a.fechaFin && `–${formatHora(a.fechaFin)}`}
+            <ResumenHorarios a={a} />
           </span>
           {a.institucionSede && (
             <span className="flex items-center gap-1">
@@ -206,7 +229,7 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
               {a.institucionSede.abreviatura ?? a.institucionSede.nombre}
-              {a.idSala != null && ` · Sala ${a.idSala}`}
+              {a.sala && ` · ${a.sala}`}
             </span>
           )}
         </div>

@@ -96,6 +96,9 @@ export default async function PerfilPage() {
                           {act.tipoActividad.descripcion}
                         </span>
                       )}
+                      <span className={styles.tipoBadge}>
+                        {act.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}
+                      </span>
                       {act.costo && Number(act.costo) > 0 ? (
                         <span className={styles.costoBadge}>
                           ${Number(act.costo).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -111,11 +114,19 @@ export default async function PerfilPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {new Date(act.fechaInicio).toLocaleDateString('es-MX', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                        })} · {new Date(act.fechaInicio).toLocaleTimeString('es-MX', {
-                          hour: '2-digit', minute: '2-digit',
-                        })}
+                        <span style={{ display: 'flex', flexDirection: 'column' }}>
+                          {(act.horarios.length > 0 ? act.horarios : [{ fechaInicio: act.fechaInicio, fechaFin: act.fechaFin }]).map((h, i) => (
+                            <span key={i}>
+                              {new Date(h.fechaInicio).toLocaleDateString('es-MX', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                              })} · {new Date(h.fechaInicio).toLocaleTimeString('es-MX', {
+                                hour: '2-digit', minute: '2-digit',
+                              })}–{new Date(h.fechaFin).toLocaleTimeString('es-MX', {
+                                hour: '2-digit', minute: '2-digit',
+                              })}
+                            </span>
+                          ))}
+                        </span>
                       </span>
                       {act.institucion && (
                         <span className={styles.metaItem}>
@@ -124,8 +135,22 @@ export default async function PerfilPage() {
                               d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           </svg>
                           {act.institucion.abreviatura ?? act.institucion.nombre}
-                          {act.idSala != null && ` · Sala ${act.idSala}`}
+                          {act.sala && ` · ${act.sala}`}
                         </span>
+                      )}
+                      {act.modalidad === 'VIRTUAL' && act.enlaceSesion && (
+                        <a
+                          href={act.enlaceSesion}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.btnUnirse}
+                        >
+                          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Unirse a la sesión
+                        </a>
                       )}
                     </div>
                   </div>

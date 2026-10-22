@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { reportarErrorEnAccion, getActividadRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getPrecioInscripcionRepository, getTipoParticipanteRepository, getTransactionManager } from '@/infrastructure/config/container';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { GestionarPrecios } from '@/application/use-cases/GestionarPrecios';
@@ -12,7 +12,7 @@ import { CrearTipoParticipanteDTO, ActualizarTipoParticipanteDTO } from '@/appli
 export async function getTiposActividadAction() {
   try {
     await requireAdmin();
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
   } catch (error) {

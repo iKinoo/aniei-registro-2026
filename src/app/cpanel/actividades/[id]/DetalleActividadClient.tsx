@@ -200,6 +200,17 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     });
   };
 
+  const formatHora = (iso: string) =>
+    new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  const formatHorario = (h: { fechaInicio: string; fechaFin: string }) => {
+    const fecha = new Date(h.fechaInicio).toLocaleDateString('es-MX', {
+      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+    });
+    const mismoDia = h.fechaInicio.slice(0, 10) === h.fechaFin.slice(0, 10);
+    return `${fecha.charAt(0).toUpperCase() + fecha.slice(1)} · ${formatHora(h.fechaInicio)}–${formatHora(h.fechaFin)}${mismoDia ? '' : ` (${formatFecha(h.fechaFin)})`}`;
+  };
+
   return (
     <div className="p-8 font-sans min-h-full">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -227,14 +238,51 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
             <div>
               <p><strong className="text-slate-800">Título para constancia:</strong> {actividad.nombre}</p>
-              <p><strong className="text-slate-800">Fecha:</strong> {formatFecha(actividad.fechaInicio)}</p>
+              <p><strong className="text-slate-800">Modalidad:</strong> {actividad.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}</p>
+              {actividad.modalidad === 'VIRTUAL' ? (
+                <p className="flex flex-wrap items-center gap-2">
+                  <strong className="text-slate-800">Enlace de sesión:</strong>
+                  {actividad.enlaceSesion ? (
+                    <a
+                      href={actividad.enlaceSesion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline break-all"
+                    >
+                      {actividad.enlaceSesion}
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 italic">Aún no se ha capturado</span>
+                  )}
+                </p>
+              ) : (
+                <>
+                  <p><strong className="text-slate-800">Institución responsable:</strong> {actividad.institucionSede ? (actividad.institucionSede.abreviatura ?? actividad.institucionSede.nombre) : '—'}</p>
+                  <p><strong className="text-slate-800">Sala / Auditorio:</strong> {actividad.sala || '—'}</p>
+                </>
+              )}
             </div>
             <div>
-              <p>
-                <strong className="text-slate-800">Cupo:</strong> {inscritos.length} / {actividad.cupoMaximo ? actividad.cupoMaximo : 'Sin límite'}
-              </p>
+              <p><strong className="text-slate-800">Cupo:</strong> {inscritos.length} / {actividad.cupoMaximo ? actividad.cupoMaximo : 'Sin límite'}</p>
               <p><strong className="text-slate-800">Costo:</strong> {actividad.costo != null && actividad.costo > 0 ? `$${actividad.costo} MXN` : 'Gratis'}</p>
             </div>
+          </div>
+          <div>
+            <p className="text-sm"><strong className="text-slate-800">Horarios:</strong></p>
+            {actividad.horarios.length === 0 ? (
+              <p className="text-sm text-slate-400 italic mt-1">Sin horarios definidos.</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {actividad.horarios.map((h, i) => (
+                  <li key={i} className="text-sm text-slate-600 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {formatHorario(h)}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 'use server';
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
-import { reportarErrorEnAccion, getActividadRepository, getEquipoRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getEquipoRepository, getTransactionManager } from '@/infrastructure/config/container';
 import { GestionarEquipos } from '@/application/use-cases/GestionarEquipos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { CrearEquipoDTO, ActualizarEquipoDTO } from '@/application/dtos/EquipoDTO';
@@ -9,7 +9,7 @@ import { CrearEquipoDTO, ActualizarEquipoDTO } from '@/application/dtos/EquipoDT
 export async function getActividadesConEquiposAction() {
   try {
     await requireAdmin();
-    const conEquipos = await new GestionarActividades(getActividadRepository()).listarConEquipos();
+    const conEquipos = await new GestionarActividades(getActividadRepository(), getTransactionManager()).listarConEquipos();
     return { success: true as const, data: conEquipos };
   } catch (error) {
     reportarErrorEnAccion('Error en getActividadesConEquiposAction', error);
@@ -83,7 +83,7 @@ export async function buscarUsuariosEquipoAction(query: string) {
 export async function getActividadDetalleAction(idActividad: number) {
   try {
     await requireAdmin();
-    const actividad = await new GestionarActividades(getActividadRepository()).obtenerPorId(idActividad);
+    const actividad = await new GestionarActividades(getActividadRepository(), getTransactionManager()).obtenerPorId(idActividad);
     if (!actividad) {
       return { success: false as const, error: 'Actividad no encontrada' };
     }

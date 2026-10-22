@@ -52,6 +52,28 @@ function TipoBadge({ tipo }: { tipo: ActividadDTO['tipoActividad'] }) {
   );
 }
 
+export function ModalidadBadge({ modalidad }: { modalidad: ActividadDTO['modalidad'] }) {
+  const virtual = modalidad === 'VIRTUAL';
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${virtual ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'}`}>
+      {virtual ? 'Virtual' : 'Presencial'}
+    </span>
+  );
+}
+
+function ResumenHorarios({ a }: { a: ActividadDTO }) {
+  if (a.horarios.length === 0) return <span className="text-xs text-slate-600">{formatFecha(a.fechaInicio)}</span>;
+  const primero = a.horarios[0];
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-slate-600">{formatFecha(primero.fechaInicio)}</span>
+      {a.horarios.length > 1 && (
+        <span className="text-[10px] text-slate-400 font-medium">+{a.horarios.length - 1} horario{a.horarios.length - 1 === 1 ? '' : 's'}</span>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   initialActividades: ActividadDTO[];
   tiposActividad: TipoActividad[];
@@ -152,8 +174,9 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                 <tr>
                   <th className="px-6 py-4 font-semibold">Actividad</th>
                   <th className="px-6 py-4 font-semibold">Tipo</th>
-                  <th className="px-6 py-4 font-semibold">Sede</th>
-                  <th className="px-6 py-4 font-semibold">Fecha</th>
+                  <th className="px-6 py-4 font-semibold">Modalidad</th>
+                  <th className="px-6 py-4 font-semibold">Institución responsable</th>
+                  <th className="px-6 py-4 font-semibold">Horarios</th>
                   <th className="px-6 py-4 font-semibold text-center">Cupo</th>
                   <th className="px-6 py-4 font-semibold text-center">Costo</th>
                   <th className="px-6 py-4 font-semibold text-right">Acciones</th>
@@ -162,7 +185,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {actividadesFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-16 text-center text-slate-400">
+                    <td colSpan={8} className="px-6 py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center gap-3">
                         <CalendarIcon />
                         <span className="text-sm">
@@ -187,19 +210,18 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                         </div>
                       </td>
                       <td className="px-6 py-4"><TipoBadge tipo={a.tipoActividad} /></td>
+                      <td className="px-6 py-4"><ModalidadBadge modalidad={a.modalidad} /></td>
                       <td className="px-6 py-4">
                         {a.institucionSede ? (
                           <span className="text-slate-700 text-xs font-medium">
                             {a.institucionSede.abreviatura ?? a.institucionSede.nombre}
-                            {a.idSala != null && <span className="text-slate-400"> / Sala {a.idSala}</span>}
+                            {a.sala && <span className="text-slate-400"> / {a.sala}</span>}
                           </span>
                         ) : (
                           <span className="text-slate-400 text-xs italic">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs text-slate-600">{formatFecha(a.fechaInicio)}</span>
-                      </td>
+                      <td className="px-6 py-4"><ResumenHorarios a={a} /></td>
                       <td className="px-6 py-4 text-center">
                         {a.cupoMaximo === 0 ? (
                           <span className="text-xs text-slate-400 font-medium">Sin límite</span>

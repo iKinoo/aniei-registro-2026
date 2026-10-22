@@ -14,4 +14,5 @@ export interface TransactionContext {
   facturacionRepo: import("./IFacturacionRepository").IFacturacionRepository;
   accesoRepo: import("./IAccesoRepository").IAccesoRepository;
   inscripcionRepo: import("./IInscripcionActividadRepository").IInscripcionActividadRepository;
+  actividadRepo: import("./IActividadRepository").IActividadRepository;
 }

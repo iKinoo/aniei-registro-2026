@@ -1,11 +1,12 @@
-import { PrismaClient } from '@/generated/prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
-import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
+import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO, ModalidadActividad } from '@/application/dtos/ActividadDTO';
 import { TipoActividad } from '@/application/dtos/CatalogosDTO';
 
 const include = {
   tipo_actividad: true,
   instituciones: true,
+  actividad_horarios: { orderBy: { fecha_inicio: 'asc' as const } },
 
   _count: { select: { inscripcion_actividades: true } },
   actividad_ponentes: {
@@ -24,7 +25,13 @@ function mapToDTO(row: any): ActividadDTO {
     fechaFin: row.fecha_fin.toISOString(),
     idTipoActividad: row.id_tipo_actividad ?? null,
     idInstitucionSede: row.id_institucion_sede ?? null,
-    idSala: row.id_sala ?? null,
+    sala: row.id_sala ?? null,
+    modalidad: (row.modalidad ?? 'PRESENCIAL') as ModalidadActividad,
+    enlaceSesion: row.enlace_sesion ?? null,
+    horarios: (row.actividad_horarios ?? []).map((h: { fecha_inicio: Date; fecha_fin: Date }) => ({
+      fechaInicio: h.fecha_inicio.toISOString(),
+      fechaFin: h.fecha_fin.toISOString(),
+    })),
     tipoActividad: row.tipo_actividad
       ? {
           idTipoActividad: row.tipo_actividad.id_tipo_actividad,
@@ -54,7 +61,7 @@ function mapToDTO(row: any): ActividadDTO {
 }
 
 export class PrismaActividadRepository implements IActividadRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: Prisma.TransactionClient) {}
 
   async listar(): Promise<ActividadDTO[]> {
     const rows = await this.prisma.actividades.findMany({
@@ -84,13 +91,21 @@ export class PrismaActividadRepository implements IActividadRepository {
         ? { instituciones: { connect: { id_institucion: data.idInstitucionSede } } }
         : {};
 
+    const horarios = (data.horarios ?? []).map((h) => ({
+      fecha_inicio: new Date(h.fechaInicio),
+      fecha_fin: new Date(h.fechaFin),
+    }));
+
     const row = await this.prisma.actividades.create({
       data: {
         nombre: data.nombre,
         cupo_maximo: data.cupoMaximo ?? 0,
         fecha_inicio: new Date(data.fechaInicio),
         fecha_fin: new Date(data.fechaFin),
-        id_sala: data.idSala ?? null,
+        id_sala: data.sala?.trim() || null,
+        modalidad: data.modalidad ?? 'PRESENCIAL',
+        enlace_sesion: data.enlaceSesion?.trim() || null,
+        ...(horarios.length > 0 && { actividad_horarios: { create: horarios } }),
         ...tipoConnect,
         ...institucionConnect,
         ...(data.costo !== undefined && { costo: data.costo }),
@@ -121,6 +136,18 @@ export class PrismaActividadRepository implements IActividadRepository {
           }
         : {};
 
+    const horariosUpdate =
+      data.horarios !== undefined
+        ? {
+            actividad_horarios: {
+              deleteMany: {},
+              create: data.horarios.map((h) => ({
+                fecha_inicio: new Date(h.fechaInicio),
+                fecha_fin: new Date(h.fechaFin),
+              })),
+            },
+          }
+        : {};
 
     const row = await this.prisma.actividades.update({
       where: { id_actividad: id },
@@ -129,7 +156,10 @@ export class PrismaActividadRepository implements IActividadRepository {
         ...(data.cupoMaximo !== undefined && { cupo_maximo: data.cupoMaximo }),
         ...(data.fechaInicio !== undefined && { fecha_inicio: new Date(data.fechaInicio) }),
         ...(data.fechaFin !== undefined && { fecha_fin: new Date(data.fechaFin) }),
-        ...(data.idSala !== undefined && { id_sala: data.idSala }),
+        ...(data.sala !== undefined && { id_sala: data.sala?.trim() || null }),
+        ...(data.modalidad !== undefined && { modalidad: data.modalidad }),
+        ...(data.enlaceSesion !== undefined && { enlace_sesion: data.enlaceSesion?.trim() || null }),
+        ...horariosUpdate,
         ...tipoUpdate,
         ...institucionUpdate,
         ...(data.costo !== undefined && { costo: data.costo }),

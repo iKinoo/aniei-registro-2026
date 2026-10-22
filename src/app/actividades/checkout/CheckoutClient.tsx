@@ -91,7 +91,18 @@ function ResumenActividad({ a }: { a: ActividadDTO }) {
     <div className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
       <div className="flex-1 min-w-0">
         <p className="font-medium text-slate-800 text-sm">{a.nombre}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{formatFecha(a.fechaInicio)}</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          <span className={`mr-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${a.modalidad === 'VIRTUAL' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600'}`}>
+            {a.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}
+          </span>
+          {a.horarios.length > 0 ? (
+            <>
+              {formatFecha(a.horarios[0].fechaInicio)}
+              {a.horarios.length > 1 && ` (+${a.horarios.length - 1} horario${a.horarios.length - 1 === 1 ? '' : 's'})`}
+            </>
+          ) : formatFecha(a.fechaInicio)}
+          {a.sala && ` · ${a.sala}`}
+        </p>
       </div>
       <div className="text-right shrink-0">
         {a.costo != null && a.costo > 0 ? (

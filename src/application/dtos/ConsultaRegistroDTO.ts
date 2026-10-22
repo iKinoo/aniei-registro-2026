@@ -42,7 +42,11 @@ export interface InscripcionConsultaDTO {
     nombre: string;
     costo: number;
     fechaInicio: Date;
-    idSala: number | null;
+    fechaFin: Date;
+    sala: string | null;
+    modalidad: 'PRESENCIAL' | 'VIRTUAL';
+    enlaceSesion: string | null;
+    horarios: { fechaInicio: Date; fechaFin: Date }[];
     tipoActividad: { descripcion: string } | null;
     institucion: Institucion | null;
   } | null;

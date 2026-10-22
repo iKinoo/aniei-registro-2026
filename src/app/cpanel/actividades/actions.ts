@@ -1,6 +1,6 @@
 'use server';
 
-import { reportarErrorEnAccion, getActividadRepository, getCatalogoRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getCatalogoRepository, getTransactionManager } from '@/infrastructure/config/container';
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
@@ -9,7 +9,7 @@ import { CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/Ac
 export async function getActividadesAction() {
   try {
     await requireAdmin();
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     const data = await useCase.listar();
     return { success: true as const, data };
   } catch (error) {
@@ -21,7 +21,7 @@ export async function getActividadesAction() {
 export async function getTiposActividadAction() {
   try {
     await requireAdmin();
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     const data = await useCase.obtenerTiposActividad();
     return { success: true as const, data };
   } catch (error) {
@@ -45,7 +45,7 @@ export async function getInstitucionesAction() {
 export async function crearActividadAction(data: CrearActividadDTO) {
   try {
     await requireAdmin();
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     const actividad = await useCase.crear(data);
     return { success: true as const, data: actividad };
   } catch (error) {
@@ -58,7 +58,7 @@ export async function crearActividadAction(data: CrearActividadDTO) {
 export async function actualizarActividadAction(id: number, data: ActualizarActividadDTO) {
   try {
     await requireAdmin();
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     const actividad = await useCase.actualizar(id, data);
     return { success: true as const, data: actividad };
   } catch (error) {

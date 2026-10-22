@@ -2,12 +2,12 @@
 
 import { requireUser } from '@/shared/auth/requireAdmin';
 import { ConsultarInscripciones } from '@/application/use-cases/ConsultarInscripciones';
-import { reportarErrorEnAccion, getActividadRepository, getInscripcionActividadRepository } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getActividadRepository, getInscripcionActividadRepository, getTransactionManager } from '@/infrastructure/config/container';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 
 export async function getActividadesDisponiblesAction() {
   try {
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     await requireUser();
     const disponibles = await useCase.listarPorCategoria('disponibles');
     return { success: true as const, data: disponibles };
@@ -19,7 +19,7 @@ export async function getActividadesDisponiblesAction() {
 
 export async function getTalleresAction() {
   try {
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     await requireUser();
     return { success: true as const, data: await useCase.listarPorCategoria('taller') };
   } catch (error) {
@@ -30,7 +30,7 @@ export async function getTalleresAction() {
 
 export async function getConcursosAction() {
   try {
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     await requireUser();
     return { success: true as const, data: await useCase.listarPorCategoria('concurso') };
   } catch (error) {
@@ -41,7 +41,7 @@ export async function getConcursosAction() {
 
 export async function getActividadesAction() {
   try {
-    const useCase = new GestionarActividades(getActividadRepository());
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
     await requireUser();
     return { success: true as const, data: await useCase.listarPorCategoria('actividad') };
   } catch (error) {

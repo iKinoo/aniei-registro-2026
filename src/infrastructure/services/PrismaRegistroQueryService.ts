@@ -21,7 +21,7 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
       this.prisma.facturaciones.findFirst({ where: { folio_registro: folio } }),
       this.prisma.inscripcion_actividades.findMany({
         where: { folio_registro: folio },
-        include: { actividades: { include: { tipo_actividad: true, instituciones: true } } },
+        include: { actividades: { include: { tipo_actividad: true, instituciones: true, actividad_horarios: { orderBy: { fecha_inicio: 'asc' } } } } },
         orderBy: { fecha_inscripcion: 'desc' },
       }),
     ]);
@@ -43,7 +43,11 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
         urlConstancia: i.url_constancia,
         actividad: i.actividades ? {
           nombre: i.actividades.nombre, costo: Number(i.actividades.costo ?? 0), fechaInicio: i.actividades.fecha_inicio,
-          idSala: i.actividades.id_sala,
+          fechaFin: i.actividades.fecha_fin,
+          sala: i.actividades.id_sala,
+          modalidad: i.actividades.modalidad,
+          enlaceSesion: i.actividades.enlace_sesion,
+          horarios: (i.actividades.actividad_horarios ?? []).map(h => ({ fechaInicio: h.fecha_inicio, fechaFin: h.fecha_fin })),
           tipoActividad: i.actividades.tipo_actividad ? { descripcion: i.actividades.tipo_actividad.descripcion } : null,
           institucion: i.actividades.instituciones ? {
             idInstitucion: i.actividades.instituciones.id_institucion, nombre: i.actividades.instituciones.nombre,

@@ -1,9 +1,44 @@
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
-import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
+import { ITransactionManager } from '@/application/ports/ITransactionManager';
+import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO, HorarioActividadDTO } from '@/application/dtos/ActividadDTO';
 import { TipoActividad } from '@/application/dtos/CatalogosDTO';
 
+function validarHorarios(horarios: HorarioActividadDTO[]): void {
+  for (const h of horarios) {
+    if (!h.fechaInicio || !h.fechaFin) {
+      throw new Error('Cada horario debe tener fecha y hora de inicio y fin.');
+    }
+    if (new Date(h.fechaFin) < new Date(h.fechaInicio)) {
+      throw new Error('La hora de fin de un horario no puede ser anterior a su hora de inicio.');
+    }
+  }
+}
+
+function derivarRango(horarios: HorarioActividadDTO[]): { fechaInicio: string; fechaFin: string } {
+  const ordenados = [...horarios].sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio));
+  return {
+    fechaInicio: ordenados[0].fechaInicio,
+    fechaFin: [...ordenados].sort((a, b) => a.fechaFin.localeCompare(b.fechaFin))[ordenados.length - 1].fechaFin,
+  };
+}
+
+function validarEnlace(enlace: string): void {
+  let url: URL;
+  try {
+    url = new URL(enlace);
+  } catch {
+    throw new Error('El enlace de la sesión no tiene un formato válido.');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('El enlace de la sesión debe comenzar con http:// o https://');
+  }
+}
+
 export class GestionarActividades {
-  constructor(private readonly actividadRepo: IActividadRepository) {}
+  constructor(
+    private readonly actividadRepo: IActividadRepository,
+    private readonly txManager: ITransactionManager,
+  ) {}
 
   async listar(): Promise<ActividadDTO[]> {
     return this.actividadRepo.listar();
@@ -36,20 +71,55 @@ export class GestionarActividades {
     if (!data.nombre || data.nombre.trim() === '') {
       throw new Error('El nombre de la actividad es requerido.');
     }
-    if (!data.fechaInicio || !data.fechaFin) {
-      throw new Error('La fecha de inicio y fecha de fin son requeridas.');
+
+    if (data.horarios && data.horarios.length > 0) {
+      validarHorarios(data.horarios);
+      data = { ...data, ...derivarRango(data.horarios) };
+    } else if (data.fechaInicio && data.fechaFin) {
+      if (new Date(data.fechaFin) < new Date(data.fechaInicio)) {
+        throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      }
+      data = { ...data, horarios: [{ fechaInicio: data.fechaInicio, fechaFin: data.fechaFin }] };
+    } else {
+      throw new Error('La actividad debe tener al menos un horario.');
     }
-    if (new Date(data.fechaFin) < new Date(data.fechaInicio)) {
-      throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+
+    const modalidad = data.modalidad ?? 'PRESENCIAL';
+    if (modalidad === 'VIRTUAL') {
+      const enlace = data.enlaceSesion?.trim();
+      if (enlace) validarEnlace(enlace);
+      data = { ...data, modalidad, enlaceSesion: enlace || null };
+    } else {
+      data = { ...data, modalidad: 'PRESENCIAL', enlaceSesion: null };
     }
-    return this.actividadRepo.crear(data);
+
+    const normalized = data;
+    return this.txManager.run((ctx) => ctx.actividadRepo.crear(normalized));
   }
 
   async actualizar(id: number, data: ActualizarActividadDTO): Promise<ActividadDTO> {
-    if (data.fechaInicio && data.fechaFin && new Date(data.fechaFin) < new Date(data.fechaInicio)) {
+    let changes = { ...data };
+
+    if (changes.horarios && changes.horarios.length > 0) {
+      validarHorarios(changes.horarios);
+      changes = { ...changes, ...derivarRango(changes.horarios) };
+    } else if (changes.horarios && changes.horarios.length === 0) {
+      throw new Error('La actividad debe conservar al menos un horario.');
+    } else if (changes.fechaInicio && changes.fechaFin && new Date(changes.fechaFin) < new Date(changes.fechaInicio)) {
       throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
     }
-    return this.actividadRepo.actualizar(id, data);
+
+    if (changes.modalidad === 'VIRTUAL') {
+      if (changes.enlaceSesion !== undefined) {
+        const enlace = changes.enlaceSesion?.trim() ?? '';
+        if (enlace) validarEnlace(enlace);
+        changes = { ...changes, enlaceSesion: enlace || null };
+      }
+    } else if (changes.modalidad === 'PRESENCIAL') {
+      changes = { ...changes, enlaceSesion: null };
+    }
+
+    return this.txManager.run((ctx) => ctx.actividadRepo.actualizar(id, changes));
   }
 
   async obtenerTiposActividad(): Promise<TipoActividad[]> {

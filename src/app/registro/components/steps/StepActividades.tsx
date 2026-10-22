@@ -67,11 +67,25 @@ export function StepActividades({ actividades, seleccionadas, onToggle, onBack, 
                       {a.tipoActividad.descripcion}
                     </span>
                   )}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                    a.modalidad === 'VIRTUAL' ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-slate-50 text-slate-500 border-slate-200'
+                  }`}>
+                    {a.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}
+                  </span>
                   {lleno && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Cupo lleno</span>}
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 leading-snug mb-2">{a.nombre}</h3>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">{fmtFecha(a.fechaInicio)} · {fmtHora(a.fechaInicio)}–{fmtHora(a.fechaFin)}</span>
+                  <span className="text-xs text-slate-400">
+                    {a.horarios.length > 0 ? (
+                      <>
+                        {fmtFecha(a.horarios[0].fechaInicio)} · {fmtHora(a.horarios[0].fechaInicio)}–{fmtHora(a.horarios[0].fechaFin)}
+                        {a.horarios.length > 1 && ` (+${a.horarios.length - 1} horario${a.horarios.length - 1 === 1 ? '' : 's'})`}
+                      </>
+                    ) : (
+                      <>{fmtFecha(a.fechaInicio)} · {fmtHora(a.fechaInicio)}–{fmtHora(a.fechaFin)}</>
+                    )}
+                  </span>
                   {a.costo && a.costo > 0
                     ? <span className="text-sm font-bold text-emerald-600">+${a.costo.toLocaleString('es-MX')}</span>
                     : <span className="text-xs text-emerald-500 font-medium">Gratis</span>}

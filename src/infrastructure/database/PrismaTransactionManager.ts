@@ -7,6 +7,7 @@ import { PrismaDepositoRepository } from '@/infrastructure/repositories/PrismaDe
 import { PrismaFacturacionRepository } from '@/infrastructure/repositories/PrismaFacturacionRepository';
 import { PrismaAccesoRepository } from '@/infrastructure/repositories/PrismaAccesoRepository';
 import { PrismaInscripcionActividadRepository } from '@/infrastructure/repositories/PrismaInscripcionActividadRepository';
+import { PrismaActividadRepository } from '@/infrastructure/repositories/PrismaActividadRepository';
 import { PrismaFolioGenerator } from './PrismaFolioGenerator';
 import { mapPrismaError } from '@/infrastructure/errors/prismaErrorMapper';
 
@@ -20,6 +21,7 @@ export class PrismaTransactionManager implements ITransactionManager {
         accesoRepo: new PrismaAccesoRepository(tx),
         facturacionRepo: new PrismaFacturacionRepository(tx),
         inscripcionRepo: new PrismaInscripcionActividadRepository(tx),
+        actividadRepo: new PrismaActividadRepository(tx),
       }), { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 8000 });
     } catch (error) {
       throw mapPrismaError(error) ?? error;
