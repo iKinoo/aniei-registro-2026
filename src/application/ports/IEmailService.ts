@@ -39,6 +39,12 @@ export interface CambioContrasenaData {
   password: string;
 }
 
+export interface ListasAsistenciaData {
+  nombreCompleto: string;
+  folio: string;
+  listas: Array<{ nombreActividad: string; pdf: Uint8Array }>;
+}
+
 export interface IEmailService {
   enviarConfirmacionRegistro(destinatario: string, datos: ConfirmacionData): Promise<void>;
   enviarConstancia(destinatario: string, pdfUint8Array: Uint8Array, folio: string): Promise<void>;
@@ -48,4 +54,5 @@ export interface IEmailService {
   enviarConstanciaPonente(destinatario: string, pdfUint8Array: Uint8Array, nombrePonente: string, nombreActividad: string): Promise<void>;
   enviarConstanciaParticipante(destinatario: string, pdfUint8Array: Uint8Array, nombreParticipante: string, nombreActividad: string): Promise<void>;
   enviarConfirmacionGrupoRapido(destinatario: string, datos: ConfirmacionGrupoRapidoData): Promise<void>;
+  enviarListasAsistencia(destinatario: string, datos: ListasAsistenciaData): Promise<void>;
 }

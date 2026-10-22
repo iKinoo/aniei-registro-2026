@@ -36,6 +36,16 @@ export interface PonenteResumenDTO {
   actividades: { idActividad: number; nombre: string; rol: string | null }[];
 }
 
+/** Resultado del envío de listas de asistencia a un ponente */
+export interface ResultadoEnvioListasDTO {
+  folioRegistro: string;
+  nombre: string;
+  correo: string;
+  actividades: number;
+  exito: boolean;
+  error?: string;
+}
+
 export interface ActividadDTO {
   idActividad: number;
   nombre: string;

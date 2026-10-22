@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
-import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, CambioContrasenaData, ConfirmacionGrupoRapidoData } from '@/application/ports/IEmailService';
+import { IEmailService, ConfirmacionData, ConfirmacionActividadesData, NotificacionPonenteData, CambioContrasenaData, ConfirmacionGrupoRapidoData, ListasAsistenciaData } from '@/application/ports/IEmailService';
 import { renderConfirmacionHTML } from './templates/confirmacion';
 import { renderConstanciaEmailHTML } from './templates/constancia';
 import { renderConfirmacionActividadesHTML } from './templates/confirmacion-actividades';
@@ -171,6 +171,33 @@ export class NodemailerEmailService implements IEmailService {
       to: destinatario,
       subject: `Confirmación de Registro Grupal Rápido — ANIEI 2026`,
       html,
+    });
+  }
+
+  async enviarListasAsistencia(destinatario: string, datos: ListasAsistenciaData): Promise<void> {
+    const actividades = datos.listas
+      .map((l) => `<li style="margin-bottom:4px;">${l.nombreActividad}</li>`)
+      .join('');
+    const html = `
+      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a1a2e; border-bottom: 2px solid #eee; padding-bottom: 10px;">Listas de Asistencia — ANIEI 2026</h2>
+        <p>Estimado(a) <strong>${datos.nombreCompleto}</strong> (Folio ${datos.folio}),</p>
+        <p>Adjunto las listas de asistencia (participantes inscritos) de sus actividades:</p>
+        <ul>${actividades}</ul>
+        <br/>
+        <p>Atentamente,<br/><strong>El Comité Organizador ANIEI 2026</strong></p>
+      </div>
+    `;
+
+    await this.transporter.sendMail({
+      from: this.from,
+      to: destinatario,
+      subject: `Listas de Asistencia de sus actividades — ANIEI 2026`,
+      html,
+      attachments: datos.listas.map((l) => ({
+        filename: `lista-asistencia-${l.nombreActividad.trim().replace(/[^\w]+/g, '-').toLowerCase().slice(0, 40)}.pdf`,
+        content: Buffer.from(l.pdf),
+      })),
     });
   }
 }
