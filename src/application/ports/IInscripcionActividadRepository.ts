@@ -19,4 +19,11 @@ export interface IInscripcionActividadRepository {
   
   /** Actualiza la url de la constancia generada para el usuario participante */
   actualizarUrlConstancia(idActividad: number, folioRegistro: string, url: string): Promise<void>;
+
+  /**
+   * Elimina la inscripción de un usuario a una actividad.
+   * @returns ruta de la constancia generada, o null si no tenía
+   * @throws RegistroError INSCRIPCION_INEXISTENTE si la relación no existe
+   */
+  eliminar(idActividad: number, folioRegistro: string): Promise<string | null>;
 }

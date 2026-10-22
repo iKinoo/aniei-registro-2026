@@ -18,6 +18,8 @@ import { EnviarConstanciaParticipanteUseCase } from '@/application/use-cases/Env
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarDetalleActividad } from '@/application/use-cases/ConsultarDetalleActividad';
+import { EliminarInscripcionActividad } from '@/application/use-cases/EliminarInscripcionActividad';
+import { RegistroError } from '@/core/errors/RegistroError';
 
 export async function getDetalleActividadAction(idActividadStr: string) {
   try {
@@ -136,6 +138,22 @@ export async function generarConstanciaParticipanteBatchAction(idActividad: numb
   } catch (error) {
     reportarErrorEnAccion('Error en generarConstanciaParticipanteBatchAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar lote' };
+  }
+}
+
+export async function eliminarInscripcionAction(
+  idActividad: number,
+  folioRegistro: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+    await new EliminarInscripcionActividad(getInscripcionActividadRepository(), getStorageService())
+      .execute(idActividad, folioRegistro);
+    return { success: true as const };
+  } catch (error) {
+    if (error instanceof RegistroError) return { success: false as const, error: error.message };
+    reportarErrorEnAccion(`Error en eliminarInscripcionAction actividad ${idActividad} folio ${folioRegistro}`, error);
+    return { success: false as const, error: 'Ocurrió un error al eliminar la inscripción' };
   }
 }
 

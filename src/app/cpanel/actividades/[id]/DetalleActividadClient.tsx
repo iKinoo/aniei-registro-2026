@@ -11,11 +11,13 @@ import {
   generarConstanciaParticipanteAction,
   enviarConstanciaParticipanteAction,
   generarConstanciaParticipanteBatchAction,
-  generarListaParticipantesPdfAction
+  generarListaParticipantesPdfAction,
+  eliminarInscripcionAction
 } from './actions';
 import { obtenerUrlArchivoAction } from '@/app/cpanel/actions';
 import { extraerRutaArchivo } from '@/shared/utils/archivos';
 import { ActividadModal } from '../ActividadModal';
+import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 
 interface Props {
   actividad: ActividadDTO;
@@ -46,6 +48,8 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
   const [loadingBatch, setLoadingBatch] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [abriendoConstancia, setAbriendoConstancia] = useState<string | null>(null);
+  const [inscritoAEliminar, setInscritoAEliminar] = useState<InscritoDTO | null>(null);
+  const [eliminandoInscripcion, setEliminandoInscripcion] = useState(false);
 
   const handleAbrirConstancia = async (valor: string) => {
     const ruta = extraerRutaArchivo(valor);
@@ -164,6 +168,27 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
       }
     } finally {
       setLoadingSend(null);
+    }
+  };
+
+  const confirmarEliminarInscripcion = async () => {
+    if (!inscritoAEliminar) return;
+    setEliminandoInscripcion(true);
+    try {
+      const res = await eliminarInscripcionAction(actividad.idActividad, inscritoAEliminar.folioRegistro);
+      if (res.success) {
+        setInscritoAEliminar(null);
+        setSelectedInscritos((prev) => {
+          const next = new Set(prev);
+          next.delete(inscritoAEliminar.folioRegistro);
+          return next;
+        });
+        refreshPage();
+      } else {
+        alert(res.error || 'Error al eliminar la inscripción');
+      }
+    } finally {
+      setEliminandoInscripcion(false);
     }
   };
 
@@ -322,12 +347,13 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                   {manejaConstanciasParticipantes && (
                     <th className="px-6 py-3 font-semibold text-right">Constancia</th>
                   )}
+                  <th className="px-6 py-3 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {inscritos.length === 0 ? (
                   <tr>
-                    <td colSpan={manejaConstanciasParticipantes ? 5 : 3} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={manejaConstanciasParticipantes ? 6 : 4} className="px-6 py-8 text-center text-slate-500">
                       Ningún participante inscrito aún.
                     </td>
                   </tr>
@@ -384,6 +410,19 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                           </div>
                         </td>
                       )}
+                      <td className="px-6 py-3 text-right">
+                        <button
+                          onClick={() => setInscritoAEliminar(i)}
+                          disabled={eliminandoInscripcion}
+                          title="Eliminar inscripción"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 text-red-600 text-xs font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 min-w-max"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Eliminar
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -403,6 +442,18 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           onClose={() => setIsEditOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={!!inscritoAEliminar}
+        title="Eliminar inscripción"
+        message={`¿Eliminar a "${inscritoAEliminar ? `${inscritoAEliminar.nombre} ${inscritoAEliminar.apellido}` : ''}" de esta actividad? Se borrará su lugar en el cupo${inscritoAEliminar?.urlConstancia ? ' y su constancia generada' : ''}.`}
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={eliminandoInscripcion}
+        onConfirm={confirmarEliminarInscripcion}
+        onCancel={() => setInscritoAEliminar(null)}
+      />
     </div>
   );
 }

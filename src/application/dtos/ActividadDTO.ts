@@ -16,6 +16,26 @@ export interface InscritoDTO {
   urlConstancia?: string | null;
 }
 
+/** Relación ponente-actividad sin agrupar (una fila por vínculo) */
+export interface VinculoPonenteDTO {
+  folioRegistro: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  idActividad: number;
+  nombreActividad: string;
+  rol: string | null;
+}
+
+/** Resumen de un ponente con todas las actividades que imparte */
+export interface PonenteResumenDTO {
+  folioRegistro: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  actividades: { idActividad: number; nombre: string; rol: string | null }[];
+}
+
 export interface ActividadDTO {
   idActividad: number;
   nombre: string;

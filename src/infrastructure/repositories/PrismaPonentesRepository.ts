@@ -1,6 +1,6 @@
 import type { Prisma } from '@/generated/prisma/client';
 import { IPonentesRepository } from '@/application/ports/IPonentesRepository';
-import { PonenteDTO } from '@/application/dtos/ActividadDTO';
+import { PonenteDTO, VinculoPonenteDTO } from '@/application/dtos/ActividadDTO';
 
 export class PrismaPonentesRepository implements IPonentesRepository {
   constructor(private readonly prisma: Prisma.TransactionClient) {}
@@ -44,5 +44,26 @@ export class PrismaPonentesRepository implements IPonentesRepository {
         url_constancia: url
       }
     });
+  }
+
+  async obtenerTodos(): Promise<VinculoPonenteDTO[]> {
+    const rows = await this.prisma.actividad_ponentes.findMany({
+      include: {
+        usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } },
+        actividades: { select: { id_actividad: true, nombre: true } },
+      },
+      orderBy: [{ folio_registro_ponente: 'asc' }, { id_actividad: 'asc' }],
+    });
+    return rows
+      .filter((r) => r.actividades)
+      .map((r) => ({
+        folioRegistro: r.usuarios.folio_registro,
+        nombre: r.usuarios.nombre,
+        apellido: r.usuarios.apellido,
+        correo: r.usuarios.correo,
+        idActividad: r.actividades!.id_actividad,
+        nombreActividad: r.actividades!.nombre,
+        rol: r.rol ?? null,
+      }));
   }
 }

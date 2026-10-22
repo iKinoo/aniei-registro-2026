@@ -20,4 +20,11 @@ export class RegistroError extends Error {
       'DATOS_INVALIDOS',
     );
   }
+
+  static INSCRIPCION_INEXISTENTE(): RegistroError {
+    return new RegistroError(
+      'La inscripción no existe',
+      'INSCRIPCION_INEXISTENTE',
+    );
+  }
 }

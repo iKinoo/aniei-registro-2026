@@ -74,6 +74,24 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
     return { ok, sinCupo };
   }
 
+  async eliminar(idActividad: number, folioRegistro: string): Promise<string | null> {
+    const where = {
+      folio_registro_id_actividad: {
+        folio_registro: folioRegistro,
+        id_actividad: idActividad,
+      },
+    } as const;
+    const existente = await this.prisma.inscripcion_actividades.findUnique({
+      where,
+      select: { url_constancia: true },
+    });
+    if (!existente) {
+      throw RegistroError.INSCRIPCION_INEXISTENTE();
+    }
+    await this.prisma.inscripcion_actividades.delete({ where });
+    return existente.url_constancia ?? null;
+  }
+
   async actualizarUrlConstancia(idActividad: number, folioRegistro: string, url: string): Promise<void> {
     await this.prisma.inscripcion_actividades.update({
       where: {
