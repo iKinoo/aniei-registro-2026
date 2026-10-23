@@ -1,5 +1,6 @@
 import { getTiposActividadAction, obtenerPreciosAction, obtenerTiposParticipanteAction } from './actions';
 import PreciosClient from './PreciosClient';
+import DescargarBaseDatosClient from './DescargarBaseDatosClient';
 
 export const metadata = {
   title: 'Configuración - CPanel',
@@ -79,6 +80,8 @@ export default async function ConfiguracionPage() {
           </table>
         </div>
       </div>
+
+      <DescargarBaseDatosClient />
     </div>
   );
 }

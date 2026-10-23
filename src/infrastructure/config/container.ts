@@ -66,6 +66,8 @@ export { getAccesoRepository, getPasswordHasher } from './credenciales';
 
 export { getAlertaErrorService, reportarErrorEnAccion } from './alertas';
 
+export { getExportacionBaseDatosService } from './exportacion';
+
 export function getActividadRepository(): IActividadRepository {
   return new PrismaActividadRepository(prisma);
 }

@@ -386,6 +386,33 @@ find /var/backups/aniei -mtime +7 -delete
 
 Restaurar respaldo: §6.1 con tu `.sql` + extraer el `.tgz` sobre `./storage/` (mismo `chown`), reiniciar servicio.
 
+### 12.1 Botón «Descargar base de datos» (`/cpanel/configuracion`)
+
+El panel de administración puede generar un respaldo lógico `.sql.gz` de la base de `DATABASE_URL` desde **Configuración → Base de datos**. El servidor ejecuta el cliente oficial `mysqldump` (`spawn`, sin shell), comprime por bloques en un directorio temporal privado del sistema (`TMPDIR`, nunca `public/` ni `storage/`) y responde solo después de validar el gzip. No exporta archivos de `storage/`.
+
+Requisitos y límites operativos:
+
+- **Binario:** instalar `mysql-community-client` / `mysql-client-8.0` en la máquina del servicio; la versión debe ser compatible con el servidor MySQL 8.x. `@prisma/adapter-mariadb` **no** garantiza que el binario instalado sea el de MySQL. Verificar con `sudo -u aniei mysqldump --version`.
+- **Opciones de ejecución** (`.env.local`, valores por defecto mostrados):
+  ```bash
+  MYSQLDUMP_PATH="mysqldump"          # ruta absoluta recomendada: /usr/bin/mysqldump
+  DB_EXPORT_TIMEOUT_SECONDS="120"     # límite de generación; debe terminar antes que proxy_read_timeout de nginx
+  DB_EXPORT_MAX_BYTES="1073741824"    # 1 GiB máximo para el archivo .sql.gz
+  ```
+  El tamaño excedido responde `413`, el timeout `504`, otra exportación en curso `409` y servicio mal configurado `503`.
+- **Timeouts coordinados:** con `DB_EXPORT_TIMEOUT_SECONDS=120` el `proxy_read_timeout` de nginx (§10, 120 s) es insuficiente. Bájalo a p. ej. `90` en la app o sube el de nginx a `timeout + 60 s` de margen para la transferencia. El navegador bufferiza el archivo completo en memoria antes de guardarlo: el límite debe medir el volumen real de la base.
+- **Concurrencia:** una sola exportación activa por proceso Node.js. Si alguna vez corres más de una instancia, coordina el límite antes de habilitar el botón en todas.
+- **Consistencia:** `mysqldump --single-transaction` requiere tablas InnoDB (confirmar: `mysql -e "SELECT table_name, engine FROM information_schema.tables WHERE table_schema='aniei' AND engine<>'InnoDB';"`). No programes migraciones ni DDL durante una exportación activa.
+- **Privilegios de la cuenta `aniei`:** `SELECT`, `SHOW VIEW`, `TRIGGER`, `EVENT` y privilegios sobre rutinas; `mysqldump` no necesita `RELOAD` con `--single-transaction`. Probar antes de habilitar:
+  ```bash
+  sudo -u aniei mysqldump --single-transaction --quick --routines --events --triggers \
+    --no-tablespaces --set-gtid-purged=OFF --databases aniei | gzip | wc -c
+  ```
+- **Temporal:** el usuario del servicio systemd (`aniei`) necesita escritura en `TMPDIR` (por defecto `/tmp`); la unidad §9 no usa `PrivateTmp`, así que basta con espacio libre ≥ tamaño esperado del dump. Los temporales propios abandonados (`aniei-bd-export-*`) se limpian automáticamente tras 6 h al iniciar una nueva exportación.
+- **Restauración:** el archivo usa `--databases`, por lo que incluye `CREATE DATABASE`/`USE`; restaura siempre en una instancia aislada de prueba con ese nombre y eventos programados desactivados. **Nunca** sobre la base de origen.
+
+El endpoint `POST /api/admin/base-datos/exportar` exige sesión ADMIN y origen coincidente con `NEXT_PUBLIC_APP_URL`; los accesos indebidos no generan dumps.
+
 ---
 
 ## 13. Actualizar a una versión nueva
