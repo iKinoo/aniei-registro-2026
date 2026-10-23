@@ -207,6 +207,11 @@ export default async function PerfilPage() {
           </div>
 
           <div className={styles.actions}>
+            {session?.user?.role === 'ADMIN' && (
+              <a href="/cpanel" className={styles.btnPrimary}>
+                Panel de administración
+              </a>
+            )}
             {inscripciones.length > 0 && (
               <>
                 <a href="/actividades/talleres" className={styles.btnSecondary}>

@@ -63,7 +63,13 @@ export default async function CpanelLayout({ children }: { children: React.React
                 </Link>
               </nav>
 
-              <div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/perfil"
+                  className="px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  Mi Perfil
+                </Link>
                 <LogoutForm />
               </div>
             </div>
