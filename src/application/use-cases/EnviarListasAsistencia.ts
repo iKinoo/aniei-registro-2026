@@ -90,9 +90,8 @@ export class EnviarListasAsistencia {
       fecha: new Date(actividad.fechaInicio).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }),
       participantes: inscritos.map((i, index) => ({
         numero: index + 1,
-        nombre: `${i.nombre} ${i.apellido}`,
-        correo: i.correo,
-        fechaInscripcion: i.fechaInscripcion ? new Date(i.fechaInscripcion).toLocaleDateString('es-MX') : '-',
+        folio: i.folioRegistro,
+        nombre: `${i.nombre} ${i.apellido}`.trim(),
       })),
     });
     cachePdf.set(idActividad, pdf);

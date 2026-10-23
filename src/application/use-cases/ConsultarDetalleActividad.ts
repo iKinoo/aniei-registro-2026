@@ -24,9 +24,8 @@ export class ConsultarDetalleActividad {
     const { actividad, nombreTipo, inscritos } = await this.obtener(id);
     const buffer = await this.pdf.generarListaParticipantes({ nombreActividad: actividad.nombre, tipoActividad: nombreTipo,
       fecha: new Date(actividad.fechaInicio).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }),
-      participantes: inscritos.map((i, index) => ({ numero: index + 1, nombre: `${i.nombre} ${i.apellido}`, correo: i.correo,
-        fechaInscripcion: i.fechaInscripcion ? new Date(i.fechaInscripcion).toLocaleDateString('es-MX') : '-' })),
+      participantes: inscritos.map((i, index) => ({ numero: index + 1, folio: i.folioRegistro, nombre: `${i.nombre} ${i.apellido}`.trim() })),
     });
-    return { buffer, nombreArchivo: `lista_participantes_${actividad.nombre.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)}.pdf` };
+    return { buffer, nombreArchivo: `lista_asistencia_${actividad.nombre.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)}.pdf` };
   }
 }

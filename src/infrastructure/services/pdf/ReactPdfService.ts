@@ -10,7 +10,7 @@ import {
   CONSTANCIA_PAGE_HEIGHT,
   CONSTANCIA_PAGE_WIDTH,
 } from './templates/ConstanciaEventoTemplate';
-import { ListaParticipantesTemplate } from './templates/ListaParticipantesTemplate';
+import { construirListaAsistencia } from './ListaAsistencia';
 import { ReporteInstitucionesTemplate } from './templates/ReporteInstitucionesTemplate';
 
 let _plantillaCache: Buffer | null = null;
@@ -38,10 +38,7 @@ export class ReactPdfService implements IPdfService {
   }
 
   async generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Buffer> {
-    const element = React.createElement(ListaParticipantesTemplate, { data: datos });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buffer = await renderToBuffer(element as any);
-    return Buffer.from(buffer);
+    return Buffer.from(await construirListaAsistencia(datos));
   }
 
   async generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Buffer> {

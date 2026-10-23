@@ -1,14 +1,14 @@
 import type { ContenidoConstancia } from '@/application/dtos/ConstanciaDTO';
 
+/** Lista de asistencia editable: cada fila lleva folio y nombre, con casilla marcable. */
 export interface ListaParticipantesPdfData {
   nombreActividad: string;
   tipoActividad: string;
   fecha: string;
   participantes: {
     numero: number;
+    folio: string;
     nombre: string;
-    correo: string;
-    fechaInscripcion: string;
   }[];
 }
 
