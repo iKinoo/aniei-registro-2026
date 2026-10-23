@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
+import { gunzipSync } from 'node:zlib';
 import ts from 'typescript';
 import { verificarArquitectura } from './check-architecture.mjs';
 
@@ -33,6 +35,8 @@ const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
 const { GestionarUsuarios } = load('@/application/use-cases/GestionarUsuarios');
 const { PrismaUsuarioRepository } = load('@/infrastructure/repositories/PrismaUsuarioRepository');
+const { PrismaAdminQueryService } = load('@/infrastructure/services/PrismaAdminQueryService');
+const { mapGrupoAdmin } = load('@/infrastructure/mappers/GrupoAdminMapper');
 const { PrismaInscripcionActividadRepository } = load('@/infrastructure/repositories/PrismaInscripcionActividadRepository');
 const { mapPrismaError } = load('@/infrastructure/errors/prismaErrorMapper');
 const { HmacEnlaceArchivoService } = load('@/infrastructure/services/storage/HmacEnlaceArchivoService');
@@ -133,6 +137,44 @@ await test('Repositorio grupal utiliza el cliente transaccional sin abrir otra t
     dependenciaId: '', estadoId: 1, miembros: [{ nombre: 'Uno', apellido: 'Prueba', correo: 'uno@example.com', passwordHash: 'hash', idTipoParticipante: 1 }] });
   assert.equal(created, 1);
   assert.deepEqual(result.folios, ['ANI26-0002']);
+});
+await test('Consulta administrativa distingue los depósitos de varios grupos del mismo responsable', async () => {
+  const depositoAnterior = { proposito: 'GRUPO_RAPIDO', monto: '900.00', fecha_deposito: new Date('2026-10-01'),
+    referencia: 'grupo-uno', archivo_nombre: 'primero.pdf', archivo_url: 'comprobantes_grupo/token-uno.pdf' };
+  const depositoReciente = { ...depositoAnterior, monto: '1353.00', referencia: 'grupo-dos',
+    archivo_nombre: 'segundo.jpg', archivo_url: 'https://storage.example.com/comprobantes/comprobantes_grupo/token-dos.jpg?exp=123' };
+  const responsable = { folio_registro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com',
+    depositos: [depositoReciente, depositoAnterior] };
+  const grupo = { id: 1, token: 'token-uno', fecha_registro: new Date('2026-10-01'), responsable,
+    miembros: [{ folio_registro: 'ANI26-0002', nombre: 'Luis', apellido: 'Pérez', correo: 'luis@example.com', carrera: null }] };
+  const primero = mapGrupoAdmin(grupo);
+  const segundo = mapGrupoAdmin({ ...grupo, id: 2, token: 'token-dos' });
+  assert.equal(primero.deposito.referencia, 'grupo-uno');
+  assert.equal(primero.deposito.monto, 900);
+  assert.equal(segundo.deposito.referencia, 'grupo-dos');
+  assert.equal(segundo.deposito.monto, 1353);
+  assert.equal(primero.responsable.folioRegistro, 'ANI26-0001');
+  assert.deepEqual(primero.miembros.map(miembro => miembro.folioRegistro), ['ANI26-0002']);
+  assert.equal(mapGrupoAdmin({ ...grupo, token: 'sin-comprobante' }).deposito, null);
+  assert.equal(mapGrupoAdmin({ ...grupo, responsable: { ...responsable,
+    depositos: [{ ...depositoAnterior, proposito: 'EVENTO_PRINCIPAL' }] } }).deposito, null);
+});
+await test('Búsqueda administrativa incluye folios de miembros y pagina con orden estable', async () => {
+  let consulta;
+  let filtro;
+  const servicio = new PrismaAdminQueryService({ grupos_registro: {
+    count: async ({ where }) => { filtro = where; return 21; },
+    findMany: async argumentos => { consulta = argumentos; return []; },
+  } });
+  const resultado = await servicio.obtenerGruposForAdmin(2, 10, 'ANI26-0002');
+  assert.equal(consulta.skip, 10);
+  assert.equal(consulta.take, 10);
+  assert.deepEqual(consulta.orderBy, [{ fecha_registro: 'desc' }, { id: 'desc' }]);
+  assert.ok(filtro.OR.some(condicion => condicion.miembros?.some?.folio_registro?.contains === 'ANI26-0002'));
+  assert.deepEqual(consulta.where, filtro);
+  assert.equal(resultado.total, 21);
+  assert.equal(resultado.totalPages, 3);
+  assert.equal(resultado.page, 2);
 });
 await test('Inscripciones bloquean actividades en orden y propagan errores de persistencia', async () => {
   const locks = [];
@@ -251,3 +293,279 @@ await test('Control detecta adaptadores transitivos en Client Components y permi
     assert.deepEqual(result.errors, []);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+// ── Exportación de base de datos ────────────────────────────────────────────
+const { ExportarBaseDatos } = load('@/application/use-cases/ExportarBaseDatos');
+const { ExportacionBaseDatosError } = load('@/core/errors/ExportacionBaseDatosError');
+const {
+  MysqlDumpExportacionBaseDatosService,
+  parsearConexionMysql,
+  escaparValorArchivoOpciones,
+  contenidoArchivoOpciones,
+  construirArgumentosMysqldump,
+  nombreRespaldoUtc,
+} = load('@/infrastructure/services/database/MysqlDumpExportacionBaseDatosService');
+
+const guardia = { requireAdmin: async () => ({ folioRegistro: 'ANI26-ADM' }) };
+const reportes = [];
+let servicioExportacion = null;
+cache.set(path.join(root, 'shared/auth/requireAdmin.ts'), { exports: guardia });
+cache.set(path.join(root, 'infrastructure/config/container.ts'), {
+  exports: {
+    getExportacionBaseDatosService: () => servicioExportacion,
+    reportarErrorEnAccion: (contexto, error) => reportes.push({ contexto, error }),
+  },
+});
+const { POST } = load('@/app/api/admin/base-datos/exportar/route');
+
+const dirExport = fs.mkdtempSync(path.join(os.tmpdir(), 'aniei-export-test-'));
+const CONEXION_EXPORT = { host: '127.0.0.1', port: 3306, usuario: 'usuario-prueba', password: 'p@ss"w%#x', base: 'aniei' };
+function scriptEjecutable(nombre, cuerpo) {
+  const ruta = path.join(dirExport, nombre);
+  fs.writeFileSync(ruta, `#!/bin/sh\n${cuerpo}\n`, { mode: 0o755 });
+  return ruta;
+}
+function servicioCon(binario, extra = {}) {
+  return new MysqlDumpExportacionBaseDatosService(CONEXION_EXPORT, { binario, timeoutMs: 5000, maxBytes: 10000000, directorioTemporal: dirExport, ...extra });
+}
+function temporalesExportActivos() {
+  return fs.readdirSync(dirExport).filter((nombre) => nombre.startsWith('aniei-bd-export-'));
+}
+function cancelacionDoble() {
+  const callbacks = [];
+  let cancelada = false;
+  return {
+    control: { estaCancelada: () => cancelada, alCancelar: (callback) => { if (cancelada) callback(); else callbacks.push(callback); } },
+    cancelar: () => { cancelada = true; for (const callback of callbacks) callback(); },
+  };
+}
+function solicitudExportar({ origin = 'http://localhost:3000', conOrigen = true } = {}) {
+  const headers = new Headers();
+  if (conOrigen) headers.set('origin', origin);
+  return {
+    method: 'POST',
+    headers,
+    signal: new AbortController().signal,
+    nextUrl: new URL('http://localhost:3000/api/admin/base-datos/exportar'),
+  };
+}
+
+await test('El caso de uso delega en un doble del puerto sin importar infraestructura', async () => {
+  const cancelacion = cancelacionDoble();
+  let liberada = 0;
+  const doble = {
+    exportar: async (recibida) => {
+      assert.equal(recibida, cancelacion.control);
+      return {
+        nombreArchivo: 'prueba.sql.gz',
+        tipoContenido: 'application/gzip',
+        tamanoBytes: 3,
+        contenido: (async function* () { yield* [new Uint8Array([1, 2]), new Uint8Array([3])]; })(),
+        liberar: async () => { liberada++; },
+      };
+    },
+  };
+  const dto = await new ExportarBaseDatos(doble).ejecutar(cancelacion.control);
+  const leidos = [];
+  for await (const bloque of dto.contenido) leidos.push(...bloque);
+  assert.deepEqual(leidos, [1, 2, 3]);
+  await dto.liberar();
+  assert.equal(liberada, 1);
+  assert.equal(nombreRespaldoUtc(new Date(Date.UTC(2026, 9, 22, 15, 4, 9))), 'aniei-bd-2026-10-22_15-04-09-UTC.sql.gz');
+});
+
+await test('La conexión se decodifica y las credenciales se escapan para el archivo de opciones', () => {
+  const conexion = parsearConexionMysql('mysql://usuario%40dominio:c%23l%22ave@db.example:3307/aniei$0');
+  assert.deepEqual(conexion, { host: 'db.example', port: 3307, usuario: 'usuario@dominio', password: 'c#l"ave', base: 'aniei$0' });
+  assert.throws(() => parsearConexionMysql('postgres://u:p@h/db'));
+  assert.throws(() => parsearConexionMysql('mysql://u:p@h/'));
+  assert.throws(() => parsearConexionMysql('mysql://u:p@h/base con espacio'));
+  assert.equal(escaparValorArchivoOpciones('p@ss"w%'), 'p@ss\\"w\\%');
+  const archivo = contenidoArchivoOpciones({ host: 'localhost', port: 3306, usuario: 'u', password: 'p@ss"w%', base: 'b' });
+  assert.ok(archivo.includes('password="p@ss\\"w\\%"'));
+  assert.ok(archivo.startsWith('[client]'));
+  const argumentos = construirArgumentosMysqldump('/tmp/x/my.cnf', 'aniei');
+  assert.equal(argumentos[0], '--defaults-file=/tmp/x/my.cnf');
+  for (const opcion of ['--single-transaction', '--quick', '--hex-blob', '--tz-utc', '--routines', '--events', '--triggers', '--no-tablespaces', '--set-gtid-purged=OFF', '--databases']) {
+    assert.ok(argumentos.includes(opcion), opcion);
+  }
+  assert.ok(!argumentos.some((argumento) => String(argumento).includes('p@ss')));
+});
+
+await test('Sin conexión configurada la exportación falla antes de tocar el sistema de archivos', async () => {
+  const servicio = new MysqlDumpExportacionBaseDatosService(null, { binario: 'mysqldump', timeoutMs: 1000, maxBytes: 10 });
+  await assert.rejects(servicio.exportar(cancelacionDoble().control), /no está configurada/);
+});
+
+await test('El adaptador genera un gzip legible, oculta credenciales y libera concurrencia al terminar', async () => {
+  const eco = scriptEjecutable('eco.sh', 'printf "ARGUMENTOS %s\\n" "$@"\necho ARCHIVO\ncat "${1#--defaults-file=}"');
+  const servicio = servicioCon(eco);
+  const dto = await servicio.exportar(cancelacionDoble().control);
+  assert.match(dto.nombreArchivo, /^aniei-bd-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-UTC\.sql\.gz$/);
+  assert.equal(dto.tipoContenido, 'application/gzip');
+  const trozos = [];
+  for await (const bloque of dto.contenido) trozos.push(bloque);
+  const total = Buffer.concat(trozos.map((trozo) => Buffer.from(trozo)));
+  assert.equal(total.length, dto.tamanoBytes);
+  assert.equal(total[0], 0x1f);
+  assert.equal(total[1], 0x8b);
+  const texto = gunzipSync(total).toString('utf8');
+  const [seccionArgumentos, seccionArchivo] = texto.split('ARCHIVO\n');
+  assert.ok(seccionArgumentos.includes('ARGUMENTOS --single-transaction'));
+  assert.ok(seccionArgumentos.includes('ARGUMENTOS --databases'));
+  assert.ok(seccionArgumentos.includes('ARGUMENTOS aniei'));
+  assert.ok(!seccionArgumentos.includes('p@ss'), 'las credenciales no viajan en argumentos');
+  assert.ok(seccionArchivo.includes('password="p@ss\\"w\\%#x"'), 'el archivo de opciones lleva la contraseña escapada');
+  assert.deepEqual(temporalesExportActivos(), []);
+  const dto2 = await servicio.exportar(cancelacionDoble().control);
+  await dto2.liberar();
+  assert.deepEqual(temporalesExportActivos(), []);
+});
+
+await test('Dos solicitudes simultáneas respetan la concurrencia y la cancelación libera el límite', async () => {
+  const lento = scriptEjecutable('lento.sh', 'exec sleep 30');
+  const servicio = servicioCon(lento, { timeoutMs: 60000 });
+  const primera = cancelacionDoble();
+  const activa = servicio.exportar(primera.control);
+  await assert.rejects(servicio.exportar(cancelacionDoble().control), /exportación de la base de datos en curso/);
+  primera.cancelar();
+  await assert.rejects(activa, /cancelada/);
+  assert.deepEqual(temporalesExportActivos(), []);
+  await assert.rejects(servicioCon(path.join(dirExport, 'no-existe')).exportar(cancelacionDoble().control), /mysqldump no está disponible/);
+});
+
+await test('El timeout termina el proceso sin dejar temporales ni concurrencia', async () => {
+  const lento = scriptEjecutable('lento2.sh', 'exec sleep 30');
+  const servicio = servicioCon(lento, { timeoutMs: 150 });
+  await assert.rejects(servicio.exportar(cancelacionDoble().control), /tiempo máximo/);
+  assert.deepEqual(temporalesExportActivos(), []);
+});
+
+await test('El límite de tamaño aborta la generación y limpia el temporal', async () => {
+  const grande = scriptEjecutable('grande.sh', 'dd if=/dev/urandom bs=65536 count=64 2>/dev/null');
+  const servicio = servicioCon(grande, { maxBytes: 20000 });
+  await assert.rejects(servicio.exportar(cancelacionDoble().control), /tamaño máximo/);
+  assert.deepEqual(temporalesExportActivos(), []);
+});
+
+await test('El fallo del binario se traduce a error tipado sin filtrar la contraseña', async () => {
+  const falla = scriptEjecutable('falla.sh', 'echo "mysqldump: Got error: 1045: Access denied for user (using password: YES)" >&2\nexit 2');
+  await assert.rejects(servicioCon(falla).exportar(cancelacionDoble().control), (error) => {
+    assert.ok(error instanceof ExportacionBaseDatosError);
+    assert.equal(error.motivo, 'FALLO');
+    assert.match(error.message, /No se pudo generar/);
+    assert.ok(error.detalle.includes('Access denied'));
+    assert.ok(!error.detalle.includes('p@ss'), 'el detalle interno oculta la contraseña');
+    return true;
+  });
+  assert.deepEqual(temporalesExportActivos(), []);
+});
+
+await test('mysqldump real lee credenciales con caracteres especiales desde el archivo de opciones', async () => {
+  const sonda = spawnSync('/usr/bin/mysqldump', ['--no-defaults', '--protocol=TCP', '--host=127.0.0.1', '--port=3306', '--user=sonda', '--password=sonda', '--databases', 'sonda'], { timeout: 8000 });
+  const salidaSonda = `${sonda.stderr?.toString() ?? ''}${sonda.stdout?.toString() ?? ''}`;
+  if (!/access denied/i.test(salidaSonda)) return;
+  const servicio = new MysqlDumpExportacionBaseDatosService(
+    { host: '127.0.0.1', port: 3306, usuario: 'sonda\'"user', password: 'p@ss"w%#x\\', base: 'aniei' },
+    { binario: '/usr/bin/mysqldump', timeoutMs: 15000, maxBytes: 10000000, directorioTemporal: dirExport },
+  );
+  await assert.rejects(servicio.exportar(cancelacionDoble().control), (error) => {
+    assert.ok(error instanceof ExportacionBaseDatosError);
+    assert.equal(error.motivo, 'FALLO');
+    assert.match(error.detalle ?? '', /access denied/i);
+    assert.ok(!(error.detalle ?? '').includes('p@ss"w%#x'), 'la contraseña real no aparece en el detalle');
+    return true;
+  });
+  assert.deepEqual(temporalesExportActivos(), []);
+});
+
+await test('Solicitantes no autorizados o de origen ajeno no alcanzan el servicio de exportación', async () => {
+  reportes.length = 0;
+  let llamadas = 0;
+  servicioExportacion = { exportar: async () => { llamadas++; throw new ExportacionBaseDatosError('FALLO'); } };
+  guardia.requireAdmin = async () => { throw new Error('UNAUTHORIZED'); };
+  let respuesta = await POST(solicitudExportar());
+  assert.equal(respuesta.status, 401);
+  guardia.requireAdmin = async () => { throw new Error('FORBIDDEN'); };
+  respuesta = await POST(solicitudExportar());
+  assert.equal(respuesta.status, 403);
+  guardia.requireAdmin = async () => ({ folioRegistro: 'ANI26-ADM' });
+  respuesta = await POST(solicitudExportar({ origin: 'https://evil.example' }));
+  assert.equal(respuesta.status, 403);
+  respuesta = await POST(solicitudExportar({ conOrigen: false }));
+  assert.equal(respuesta.status, 403);
+  assert.equal(llamadas, 0);
+  assert.deepEqual(reportes, []);
+  servicioExportacion = null;
+});
+
+await test('Los errores de exportación se traducen a códigos HTTP en español', async () => {
+  guardia.requireAdmin = async () => ({});
+  const casos = [
+    ['CONCURRENCIA', 409],
+    ['SIN_CONFIGURAR', 503],
+    ['BINARIO_NO_DISPONIBLE', 503],
+    ['TIMEOUT', 504],
+    ['TAMANO_EXCEDIDO', 413],
+    ['FALLO', 500],
+  ];
+  for (const [motivo, esperado] of casos) {
+    reportes.length = 0;
+    servicioExportacion = { exportar: async () => { throw new ExportacionBaseDatosError(motivo); } };
+    const respuesta = await POST(solicitudExportar());
+    assert.equal(respuesta.status, esperado, motivo);
+    const cuerpo = await respuesta.json();
+    assert.ok(cuerpo.error.length > 0, motivo);
+    if (motivo === 'CONCURRENCIA') assert.deepEqual(reportes, [], motivo);
+    else assert.equal(reportes.length, 1, motivo);
+  }
+  servicioExportacion = null;
+});
+
+await test('La respuesta exitosa entrega el gzip con cabeceras de adjunto y sin filtrar datos internos', async () => {
+  const bloques = [new Uint8Array([0x1f, 0x8b, 1]), new Uint8Array([2, 3])];
+  servicioExportacion = {
+    exportar: async () => ({
+      nombreArchivo: 'aniei-bd-2026-10-22_15-04-09-UTC.sql.gz',
+      tipoContenido: 'application/gzip',
+      tamanoBytes: 5,
+      contenido: (async function* () { for (const bloque of bloques) yield bloque; })(),
+      liberar: async () => {},
+    }),
+  };
+  const respuesta = await POST(solicitudExportar());
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.headers.get('content-type'), 'application/gzip');
+  const disposicion = respuesta.headers.get('content-disposition');
+  assert.ok(disposicion?.startsWith('attachment'));
+  assert.ok(disposicion?.includes('aniei-bd-2026-10-22_15-04-09-UTC.sql.gz'));
+  assert.equal(respuesta.headers.get('content-length'), '5');
+  assert.equal(respuesta.headers.get('cache-control'), 'private, no-store');
+  assert.equal(respuesta.headers.get('x-content-type-options'), 'nosniff');
+  const cuerpo = new Uint8Array(await respuesta.arrayBuffer());
+  assert.deepEqual([...cuerpo], [0x1f, 0x8b, 1, 2, 3]);
+  servicioExportacion = null;
+});
+
+await test('Un fallo durante la transmisión cierra el flujo, libera recursos y registra el error', async () => {
+  reportes.length = 0;
+  let liberada = 0;
+  servicioExportacion = {
+    exportar: async () => ({
+      nombreArchivo: 'x.sql.gz',
+      tipoContenido: 'application/gzip',
+      tamanoBytes: 9,
+      contenido: (async function* () { yield new Uint8Array([1]); throw new ExportacionBaseDatosError('TIMEOUT'); })(),
+      liberar: async () => { liberada++; },
+    }),
+  };
+  const respuesta = await POST(solicitudExportar());
+  assert.equal(respuesta.status, 200);
+  await assert.rejects(respuesta.arrayBuffer());
+  assert.equal(liberada, 1);
+  assert.equal(reportes.length, 1);
+  assert.match(reportes[0].contexto, /transmitir/);
+  servicioExportacion = null;
+});
+
+fs.rmSync(dirExport, { recursive: true, force: true });
