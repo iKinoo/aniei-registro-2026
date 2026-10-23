@@ -63,6 +63,7 @@ model actividades {
   costo                   Decimal?                  @default(0) @db.Decimal(10, 2)
   modalidad               Modalidad                 @default(PRESENCIAL)
   enlace_sesion           String?                   @db.VarChar(500)
+  activo                  Boolean                   @default(true)
   actividad_ponentes      actividad_ponentes[]
   actividad_horarios      actividad_horarios[]
   instituciones           instituciones?            @relation(fields: [id_institucion_sede], references: [id_institucion], onUpdate: NoAction)
@@ -140,7 +141,7 @@ model equipos {
   nombre_equipo      String               @db.VarChar(150)
   fecha_registro     DateTime?            @default(now()) @db.DateTime(6)
   equipo_integrantes equipo_integrantes[]
-  actividades        actividades          @relation(fields: [id_actividad], references: [id_actividad], onUpdate: NoAction)
+  actividades        actividades          @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   instituciones      instituciones?       @relation(fields: [id_institucion], references: [id_institucion], onUpdate: NoAction)
 }
 

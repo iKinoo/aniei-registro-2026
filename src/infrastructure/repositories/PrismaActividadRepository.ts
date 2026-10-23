@@ -28,6 +28,7 @@ function mapToDTO(row: any): ActividadDTO {
     sala: row.id_sala ?? null,
     modalidad: (row.modalidad ?? 'PRESENCIAL') as ModalidadActividad,
     enlaceSesion: row.enlace_sesion ?? null,
+    activo: row.activo ?? true,
     horarios: (row.actividad_horarios ?? []).map((h: { fecha_inicio: Date; fecha_fin: Date }) => ({
       fechaInicio: h.fecha_inicio.toISOString(),
       fechaFin: h.fecha_fin.toISOString(),
@@ -105,6 +106,7 @@ export class PrismaActividadRepository implements IActividadRepository {
         id_sala: data.sala?.trim() || null,
         modalidad: data.modalidad ?? 'PRESENCIAL',
         enlace_sesion: data.enlaceSesion?.trim() || null,
+        activo: data.activo ?? true,
         ...(horarios.length > 0 && { actividad_horarios: { create: horarios } }),
         ...tipoConnect,
         ...institucionConnect,
@@ -159,6 +161,7 @@ export class PrismaActividadRepository implements IActividadRepository {
         ...(data.sala !== undefined && { id_sala: data.sala?.trim() || null }),
         ...(data.modalidad !== undefined && { modalidad: data.modalidad }),
         ...(data.enlaceSesion !== undefined && { enlace_sesion: data.enlaceSesion?.trim() || null }),
+        ...(data.activo !== undefined && { activo: data.activo }),
         ...horariosUpdate,
         ...tipoUpdate,
         ...institucionUpdate,
@@ -167,6 +170,10 @@ export class PrismaActividadRepository implements IActividadRepository {
       include,
     });
     return mapToDTO(row);
+  }
+
+  async eliminar(id: number): Promise<void> {
+    await this.prisma.actividades.delete({ where: { id_actividad: id } });
   }
 
   async obtenerTiposActividad(): Promise<TipoActividad[]> {

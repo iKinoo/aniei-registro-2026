@@ -25,6 +25,7 @@ export class ConfirmarInscripciones {
     if (!usuario) throw RegistroError.DATOS_INVALIDOS('Usuario no encontrado');
     const rows = await Promise.all(ids.map(id => this.actividades.obtenerPorId(id)));
     if (rows.some(a => !a)) throw RegistroError.DATOS_INVALIDOS('Actividad no encontrada');
+    if (rows.some(a => a && !a.activo)) throw RegistroError.DATOS_INVALIDOS('Alguna de las actividades seleccionadas ya no está disponible');
     const actividades = rows.filter(a => a !== null).sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio));
     const total = actividades.reduce((sum, a) => sum + a.costo, 0);
     if (total > 0 && (!dto.deposito || !dto.archivo)) {

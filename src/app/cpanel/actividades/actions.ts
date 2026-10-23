@@ -5,12 +5,13 @@ import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarCatalogos } from '@/application/use-cases/ConsultarCatalogos';
 import { GestionarActividades } from '@/application/use-cases/GestionarActividades';
 import { CrearActividadDTO, ActualizarActividadDTO } from '@/application/dtos/ActividadDTO';
+import { RegistroError } from '@/core/errors/RegistroError';
 
 export async function getActividadesAction() {
   try {
     await requireAdmin();
     const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
-    const data = await useCase.listar();
+    const data = await useCase.listarTodas();
     return { success: true as const, data };
   } catch (error) {
     reportarErrorEnAccion('Error en getActividadesAction', error);
@@ -64,6 +65,36 @@ export async function actualizarActividadAction(id: number, data: ActualizarActi
   } catch (error) {
     reportarErrorEnAccion('Error en actualizarActividadAction', error);
     const msg = error instanceof Error ? error.message : 'Error al actualizar la actividad';
+    return { success: false as const, error: msg };
+  }
+}
+
+export async function cambiarActivoActividadAction(id: number, activo: boolean) {
+  try {
+    await requireAdmin();
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
+    const actividad = await useCase.cambiarEstadoActivo(id, activo);
+    return { success: true as const, data: actividad };
+  } catch (error) {
+    reportarErrorEnAccion(`Error en cambiarActivoActividadAction actividad ${id}`, error);
+    const msg = error instanceof RegistroError
+      ? error.message
+      : 'Error al cambiar el estado de la actividad';
+    return { success: false as const, error: msg };
+  }
+}
+
+export async function eliminarActividadAction(id: number) {
+  try {
+    await requireAdmin();
+    const useCase = new GestionarActividades(getActividadRepository(), getTransactionManager());
+    await useCase.eliminar(id);
+    return { success: true as const };
+  } catch (error) {
+    reportarErrorEnAccion(`Error en eliminarActividadAction actividad ${id}`, error);
+    const msg = error instanceof RegistroError
+      ? error.message
+      : 'Error al eliminar la actividad';
     return { success: false as const, error: msg };
   }
 }

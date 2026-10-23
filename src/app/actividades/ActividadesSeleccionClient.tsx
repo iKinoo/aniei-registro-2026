@@ -74,12 +74,18 @@ function ResumenHorarios({ a }: { a: ActividadDTO }) {
   if (a.horarios.length === 0) {
     return <>{formatFechaCorta(a.fechaInicio)} · {formatHora(a.fechaInicio)}{a.fechaInicio !== a.fechaFin && `–${formatHora(a.fechaFin)}`}</>;
   }
-  const primero = a.horarios[0];
+  if (a.horarios.length === 1) {
+    const h = a.horarios[0];
+    return <>{formatFechaCorta(h.fechaInicio)} · {formatHora(h.fechaInicio)}–{formatHora(h.fechaFin)}</>;
+  }
   return (
-    <>
-      {formatFechaCorta(primero.fechaInicio)} · {formatHora(primero.fechaInicio)}–{formatHora(primero.fechaFin)}
-      {a.horarios.length > 1 && ` (+${a.horarios.length - 1} horario${a.horarios.length - 1 === 1 ? '' : 's'})`}
-    </>
+    <span className="flex flex-col gap-0.5">
+      {a.horarios.map((h, i) => (
+        <span key={`${h.fechaInicio}-${h.fechaFin}-${i}`}>
+          {formatFechaCorta(h.fechaInicio)} · {formatHora(h.fechaInicio)}–{formatHora(h.fechaFin)}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -217,8 +223,8 @@ function ActividadCard({ actividad: a, isSelected, isInscrita, onToggle }: CardP
 
         {/* Meta info */}
         <div className="flex flex-wrap gap-3 text-xs text-slate-500 mb-4">
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className={`flex gap-1 ${a.horarios.length > 1 ? 'items-start' : 'items-center'}`}>
+            <svg className={`w-3.5 h-3.5 shrink-0 ${a.horarios.length > 1 ? 'mt-0.5' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <ResumenHorarios a={a} />

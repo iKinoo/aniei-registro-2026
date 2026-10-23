@@ -55,7 +55,7 @@ function storage() {
   };
 }
 const usuario = { nombre: 'Ana', apellido: 'Pérez', correo: { toString: () => 'ana@example.com' }, idInstitucion: null, idEntidadFederativa: 1 };
-const actividades = { obtenerPorId: async id => ({ idActividad: id, nombre: `Actividad ${id}`, costo: 100, fechaInicio: '2026-10-01T10:00:00Z' }) };
+const actividades = { obtenerPorId: async id => ({ idActividad: id, nombre: `Actividad ${id}`, costo: 100, fechaInicio: '2026-10-01T10:00:00Z', activo: true }) };
 const usuarios = { buscarPorId: async () => usuario };
 const email = { enviarConfirmacionActividades: async () => {}, enviarConfirmacionRegistro: async () => {}, enviarConfirmacionGrupoRapido: async () => {} };
 

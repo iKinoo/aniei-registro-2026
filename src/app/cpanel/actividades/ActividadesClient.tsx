@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ActividadDTO } from '@/application/dtos/ActividadDTO';
 import { TipoActividad, Institucion } from '@/application/dtos/CatalogosDTO';
-import { getActividadesAction } from './actions';
+import { getActividadesAction, cambiarActivoActividadAction, eliminarActividadAction } from './actions';
 import { ActividadModal } from './ActividadModal';
 
 function formatFecha(iso: string) {
@@ -32,6 +32,16 @@ const EyeIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+);
+const PowerIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.636 18.364a9 9 0 110-12.728m12.728 0a9 9 0 110 12.728m-9.9-9.236V3" />
+  </svg>
+);
+const TrashIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
 
@@ -85,6 +95,42 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   const [editingActividad, setEditingActividad] = useState<ActividadDTO | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<number | undefined>(undefined);
+  const [msg, setMsg] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null);
+  const [processingId, setProcessingId] = useState<number | null>(null);
+
+  async function handleToggleActivo(a: ActividadDTO) {
+    const nuevoEstado = !a.activo;
+    if (nuevoEstado === false && a.cupoOcupado > 0) {
+      if (!confirm(`¿Desactivar "${a.nombre}"?\n\nTiene ${a.cupoOcupado} participante(s) inscrito(s). La actividad dejará de verse en el catálogo, perfil y checkout, pero se conservarán las inscripciones.`)) return;
+    }
+    setProcessingId(a.idActividad);
+    setMsg(null);
+    const res = await cambiarActivoActividadAction(a.idActividad, nuevoEstado);
+    setProcessingId(null);
+    if (res.success) {
+      setMsg({ tipo: 'exito', texto: nuevoEstado ? `Actividad "${a.nombre}" activada.` : `Actividad "${a.nombre}" desactivada. Las inscripciones se conservan.` });
+      await refresh();
+    } else {
+      setMsg({ tipo: 'error', texto: res.error });
+    }
+  }
+
+  async function handleEliminar(a: ActividadDTO) {
+    const avisoInscritos = a.cupoOcupado > 0
+      ? `\n\n⚠ Tiene ${a.cupoOcupado} participante(s) inscrito(s), que TAMBIÉN se eliminarán. Si solo quieres ocultarla, usa "Desactivar".`
+      : '';
+    if (!confirm(`¿Eliminar definitivamente la actividad "${a.nombre}"?\n\nSe eliminarán en cascada sus inscripciones, ponentes, horarios, registros de asistencia y equipos. Esta acción no se puede deshacer.${avisoInscritos}`)) return;
+    setProcessingId(a.idActividad);
+    setMsg(null);
+    const res = await eliminarActividadAction(a.idActividad);
+    setProcessingId(null);
+    if (res.success) {
+      setMsg({ tipo: 'exito', texto: `Actividad "${a.nombre}" eliminada.` });
+      await refresh();
+    } else {
+      setMsg({ tipo: 'error', texto: res.error });
+    }
+  }
 
   const actividadesFiltradas = filtroTipo != null
     ? actividades.filter((a) => a.idTipoActividad === filtroTipo)
@@ -167,6 +213,13 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
           </div>
         </div>
 
+        {msg && (
+          <div className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${msg.tipo === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+            <span>{msg.texto}</span>
+            <button onClick={() => setMsg(null)} className="font-bold hover:opacity-70" aria-label="Cerrar">×</button>
+          </div>
+        )}
+
         <div className="rounded-2xl shadow-xl border border-slate-100 bg-white overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -203,10 +256,15 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                   </tr>
                 ) : (
                   actividadesFiltradas.map((a) => (
-                    <tr key={a.idActividad} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={a.idActividad} className={`transition-colors ${a.activo ? 'hover:bg-slate-50/80' : 'bg-slate-50/70 opacity-70 hover:opacity-90'}`}>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-0.5">
                           <span className="font-semibold text-slate-900">{a.nombre}</span>
+                          {!a.activo && (
+                            <span className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-rose-100 text-rose-700">
+                              Inactiva
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4"><TipoBadge tipo={a.tipoActividad} /></td>
@@ -254,7 +312,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 flex-wrap">
                           <Link
                             href={`/cpanel/actividades/${a.idActividad}`}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-xs font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
@@ -278,6 +336,24 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 text-xs font-medium text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
                           >
                             <EditIcon /> Editar
+                          </button>
+                          <button
+                            id={`btn-activo-${a.idActividad}`}
+                            onClick={() => handleToggleActivo(a)}
+                            disabled={processingId === a.idActividad}
+                            title={a.activo ? 'Desactivar: se oculta en las pantallas de usuario pero conserva inscritos' : 'Activar: vuelve a ser visible para los usuarios'}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait ${a.activo ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}
+                          >
+                            <PowerIcon /> {a.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                          <button
+                            id={`btn-eliminar-${a.idActividad}`}
+                            onClick={() => handleEliminar(a)}
+                            disabled={processingId === a.idActividad}
+                            title="Eliminar definitivamente la actividad y todos sus datos asociados (inscritos, ponentes, horarios, equipos)"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rose-200 text-xs font-medium text-rose-600 rounded-lg hover:bg-rose-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            <TrashIcon /> Eliminar
                           </button>
                         </div>
                       </td>

@@ -67,6 +67,8 @@ export interface ActividadDTO {
   modalidad: ModalidadActividad;
   enlaceSesion: string | null;
   horarios: HorarioActividadDTO[];
+  /** false = desactivada (soft-delete): oculta en pantallas de usuario, conserva inscritos. */
+  activo: boolean;
   // Relations
   tipoActividad: { idTipoActividad: number; descripcion: string; clave: string | null; manejaEquipos: boolean; generaConstanciaParticipante: boolean } | null;
   institucionSede: { idInstitucion: number; nombre: string; abreviatura: string | null } | null;
@@ -87,6 +89,7 @@ export interface CrearActividadDTO {
   modalidad?: ModalidadActividad;
   enlaceSesion?: string | null;
   horarios?: HorarioActividadDTO[];
+  activo?: boolean;
   // Optional detail sections
   costo?: number;
 }

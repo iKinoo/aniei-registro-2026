@@ -6,5 +6,6 @@ export interface IActividadRepository {
   obtenerPorId(id: number): Promise<ActividadDTO | null>;
   crear(data: CrearActividadDTO): Promise<ActividadDTO>;
   actualizar(id: number, data: ActualizarActividadDTO): Promise<ActividadDTO>;
+  eliminar(id: number): Promise<void>;
   obtenerTiposActividad(): Promise<TipoActividad[]>;
 }

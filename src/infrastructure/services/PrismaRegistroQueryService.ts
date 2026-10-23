@@ -41,7 +41,7 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
       inscripciones: inscripciones.map(i => ({
         idInscripcion: i.id_inscripcion, idActividad: i.id_actividad, fechaInscripcion: i.fecha_inscripcion ?? u.fecha_registro ?? new Date(),
         urlConstancia: i.url_constancia,
-        actividad: i.actividades ? {
+        actividad: i.actividades && i.actividades.activo ? {
           nombre: i.actividades.nombre, costo: Number(i.actividades.costo ?? 0), fechaInicio: i.actividades.fecha_inicio,
           fechaFin: i.actividades.fecha_fin,
           sala: i.actividades.id_sala,
@@ -64,7 +64,7 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
     const detalle = await this.obtenerDetalle(folio);
     if (!detalle) return null;
     const equipos = await this.prisma.equipo_integrantes.findMany({
-      where: { folio_registro: folio }, include: { equipos: { include: { actividades: true } } },
+      where: { folio_registro: folio, equipos: { actividades: { activo: true } } }, include: { equipos: { include: { actividades: true } } },
     });
     return { ...detalle, equipos: equipos.map(e => ({
       esRepresentante: e.es_representante,

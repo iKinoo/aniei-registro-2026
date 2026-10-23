@@ -221,7 +221,14 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
             ← Volver
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">{actividad.nombre}</h1>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">
+              {actividad.nombre}
+              {!actividad.activo && (
+                <span className="ml-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-rose-100 text-rose-700 align-middle">
+                  Inactiva
+                </span>
+              )}
+            </h1>
             <p className="text-slate-300 mt-1">{nombreTipo}</p>
           </div>
           <button

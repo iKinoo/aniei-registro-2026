@@ -2,6 +2,7 @@ import { IActividadRepository } from '@/application/ports/IActividadRepository';
 import { ITransactionManager } from '@/application/ports/ITransactionManager';
 import { ActividadDTO, CrearActividadDTO, ActualizarActividadDTO, HorarioActividadDTO } from '@/application/dtos/ActividadDTO';
 import { TipoActividad } from '@/application/dtos/CatalogosDTO';
+import { RegistroError } from '@/core/errors/RegistroError';
 
 function validarHorarios(horarios: HorarioActividadDTO[]): void {
   for (const h of horarios) {
@@ -41,6 +42,12 @@ export class GestionarActividades {
   ) {}
 
   async listar(): Promise<ActividadDTO[]> {
+    const todas = await this.actividadRepo.listar();
+    return todas.filter(a => a.activo);
+  }
+
+  /** Incluye desactivadas. Solo para pantallas de administración. */
+  async listarTodas(): Promise<ActividadDTO[]> {
     return this.actividadRepo.listar();
   }
 
@@ -50,11 +57,11 @@ export class GestionarActividades {
 
   async obtenerPorIds(ids: number[]): Promise<ActividadDTO[]> {
     const rows = await Promise.all([...new Set(ids)].map(id => this.actividadRepo.obtenerPorId(id)));
-    return rows.filter(a => a !== null);
+    return rows.filter((a): a is ActividadDTO => a !== null && a.activo);
   }
 
   async listarPorCategoria(categoria: string): Promise<ActividadDTO[]> {
-    const todas = await this.actividadRepo.listar();
+    const todas = await this.listar();
     if (categoria !== 'disponibles') return todas.filter(a => a.tipoActividad?.clave?.toLowerCase() === categoria);
     return todas.filter(a => {
       const clave = a.tipoActividad?.clave?.toLowerCase() ?? '';
@@ -120,6 +127,27 @@ export class GestionarActividades {
     }
 
     return this.txManager.run((ctx) => ctx.actividadRepo.actualizar(id, changes));
+  }
+
+  async cambiarEstadoActivo(id: number, activo: boolean): Promise<ActividadDTO> {
+    const existente = await this.actividadRepo.obtenerPorId(id);
+    if (!existente) {
+      throw RegistroError.DATOS_INVALIDOS('La actividad no existe');
+    }
+    return this.txManager.run((ctx) => ctx.actividadRepo.actualizar(id, { activo }));
+  }
+
+  /**
+   * Borrado definitivo en cascada: elimina inscripciones, ponentes, horarios,
+   * registros de asistencia y equipos de la actividad. Para ocultar una actividad
+   * conservando sus inscritos, usar cambiarEstadoActivo(false).
+   */
+  async eliminar(id: number): Promise<void> {
+    const existente = await this.actividadRepo.obtenerPorId(id);
+    if (!existente) {
+      throw RegistroError.DATOS_INVALIDOS('La actividad no existe');
+    }
+    await this.txManager.run((ctx) => ctx.actividadRepo.eliminar(id));
   }
 
   async obtenerTiposActividad(): Promise<TipoActividad[]> {
