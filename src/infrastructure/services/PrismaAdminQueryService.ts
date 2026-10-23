@@ -1,7 +1,9 @@
 import { PrismaClient, Prisma } from '@/generated/prisma/client';
 import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
+import { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
+import { mapGrupoAdmin } from '@/infrastructure/mappers/GrupoAdminMapper';
 
 const USUARIO_INCLUDE = {
   instituciones: true,
@@ -14,6 +16,27 @@ const USUARIO_INCLUDE = {
 } satisfies Prisma.usuariosInclude;
 
 type UsuarioConRelaciones = Prisma.usuariosGetPayload<{ include: typeof USUARIO_INCLUDE }>;
+
+const GRUPO_INCLUDE = {
+  responsable: {
+    include: {
+      depositos: {
+        where: { proposito: 'GRUPO_RAPIDO' },
+        orderBy: { id_deposito: 'desc' },
+      },
+    },
+  },
+  miembros: {
+    select: {
+      folio_registro: true,
+      nombre: true,
+      apellido: true,
+      correo: true,
+      carrera: true,
+    },
+    orderBy: { folio_registro: 'asc' },
+  },
+} satisfies Prisma.grupos_registroInclude;
 
 export class PrismaAdminQueryService implements IAdminQueryService {
   constructor(private readonly prisma: PrismaClient) { }
@@ -75,6 +98,48 @@ export class PrismaAdminQueryService implements IAdminQueryService {
     });
 
     return usuarios.map((user) => this.mapearUsuario(user));
+  }
+
+  async obtenerGruposForAdmin(
+    page: number,
+    limit: number,
+    search?: string
+  ): Promise<PaginatedResult<GrupoForAdminDTO>> {
+    const skip = (page - 1) * limit;
+
+    const whereClause: Prisma.grupos_registroWhereInput = search
+      ? {
+        OR: [
+          { folio_registro_responsable: { contains: search } },
+          { responsable: { nombre: { contains: search } } },
+          { responsable: { apellido: { contains: search } } },
+          { responsable: { correo: { contains: search } } },
+          { miembros: { some: { folio_registro: { contains: search } } } },
+          { miembros: { some: { nombre: { contains: search } } } },
+          { miembros: { some: { apellido: { contains: search } } } },
+          { miembros: { some: { correo: { contains: search } } } },
+        ],
+      }
+      : {};
+
+    const [total, grupos] = await Promise.all([
+      this.prisma.grupos_registro.count({ where: whereClause }),
+      this.prisma.grupos_registro.findMany({
+        where: whereClause,
+        include: GRUPO_INCLUDE,
+        orderBy: [{ fecha_registro: 'desc' }, { id: 'desc' }],
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data: grupos.map(mapGrupoAdmin),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   private mapearUsuario(user: UsuarioConRelaciones): UsuarioForAdminDTO {

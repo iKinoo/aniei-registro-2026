@@ -33,7 +33,7 @@ export async function loginAction(_prevState: { success: boolean; error?: string
   const role = result.role ?? 'USER';
 
   if (role === 'ADMIN') {
-    redirect('/cpanel');
+    redirect('/cpanel/usuarios');
   } else {
     redirect('/perfil');
   }

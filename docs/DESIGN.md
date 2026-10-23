@@ -204,14 +204,17 @@ src/
 │   ├── components/HistorialDepositos.tsx
 │   └── cpanel/                       # ── Panel de Administración ──
 │       ├── layout.tsx
-│       ├── page.tsx                  # Gestión de usuarios (búsqueda + paginación + reenvío constancia + URL firmada)
+│       ├── page.tsx                  # Redirección a /cpanel/usuarios
 │       ├── actions.ts                # getUsuariosAdminAction, reenviarConstanciaAction, obtenerUrlArchivoAction
 │       ├── logoutAction.ts
 │       ├── actividades/
 │       │   ├── page.tsx
 │       │   └── [id]/page.tsx
 │       ├── configuracion/page.tsx    # Precios escalonados
-│       └── usuarios/[folio]/page.tsx # Detalle depósitos de usuario
+│       └── usuarios/
+│           ├── page.tsx             # Gestión de usuarios y acceso a grupos
+│           ├── grupos/page.tsx      # Grupos, miembros, responsable y comprobante
+│           └── [folio]/page.tsx     # Detalle depósitos de usuario
 │
 ├── core/                         # ── DOMAIN LAYER (puro TypeScript) ──
 │   ├── entities/
@@ -1322,7 +1325,7 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 La autenticación usa **NextAuth v5** con **Credentials** y tabla `accesos` (bcrypt):
 
 ```
-app/login/                  → Formulario login (público, redirige a /cpanel o /perfil si ya autenticado)
+app/login/                  → Formulario login (público, redirige a /cpanel/usuarios o /perfil si ya autenticado)
 app/api/auth/[...nextauth]/ → Handlers NextAuth (JWT)
 proxy.ts                    → Middleware Auth (NextAuth) — protege /cpanel, /perfil, /actividades, /registro
 auth.ts / auth.config.ts    → Configuración (session jwt, callbacks jwt/session, pages signIn /login)
@@ -1360,7 +1363,9 @@ El CPanel (`/cpanel`) es dashboard protegido (`proxy.ts:37` requiere `ADMIN`):
 
 | Ruta                       | Funcionalidad                                              |
 |----------------------------|------------------------------------------------------------|
-| `/cpanel`                  | Gestión de usuarios: búsqueda insensible, paginación, reenvío constancia, URL firmada de comprobante |
+| `/cpanel`                  | Redirección a `/cpanel/usuarios`                           |
+| `/cpanel/usuarios`         | Gestión de usuarios: búsqueda, paginación y acceso a grupos |
+| `/cpanel/usuarios/grupos`  | Grupos registrados: miembros, responsable, depósito y comprobante firmado |
 | `/cpanel/actividades`      | CRUD de actividades                                        |
 | `/cpanel/actividades/[id]` | Detalle de actividad + gestión de ponentes                 |
 | `/cpanel/configuracion`    | Precios escalonados (`GestionarPrecios`)                   |
@@ -1373,6 +1378,8 @@ El CPanel (`/cpanel`) es dashboard protegido (`proxy.ts:37` requiere `ADMIN`):
 - **Gestión de ponentes** (`IPonentesRepository`).
 - **Gestión de precios** (`GestionarPrecios` con límite 3 niveles).
 - **Acceso a archivos protegidos** (`obtenerUrlArchivoAction` → `ObtenerAccesoArchivo` → `SupabaseStorageService.getAccess` con `createSignedUrl(5min)`).
+
+La consulta de grupos sigue `getGruposAdminAction → ObtenerGruposForAdmin → IAdminQueryService ← PrismaAdminQueryService`, con `requireAdmin` y validación de filtros en la acción. El mapper vincula cada depósito `GRUPO_RAPIDO` mediante el token presente en `comprobantes_grupo/{token}.ext`; usar el último depósito del responsable mezclaría pagos de grupos distintos. El responsable se muestra por separado de los miembros. El esquema actual no tiene una clave foránea entre grupo y depósito; si cambia la convención de almacenamiento, deberá incorporarse una relación explícita y migrar los registros existentes.
 
 ### 14.3 Servicio de Consultas Admin
 
@@ -1837,7 +1844,9 @@ NEXT_PUBLIC_BASE_URL="https://aniei-registro-2026.vercel.app" # para QR de grupo
 | `/grupo-completar/[token]/usuario/[folio]` | `app/grupo-completar/[token]/usuario/[folio]/page.tsx` | No | Completar miembro |
 | `/actividades` | `app/actividades/page.tsx` | Sí (`proxy.ts:52`) | Listado actividades |
 | `/actividades/checkout` | `app/actividades/checkout/page.tsx` | Sí | Checkout inscripción actividades |
-| `/cpanel` | `app/cpanel/page.tsx` | `ADMIN` (`proxy.ts:37`) | Gestión usuarios |
+| `/cpanel` | `app/cpanel/page.tsx` | `ADMIN` | Redirige a usuarios |
+| `/cpanel/usuarios` | `app/cpanel/usuarios/page.tsx` | `ADMIN` | Gestión de usuarios |
+| `/cpanel/usuarios/grupos` | `app/cpanel/usuarios/grupos/page.tsx` | `ADMIN` | Grupos, miembros, responsable y depósito |
 | `/cpanel/actividades` | `app/cpanel/actividades/page.tsx` | `ADMIN` | CRUD actividades |
 | `/cpanel/actividades/[id]` | `app/cpanel/actividades/[id]/page.tsx` | `ADMIN` | Detalle + ponentes |
 | `/cpanel/configuracion` | `app/cpanel/configuracion/page.tsx` | `ADMIN` | Precios |

@@ -18,7 +18,7 @@ export default auth((req) => {
   if (isAuthRoute) {
     if (isLoggedIn) {
       if (role === 'ADMIN') {
-        return NextResponse.redirect(new URL('/cpanel', req.nextUrl));
+        return NextResponse.redirect(new URL('/cpanel/usuarios', req.nextUrl));
       }
       return NextResponse.redirect(new URL('/perfil', req.nextUrl));
     }
@@ -27,7 +27,7 @@ export default auth((req) => {
 
   if (isRegistroRoute && isLoggedIn) {
     if (role === 'ADMIN') {
-      return NextResponse.redirect(new URL('/cpanel', req.nextUrl));
+      return NextResponse.redirect(new URL('/cpanel/usuarios', req.nextUrl));
     }
     return NextResponse.redirect(new URL('/perfil', req.nextUrl));
   }

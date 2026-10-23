@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/auth';
 import { getRegistroQueryService } from '@/infrastructure/config/container';
 import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
@@ -208,9 +209,9 @@ export default async function PerfilPage() {
 
           <div className={styles.actions}>
             {session?.user?.role === 'ADMIN' && (
-              <a href="/cpanel" className={styles.btnPrimary}>
+              <Link href="/cpanel/usuarios" className={styles.btnPrimary}>
                 Panel de administración
-              </a>
+              </Link>
             )}
             {inscripciones.length > 0 && (
               <>

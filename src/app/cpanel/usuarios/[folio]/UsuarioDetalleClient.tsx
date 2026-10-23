@@ -113,7 +113,7 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
     setIsDeleting(false);
     if (result.success) {
       setDeleteDialog(false);
-      router.push('/cpanel');
+      router.push('/cpanel/usuarios');
       router.refresh();
     } else {
       alert(result.error);
@@ -201,7 +201,7 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/cpanel" className="text-sm text-slate-300 hover:text-white mb-2 inline-block">
+          <Link href="/cpanel/usuarios" className="text-sm text-slate-300 hover:text-white mb-2 inline-block">
             Volver al panel
           </Link>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">{nombreCompleto}</h1>
