@@ -24,6 +24,8 @@ import { ReactPdfService } from '@/infrastructure/services/pdf/ReactPdfService';
 import { SupabaseStorageService } from '@/infrastructure/services/storage/SupabaseStorageService';
 import { LocalFilesystemStorageService } from '@/infrastructure/services/storage/LocalFilesystemStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
+import { ExcelJsService } from '@/infrastructure/services/excel/ExcelJsService';
+import type { IExcelService } from '@/application/ports/IExcelService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IAuthService } from '@/application/ports/IAuthService';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
@@ -88,6 +90,10 @@ export function getEmailService(): IEmailService {
 
 export function getPdfService(): IPdfService {
   return new ReactPdfService();
+}
+
+export function getExcelService(): IExcelService {
+  return new ExcelJsService();
 }
 
 export function getStorageService(): IStorageService {

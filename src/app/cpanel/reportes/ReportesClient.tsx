@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, InstitucionReporteItem } from './actions';
+import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, generarListaUsuariosXlsAction, InstitucionReporteItem } from './actions';
 
 const DownloadIcon = () => (
   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,11 +16,24 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+const descargarBase64 = (base64: string, nombreArchivo: string, mime: string) => {
+  const blob = new Blob([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export function ReportesClient() {
   const [instituciones, setInstituciones] = useState<InstitucionReporteItem[]>([]);
   const [totalParticipantes, setTotalParticipantes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [loadingXls, setLoadingXls] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -42,20 +55,27 @@ export function ReportesClient() {
       const result = await generarReporteInstitucionesPdfAction();
       if (result.success) {
         const { base64, nombreArchivo } = result.data;
-        const blob = new Blob([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = nombreArchivo;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        descargarBase64(base64, nombreArchivo, 'application/pdf');
       } else {
         alert(result.error);
       }
     } finally {
       setLoadingPdf(false);
+    }
+  };
+
+  const handleDescargarXls = async () => {
+    setLoadingXls(true);
+    try {
+      const result = await generarListaUsuariosXlsAction();
+      if (result.success) {
+        const { base64, nombreArchivo } = result.data;
+        descargarBase64(base64, nombreArchivo, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setLoadingXls(false);
     }
   };
 
@@ -180,6 +200,34 @@ export function ReportesClient() {
             </table>
           </div>
         )}
+      </div>
+      {/* Lista total de usuarios */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Lista de Usuarios Registrados</h3>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Descargar la lista completa de participantes en formato Excel.
+            </p>
+          </div>
+          <button
+            onClick={handleDescargarXls}
+            disabled={loadingXls || loading}
+            className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {loadingXls ? (
+              <>
+                <SpinnerIcon />
+                Generando...
+              </>
+            ) : (
+              <>
+                <DownloadIcon />
+                Descargar XLS
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

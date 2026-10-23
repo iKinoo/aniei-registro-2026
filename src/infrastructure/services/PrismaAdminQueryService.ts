@@ -3,6 +3,18 @@ import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
 
+const USUARIO_INCLUDE = {
+  instituciones: true,
+  titulos: true,
+  depositos: {
+    where: { proposito: 'EVENTO_PRINCIPAL' },
+    orderBy: { fecha_registro: 'desc' },
+    take: 1, // Get only the most recent deposit
+  },
+} satisfies Prisma.usuariosInclude;
+
+type UsuarioConRelaciones = Prisma.usuariosGetPayload<{ include: typeof USUARIO_INCLUDE }>;
+
 export class PrismaAdminQueryService implements IAdminQueryService {
   constructor(private readonly prisma: PrismaClient) { }
 
@@ -40,51 +52,52 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       this.prisma.usuarios.count({ where: whereClause }),
       this.prisma.usuarios.findMany({
         where: whereClause,
-        include: {
-          instituciones: true,
-          titulos: true,
-          depositos: {
-            where: { proposito: 'EVENTO_PRINCIPAL' },
-            orderBy: { fecha_registro: 'desc' },
-            take: 1, // Get only the most recent deposit
-          },
-        },
+        include: USUARIO_INCLUDE,
         orderBy: { fecha_registro: 'desc' },
         skip,
         take: limit,
       }),
     ]);
 
-    const data: UsuarioForAdminDTO[] = usuarios.map((user) => {
-      const dep = user.depositos.length > 0 ? user.depositos[0] : null;
-
-      return {
-        folioRegistro: user.folio_registro,
-        nombreCompleto: `${user.nombre} ${user.apellido}`,
-        correo: user.correo,
-        telefono: user.telefono || null,
-        institucion: user.instituciones?.nombre || 'Desconocida',
-        tipoUsuario: user.titulos?.descripcion || 'Desconocido',
-        fechaRegistro: user.fecha_registro || new Date(),
-        deposito: dep
-          ? {
-            monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number
-            fecha: dep.fecha_deposito,
-            referencia: dep.referencia,
-            archivo: {
-              ruta: dep.archivo_url,
-            },
-          }
-          : null,
-      };
-    });
-
     return {
-      data,
+      data: usuarios.map((user) => this.mapearUsuario(user)),
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async listarTodosUsuariosForAdmin(): Promise<UsuarioForAdminDTO[]> {
+    const usuarios = await this.prisma.usuarios.findMany({
+      include: USUARIO_INCLUDE,
+      orderBy: { fecha_registro: 'desc' },
+    });
+
+    return usuarios.map((user) => this.mapearUsuario(user));
+  }
+
+  private mapearUsuario(user: UsuarioConRelaciones): UsuarioForAdminDTO {
+    const dep = user.depositos.length > 0 ? user.depositos[0] : null;
+
+    return {
+      folioRegistro: user.folio_registro,
+      nombreCompleto: `${user.nombre} ${user.apellido}`,
+      correo: user.correo,
+      telefono: user.telefono || null,
+      institucion: user.instituciones?.nombre || 'Desconocida',
+      tipoUsuario: user.titulos?.descripcion || 'Desconocido',
+      fechaRegistro: user.fecha_registro || new Date(),
+      deposito: dep
+        ? {
+          monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number
+          fecha: dep.fecha_deposito,
+          referencia: dep.referencia,
+          archivo: {
+            ruta: dep.archivo_url,
+          },
+        }
+        : null,
     };
   }
 }

@@ -1,8 +1,9 @@
 'use server';
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
-import { reportarErrorEnAccion, getRegistroQueryService, getPdfService } from '@/infrastructure/config/container';
+import { reportarErrorEnAccion, getRegistroQueryService, getPdfService, getAdminQueryService, getExcelService } from '@/infrastructure/config/container';
 import { GenerarReporteInstituciones } from '@/application/use-cases/GenerarReporteInstituciones';
+import { GenerarListaUsuariosXls } from '@/application/use-cases/GenerarListaUsuariosXls';
 import type { InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 
 export type { InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
@@ -32,3 +33,17 @@ export async function generarReporteInstitucionesPdfAction(): Promise<
     return { success: false, error: 'Error al generar el reporte' };
   }
 }
+
+export async function generarListaUsuariosXlsAction(): Promise<
+  { success: true; data: { base64: string; nombreArchivo: string } } | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+    const xls = await new GenerarListaUsuariosXls(getAdminQueryService(), getExcelService()).generar();
+    return { success: true, data: { base64: Buffer.from(xls).toString('base64'), nombreArchivo: 'lista_usuarios_registrados.xlsx' } };
+  } catch (error) {
+    reportarErrorEnAccion('Error al generar lista de usuarios en Excel', error);
+    return { success: false, error: 'Error al generar la lista de usuarios' };
+  }
+}
+

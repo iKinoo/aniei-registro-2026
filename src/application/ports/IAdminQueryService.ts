@@ -8,4 +8,5 @@ export interface IAdminQueryService {
     search?: string,
     idInstitucion?: number
   ): Promise<PaginatedResult<UsuarioForAdminDTO>>;
+  listarTodosUsuariosForAdmin(): Promise<UsuarioForAdminDTO[]>;
 }
