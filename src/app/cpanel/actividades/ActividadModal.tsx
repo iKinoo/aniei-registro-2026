@@ -15,11 +15,23 @@ interface HorarioRow {
 
 const vacioHorario = (): HorarioRow => ({ fecha: '', horaInicio: '', horaFin: '' });
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+function fechaLocal(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function horaLocal(d: Date): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 function horarioToFila(fechaInicio: string, fechaFin: string): HorarioRow {
+  const inicio = new Date(fechaInicio);
+  const fin = new Date(fechaFin);
   return {
-    fecha: fechaInicio.slice(0, 10),
-    horaInicio: fechaInicio.slice(11, 16),
-    horaFin: fechaFin.slice(11, 16),
+    fecha: fechaLocal(inicio),
+    horaInicio: horaLocal(inicio),
+    horaFin: horaLocal(fin),
   };
 }
 
