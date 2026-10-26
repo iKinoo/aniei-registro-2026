@@ -10,6 +10,8 @@ import { gunzipSync } from 'node:zlib';
 import ts from 'typescript';
 import { verificarArquitectura } from './check-architecture.mjs';
 
+process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+
 const root = path.resolve('src');
 const nativeRequire = createRequire(import.meta.url);
 const cache = new Map();
