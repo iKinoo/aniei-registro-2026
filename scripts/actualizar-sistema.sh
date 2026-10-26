@@ -1,3 +1,131 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# ANIEI 2026 - despliegue con sudo (root instala; aniei ejecuta).
+# Uso: sudo ./scripts/actualizar-sistema.sh [--yes] [--force]
+# PRECAUCION: este despliegue detiene la aplicacion durante instalacion/build.
+# NO revierte migraciones de BD ni garantiza recuperacion frente a fallos del disco.
+
+APP_DIR="/opt/aniei-registro-2026"
+SERVICE="aniei"
+RUNTIME_USER="aniei"
+RUNTIME_GROUP="aniei"
+REMOTO="origin"
+RAMA="main"
+EJECUTAR_TEST_FLOWS=1
+LOG_DIR="/var/log/aniei"
+LOCK_FILE="/run/lock/aniei-actualizacion.lock"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/}"
+HEALTH_REINTENTOS=15
+HEALTH_INTERVALO=2
+
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+err() { printf '[%s] ERROR: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >&2; }
+fail() { err "$*"; exit 1; }
+
+CONFIRMADO=0
+FORZAR=0
+ETAPA="Preparacion"
+PREV_SHA=""
+DESPLIEGUE_INICIADO=0
+SERVICIO_ANTES_ACTIVO=0
+MIGRACIONES_INICIADAS=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) CONFIRMADO=1 ;;
+    --force|-f) FORZAR=1 ;;
+    *) fail "Opcion desconocida: $arg" ;;
+  esac
+done
+
+(( EUID == 0 )) || fail "Ejecuta con sudo (root)."
+umask 077
+mkdir -p -- "$LOG_DIR"
+LOG_FILE="$LOG_DIR/actualizacion-$(date +%Y%m%d-%H%M%S)-$$.log"
+touch -- "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# Se confia SOLO en este repositorio fijo durante este comando Git.
+# Evita alterar globalmente safe.directory en root.
+git_app() { git -c "safe.directory=$APP_DIR" "$@"; }
+
+# Prisma CLI necesita variables; no evalua shell del .env.local.
+# Se excluyen variables que alterarian la ejecucion del despliegue.
+cargar_env_local() {
+  local archivo="$1" linea clave valor
+  while IFS= read -r linea || [[ -n "$linea" ]]; do
+    linea="${linea%$'\r'}"
+    [[ "$linea" =~ ^[[:space:]]*($|#) ]] && continue
+    [[ "$linea" == *=* ]] || continue
+    clave="${linea%%=*}"
+    valor="${linea#*=}"
+    [[ "$clave" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*$ ]] || continue
+    clave="${BASH_REMATCH[1]}"
+    case "$clave" in
+      PATH|HOME|SHELL|IFS|BASH_ENV|ENV|LD_*|NODE_OPTIONS|NPM_CONFIG_*|npm_config_*|GIT_*) continue ;;
+    esac
+    if [[ "$valor" =~ ^\"(.*)\"$ || "$valor" =~ ^\'(.*)\'$ ]]; then
+      valor="${valor:1:${#valor}-2}"
+    fi
+    export "$clave=$valor"
+  done < "$archivo"
+}
+
+mostrar_diagnostico() {
+  systemctl status "$SERVICE" --no-pager --full || true
+  journalctl -u "$SERVICE" -n 40 --no-pager -o short-iso || true
+}
+
+verificar_salud() {
+  local i
+  for ((i=1;i<=HEALTH_REINTENTOS;i++)); do
+    if systemctl is-active --quiet "$SERVICE" && \
+       curl -fsSL --max-redirs 3 --max-time 5 -o /dev/null "$HEALTH_URL"; then
+      log "Servicio activo y comprobacion HTTP satisfactoria: $HEALTH_URL"
+      return 0
+    fi
+    if (( i < HEALTH_REINTENTOS )); then
+      log "Esperando arranque ($i/$HEALTH_REINTENTOS)..."
+      sleep "$HEALTH_INTERVALO"
+    fi
+  done
+  return 1
+}
+
+# ROOT instala y compila. Se otorga acceso por grupo SOLO a los
+# artefactos del runtime. No hay chmod -R a+rX sobre todo el proyecto.
+preparar_permisos_runtime() {
+  log "Preparando permisos para $RUNTIME_USER..."
+  [[ -d node_modules && -d .next ]] || { err "Faltan node_modules o .next"; return 1; }
+  
+  # Permitir atravesar el directorio del proyecto sin cambiar propietario.
+  chgrp "$RUNTIME_GROUP" "$APP_DIR" || return 1
+  chmod g+rx "$APP_DIR" || return 1
+
+  chgrp -R "$RUNTIME_GROUP" node_modules .next || return 1
+  chmod -R g+rX node_modules .next || return 1
+  # Next puede requerir escribir en cache de imagenes durante el runtime.
+  mkdir -p .next/cache || return 1
+  chgrp -R "$RUNTIME_GROUP" .next/cache || return 1
+  chmod -R g+rwX .next/cache || return 1
+  chmod g+s .next/cache || return 1
+
+  # Next carga .env.local durante el runtime (si existe).
+  if [[ -f .env.local ]]; then
+    chgrp "$RUNTIME_GROUP" .env.local || return 1
+    chmod 640 .env.local || return 1
+  fi
+
+  if ! runuser -u "$RUNTIME_USER" -- "$APP_DIR/node_modules/.bin/next" --version; then
+    err "El usuario $RUNTIME_USER no puede ejecutar Next.js"
+    return 1
+  fi
+  if [[ -f .next/BUILD_ID ]] && ! runuser -u "$RUNTIME_USER" -- test -r "$APP_DIR/.next/BUILD_ID"; then
+    err "El usuario $RUNTIME_USER no puede leer el build"
+    return 1
+  fi
+}
 
 restaurar_anterior() {
   err "Intentando restaurar $PREV_SHA..."
@@ -120,3 +248,4 @@ DESPLIEGUE_INICIADO=0
 log "Actualizacion finalizada. Commit $(git_app rev-parse --short HEAD)"
 log "Servicio: $(systemctl is-active "$SERVICE")"
 log "Registro: $LOG_FILE"
+
