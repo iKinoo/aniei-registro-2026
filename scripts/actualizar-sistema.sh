@@ -104,13 +104,32 @@ preparar_permisos_runtime() {
   chgrp "$RUNTIME_GROUP" "$APP_DIR" || return 1
   chmod g+rx "$APP_DIR" || return 1
 
+  # npm start necesita leer package.json ANTES de invocar Next.js.
+  # npm ci / git checkout pueden regenerarlo con umask 077.
+  chgrp "$RUNTIME_GROUP" package.json || return 1
+  chmod 640 package.json || return 1
+
   chgrp -R "$RUNTIME_GROUP" node_modules .next || return 1
   chmod -R g+rX node_modules .next || return 1
   # Next puede requerir escribir en cache de imagenes durante el runtime.
   mkdir -p .next/cache || return 1
   chgrp -R "$RUNTIME_GROUP" .next/cache || return 1
   chmod -R g+rwX .next/cache || return 1
-  chmod g+s .next/cache || return 1
+  # Asegurar herencia de grupo para directorios de cache creados en runtime.
+  find .next/cache -type d -exec chmod g+s {} + || return 1
+
+  # Recursos estaticos de la app (si existen).
+  if [[ -d public ]]; then
+    chgrp -R "$RUNTIME_GROUP" public || return 1
+    chmod -R g+rX public || return 1
+  fi
+
+  # Prisma generado puede importarse en runtime fuera de node_modules.
+  if [[ -d src/generated/prisma ]]; then
+    chgrp -R "$RUNTIME_GROUP" src/generated/prisma || return 1
+    chmod -R g+rX src/generated/prisma || return 1
+    chmod g+rx src src/generated || return 1
+  fi
 
   # Next carga .env.local durante el runtime (si existe).
   if [[ -f .env.local ]]; then
@@ -118,6 +137,11 @@ preparar_permisos_runtime() {
     chmod 640 .env.local || return 1
   fi
 
+  # Preflight con el mismo npm que usa ExecStart de systemd.
+  if ! runuser -u "$RUNTIME_USER" -- npm --prefix "$APP_DIR" pkg get version >/dev/null; then
+    err "El usuario $RUNTIME_USER no puede leer package.json mediante npm"
+    return 1
+  fi
   if ! runuser -u "$RUNTIME_USER" -- "$APP_DIR/node_modules/.bin/next" --version; then
     err "El usuario $RUNTIME_USER no puede ejecutar Next.js"
     return 1
@@ -207,7 +231,7 @@ ejecutar() {
   "$@"
 }
 
-for cmd in git npm npx systemctl curl flock tee runuser chgrp chmod chown mkdir; do
+for cmd in git npm npx systemctl curl flock tee runuser chgrp chmod chown mkdir find; do
   command -v "$cmd" >/dev/null || fail "Falta comando: $cmd"
 done
 id "$RUNTIME_USER" >/dev/null 2>&1 || fail "No existe usuario $RUNTIME_USER"
