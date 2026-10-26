@@ -10,6 +10,7 @@ APP_DIR="/opt/aniei-registro-2026"
 SERVICE="aniei"
 RUNTIME_USER="aniei"
 RUNTIME_GROUP="aniei"
+STORAGE_DIR="$APP_DIR/storage"
 REMOTO="origin"
 RAMA="main"
 EJECUTAR_TEST_FLOWS=1
@@ -127,6 +128,33 @@ preparar_permisos_runtime() {
   fi
 }
 
+
+# Los archivos de storage son datos persistentes: nunca borrarlos ni
+# incorporarlos a una limpieza del build. El servicio aniei debe poder escribir.
+preparar_storage() {
+  log "Comprobando almacenamiento persistente para $RUNTIME_USER..."
+
+  # No cambiar permisos de una ruta externa si alguien sustituyo storage
+  # o constancias por un enlace simbolico.
+  if [[ -L "$STORAGE_DIR" || -L "$STORAGE_DIR/constancias" ]]; then
+    err "storage o storage/constancias es un enlace simbolico; revisar manualmente"
+    return 1
+  fi
+
+  mkdir -p -- "$STORAGE_DIR/constancias" || return 1
+  chown -R -- "$RUNTIME_USER:$RUNTIME_GROUP" "$STORAGE_DIR" || return 1
+  chmod -R u+rwX,go-rwx -- "$STORAGE_DIR" || return 1
+
+  # Verificar escritura real con el mismo usuario que ejecuta systemd.
+  if ! runuser -u "$RUNTIME_USER" -- sh -c \
+      'test -d "$1" && test -w "$1" && test -w "$2"' \
+      sh "$STORAGE_DIR" "$STORAGE_DIR/constancias"; then
+    err "$RUNTIME_USER no puede escribir en storage/constancias"
+    return 1
+  fi
+  log "Storage listo; archivos existentes conservados."
+}
+
 restaurar_anterior() {
   err "Intentando restaurar $PREV_SHA..."
   systemctl stop "$SERVICE" || return 1
@@ -138,6 +166,7 @@ restaurar_anterior() {
   log "Rollback: compilando..."
   npm run build || return 1
   preparar_permisos_runtime || return 1
+  preparar_storage || return 1
 
   if (( SERVICIO_ANTES_ACTIVO == 1 )); then
     systemctl daemon-reload || return 1
@@ -178,7 +207,7 @@ ejecutar() {
   "$@"
 }
 
-for cmd in git npm npx systemctl curl flock tee runuser chgrp chmod; do
+for cmd in git npm npx systemctl curl flock tee runuser chgrp chmod chown mkdir; do
   command -v "$cmd" >/dev/null || fail "Falta comando: $cmd"
 done
 id "$RUNTIME_USER" >/dev/null 2>&1 || fail "No existe usuario $RUNTIME_USER"
@@ -216,6 +245,9 @@ if systemctl is-active --quiet "$SERVICE"; then
   SERVICIO_ANTES_ACTIVO=1
 fi
 
+# Reparar/verificar storage antes de tocar el servicio activo.
+ejecutar "Preparando storage persistente" preparar_storage
+
 # Se detiene la aplicacion SOLO despues de validar Git y confirmacion.
 DESPLIEGUE_INICIADO=1
 ejecutar "Deteniendo $SERVICE" systemctl stop "$SERVICE"
@@ -237,6 +269,7 @@ if (( EJECUTAR_TEST_FLOWS == 1 )) && [[ -f scripts/verificar-flujos.mjs ]]; then
   ejecutar "Ejecutando pruebas de flujos" npm run test:flows
 fi
 ejecutar "Preparando permisos" preparar_permisos_runtime
+ejecutar "Verificando storage persistente" preparar_storage
 ejecutar "Recargando systemd" systemctl daemon-reload
 ejecutar "Arrancando $SERVICE" systemctl start "$SERVICE"
 ETAPA="Verificando disponibilidad HTTP"
@@ -248,4 +281,3 @@ DESPLIEGUE_INICIADO=0
 log "Actualizacion finalizada. Commit $(git_app rev-parse --short HEAD)"
 log "Servicio: $(systemctl is-active "$SERVICE")"
 log "Registro: $LOG_FILE"
-
