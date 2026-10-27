@@ -153,7 +153,7 @@ export function UsuariosAdminClient() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, correo..."
+                  placeholder="Buscar por folio, nombre, correo..."
                   className="pl-10 pr-4 py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-800 placeholder-slate-400 w-48 sm:w-64 md:w-80 outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -168,6 +168,7 @@ export function UsuariosAdminClient() {
             <table className="  w-full text-sm text-left">
               <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                 <tr>
+                  <th className="px-6 py-4 font-semibold">Folio</th>
                   <th className="px-6 py-4 font-semibold">Usuario</th>
                   <th className="px-6 py-4 font-semibold">Institución</th>
                   <th className="px-6 py-4 font-semibold">Detalle Depósito</th>
@@ -178,7 +179,7 @@ export function UsuariosAdminClient() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                       <div className="flex justify-center flex-col items-center space-y-2">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span>Cargando usuarios...</span>
@@ -187,13 +188,16 @@ export function UsuariosAdminClient() {
                   </tr>
                 ) : usuarios.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                       No se encontraron usuarios que coincidan con la búsqueda.
                     </td>
                   </tr>
                 ) : (
                   usuarios.map((user) => (
                     <tr key={user.folioRegistro} className=" hover:bg-slate-50/80 transition-colors duration-150">
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs font-medium text-slate-700">{user.folioRegistro}</span>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-medium text-slate-900">{user.nombreCompleto}</span>
@@ -217,6 +221,14 @@ export function UsuariosAdminClient() {
                               {new Date(user.deposito.fecha).toLocaleDateString('es-MX')}
                             </span>
                           </div>
+                        ) : user.registradoPor ? (
+                          <Link
+                            href={`/cpanel/usuarios/${user.registradoPor}`}
+                            className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
+                            title={`Ver usuario que registró a ${user.nombreCompleto}`}
+                          >
+                            Registrado por {user.registradoPor}
+                          </Link>
                         ) : (
                           <span className="text-slate-400 text-sm italic">Sin depósito asociado</span>
                         )}

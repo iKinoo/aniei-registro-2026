@@ -1,7 +1,9 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IRegistroQueryService } from '@/application/ports/IRegistroQueryService';
 import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+import type { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { mapUsuarioConsulta, mapDepositoHistorial } from '@/infrastructure/mappers/ConsultaRegistroMapper';
+import { mapGrupoAdmin, GRUPO_ADMIN_INCLUDE } from '@/infrastructure/mappers/GrupoAdminMapper';
 
 export class PrismaRegistroQueryService implements IRegistroQueryService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -56,6 +58,15 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
         } : null,
       })),
     };
+  }
+
+  async obtenerGruposRegistrados(folioResponsable: string): Promise<GrupoForAdminDTO[]> {
+    const grupos = await this.prisma.grupos_registro.findMany({
+      where: { folio_registro_responsable: folioResponsable },
+      include: GRUPO_ADMIN_INCLUDE,
+      orderBy: [{ fecha_registro: 'desc' }, { id: 'desc' }],
+    });
+    return grupos.map(mapGrupoAdmin);
   }
 
   async obtenerPerfil(folio: string): Promise<PerfilDTO | null> {

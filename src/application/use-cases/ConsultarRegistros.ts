@@ -6,5 +6,6 @@ export class ConsultarRegistros {
   obtenerUsuario(folio: string) { return this.consultas.obtenerUsuario(folio); }
   obtenerDetalle(folio: string) { return this.consultas.obtenerDetalle(folio); }
   obtenerPerfil(folio: string) { return this.consultas.obtenerPerfil(folio); }
+  obtenerGruposRegistrados(folio: string) { return this.consultas.obtenerGruposRegistrados(folio); }
   buscarUsuarios(query: string) { return this.consultas.buscarUsuarios(query); }
 }

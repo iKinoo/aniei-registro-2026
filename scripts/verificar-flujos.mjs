@@ -39,6 +39,7 @@ const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciale
 const { GestionarUsuarios } = load('@/application/use-cases/GestionarUsuarios');
 const { PrismaUsuarioRepository } = load('@/infrastructure/repositories/PrismaUsuarioRepository');
 const { PrismaAdminQueryService } = load('@/infrastructure/services/PrismaAdminQueryService');
+const { PrismaRegistroQueryService } = load('@/infrastructure/services/PrismaRegistroQueryService');
 const { mapGrupoAdmin } = load('@/infrastructure/mappers/GrupoAdminMapper');
 const { PrismaInscripcionActividadRepository } = load('@/infrastructure/repositories/PrismaInscripcionActividadRepository');
 const { mapPrismaError } = load('@/infrastructure/errors/prismaErrorMapper');
@@ -178,6 +179,45 @@ await test('Búsqueda administrativa incluye folios de miembros y pagina con ord
   assert.equal(resultado.total, 21);
   assert.equal(resultado.totalPages, 3);
   assert.equal(resultado.page, 2);
+});
+await test('Consulta administrativa expone el folio del responsable para miembros de grupo', async () => {
+  let includeUsuarios;
+  const servicio = new PrismaAdminQueryService({
+    usuarios: {
+      count: async () => 1,
+      findMany: async argumentos => {
+        includeUsuarios = argumentos.include;
+        return [{
+          folio_registro: 'ANI26-0008',
+          nombre: 'Luis',
+          apellido: 'Pérez',
+          correo: 'luis@example.com',
+          telefono: null,
+          fecha_registro: new Date('2026-10-01'),
+          instituciones: null,
+          titulos: null,
+          depositos: [],
+          grupo_registro: { folio_registro_responsable: 'ANI26-0007' },
+        }];
+      },
+    },
+  });
+  const resultado = await servicio.obtenerUsuariosForAdmin(1, 10);
+  assert.deepEqual(includeUsuarios.grupo_registro, { select: { folio_registro_responsable: true } });
+  assert.equal(resultado.data[0].registradoPor, 'ANI26-0007');
+  assert.equal(resultado.data[0].deposito, null);
+});
+await test('Detalle de usuario consulta los grupos que registró como responsable', async () => {
+  let consulta;
+  const servicio = new PrismaRegistroQueryService({
+    grupos_registro: {
+      findMany: async argumentos => { consulta = argumentos; return []; },
+    },
+  });
+  const grupos = await servicio.obtenerGruposRegistrados('ANI26-0007');
+  assert.deepEqual(consulta.where, { folio_registro_responsable: 'ANI26-0007' });
+  assert.deepEqual(consulta.orderBy, [{ fecha_registro: 'desc' }, { id: 'desc' }]);
+  assert.deepEqual(grupos, []);
 });
 await test('Inscripciones bloquean actividades en orden y propagan errores de persistencia', async () => {
   const locks = [];

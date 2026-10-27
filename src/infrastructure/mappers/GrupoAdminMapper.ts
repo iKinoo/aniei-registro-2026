@@ -1,5 +1,26 @@
-import type { depositos, grupos_registro, usuarios } from '@/generated/prisma/client';
+import type { Prisma, depositos, grupos_registro, usuarios } from '@/generated/prisma/client';
 import type { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
+
+export const GRUPO_ADMIN_INCLUDE = {
+  responsable: {
+    include: {
+      depositos: {
+        where: { proposito: 'GRUPO_RAPIDO' },
+        orderBy: { id_deposito: 'desc' },
+      },
+    },
+  },
+  miembros: {
+    select: {
+      folio_registro: true,
+      nombre: true,
+      apellido: true,
+      correo: true,
+      carrera: true,
+    },
+    orderBy: { folio_registro: 'asc' },
+  },
+} satisfies Prisma.grupos_registroInclude;
 
 type GrupoConRelaciones = grupos_registro & {
   responsable: Pick<usuarios, 'folio_registro' | 'nombre' | 'apellido' | 'correo'> & {

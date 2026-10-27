@@ -15,7 +15,11 @@ export default async function UsuarioDetallePage({ params }: { params: Promise<{
 
   await requireAdmin();
   const { folio } = await params;
-  const detalle = await new ConsultarRegistros(getRegistroQueryService()).obtenerDetalle(folio);
+  const consultas = new ConsultarRegistros(getRegistroQueryService());
+  const [detalle, gruposRegistrados] = await Promise.all([
+    consultas.obtenerDetalle(folio),
+    consultas.obtenerGruposRegistrados(folio),
+  ]);
   const usuario = detalle?.usuario;
 
   if (!usuario) {
@@ -55,6 +59,7 @@ export default async function UsuarioDetallePage({ params }: { params: Promise<{
       }}
       depositos={depositos}
       facturacion={facturacion}
+      gruposRegistrados={gruposRegistrados}
       inscripciones={inscripciones.map((i) => ({
         idInscripcion: i.idInscripcion,
         idActividad: i.idActividad,

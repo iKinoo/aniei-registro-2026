@@ -3,7 +3,7 @@ import { IAdminQueryService } from '@/application/ports/IAdminQueryService';
 import { UsuarioForAdminDTO } from '@/application/dtos/UsuarioForAdminDTO';
 import { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { PaginatedResult } from '@/application/dtos/PaginatedResult';
-import { mapGrupoAdmin } from '@/infrastructure/mappers/GrupoAdminMapper';
+import { mapGrupoAdmin, GRUPO_ADMIN_INCLUDE } from '@/infrastructure/mappers/GrupoAdminMapper';
 
 const USUARIO_INCLUDE = {
   instituciones: true,
@@ -13,30 +13,12 @@ const USUARIO_INCLUDE = {
     orderBy: { fecha_registro: 'desc' },
     take: 1, // Get only the most recent deposit
   },
+  grupo_registro: {
+    select: { folio_registro_responsable: true },
+  },
 } satisfies Prisma.usuariosInclude;
 
 type UsuarioConRelaciones = Prisma.usuariosGetPayload<{ include: typeof USUARIO_INCLUDE }>;
-
-const GRUPO_INCLUDE = {
-  responsable: {
-    include: {
-      depositos: {
-        where: { proposito: 'GRUPO_RAPIDO' },
-        orderBy: { id_deposito: 'desc' },
-      },
-    },
-  },
-  miembros: {
-    select: {
-      folio_registro: true,
-      nombre: true,
-      apellido: true,
-      correo: true,
-      carrera: true,
-    },
-    orderBy: { folio_registro: 'asc' },
-  },
-} satisfies Prisma.grupos_registroInclude;
 
 export class PrismaAdminQueryService implements IAdminQueryService {
   constructor(private readonly prisma: PrismaClient) { }
@@ -54,6 +36,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
     if (search) {
       conditions.push({
         OR: [
+          { folio_registro: { contains: search } },
           { nombre: { contains: search } },
           { apellido: { contains: search } },
           { correo: { contains: search } },
@@ -126,7 +109,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       this.prisma.grupos_registro.count({ where: whereClause }),
       this.prisma.grupos_registro.findMany({
         where: whereClause,
-        include: GRUPO_INCLUDE,
+        include: GRUPO_ADMIN_INCLUDE,
         orderBy: [{ fecha_registro: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
@@ -153,6 +136,7 @@ export class PrismaAdminQueryService implements IAdminQueryService {
       institucion: user.instituciones?.nombre || 'Desconocida',
       tipoUsuario: user.titulos?.descripcion || 'Desconocido',
       fechaRegistro: user.fecha_registro || new Date(),
+      registradoPor: user.grupo_registro?.folio_registro_responsable ?? null,
       deposito: dep
         ? {
           monto: Number(dep.monto), // Decimal is returned as Decimal type from Prisma usually, map to Number

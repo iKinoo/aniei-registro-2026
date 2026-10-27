@@ -8,6 +8,7 @@ import { HistorialDepositosAdmin } from '@/app/components/HistorialDepositosAdmi
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import { eliminarUsuarioAction, reenviarConstanciaAction, obtenerUrlArchivoAction } from '@/app/cpanel/actions';
 import { extraerRutaArchivo } from '@/shared/utils/archivos';
+import type { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { cambiarContrasenaAction, regenerarConstanciaGeneralAction, type CambiarContrasenaResultado } from './actions';
 
 interface UsuarioData {
@@ -55,9 +56,10 @@ interface Props {
   depositos: DepositoHistorialItem[];
   facturacion: FacturacionData | null;
   inscripciones: InscripcionData[];
+  gruposRegistrados: GrupoForAdminDTO[];
 }
 
-export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripciones }: Props) {
+export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripciones, gruposRegistrados }: Props) {
   const router = useRouter();
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -65,6 +67,7 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
   const [regeneratingConstancia, setRegeneratingConstancia] = useState(false);
   const [loadingConstanciaFiscal, setLoadingConstanciaFiscal] = useState(false);
   const [loadingActivityConstancia, setLoadingActivityConstancia] = useState<number | null>(null);
+  const [loadingGrupoArchivo, setLoadingGrupoArchivo] = useState<number | null>(null);
   const [resending, setResending] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
   const [passwordCustom, setPasswordCustom] = useState('');
@@ -177,6 +180,21 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
       }
     } finally {
       setLoadingActivityConstancia(null);
+    }
+  };
+
+  const handleVerComprobanteGrupo = async (grupo: GrupoForAdminDTO) => {
+    if (!grupo.deposito) return;
+    setLoadingGrupoArchivo(grupo.id);
+    try {
+      const result = await obtenerUrlArchivoAction(extraerRutaArchivo(grupo.deposito.archivoRuta));
+      if (result.success) {
+        window.open(result.url, '_blank', 'noopener,noreferrer');
+      } else {
+        alert('No se pudo acceder al comprobante: ' + result.error);
+      }
+    } finally {
+      setLoadingGrupoArchivo(null);
     }
   };
 
@@ -430,6 +448,84 @@ export function UsuarioDetalleClient({ usuario, depositos, facturacion, inscripc
         </h2>
         <HistorialDepositosAdmin depositos={depositos} />
       </div>
+
+      {gruposRegistrados.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-slate-900 mb-4">
+            Grupos que registró
+            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+              {gruposRegistrados.length}
+            </span>
+          </h2>
+          <div className="space-y-4">
+            {gruposRegistrados.map((grupo) => (
+              <div key={grupo.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">Grupo #{grupo.id}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Registrado el{' '}
+                      {new Date(grupo.fechaRegistro).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      {' '}· {grupo.miembros.length} {grupo.miembros.length === 1 ? 'miembro' : 'miembros'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {grupo.deposito ? (
+                      <>
+                        <div className="text-right">
+                          <span className="font-medium text-emerald-600 text-sm">
+                            ${Number(grupo.deposito.monto).toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
+                          </span>
+                          <p className="text-slate-500 text-xs">Ref: {grupo.deposito.referencia}</p>
+                        </div>
+                        <button
+                          onClick={() => handleVerComprobanteGrupo(grupo)}
+                          disabled={loadingGrupoArchivo === grupo.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 shadow-sm text-xs font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
+                        >
+                          {loadingGrupoArchivo === grupo.id ? (
+                            <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                          Ver comprobante
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 text-sm italic">Sin depósito asociado</span>
+                    )}
+                  </div>
+                </div>
+                <div className="border-t border-slate-200 pt-3">
+                  <h3 className="text-xs uppercase tracking-wider text-slate-400 mb-2">Integrantes</h3>
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {grupo.miembros.map((miembro) => (
+                      <li key={miembro.folioRegistro} className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-100">
+                        <div className="min-w-0">
+                          <p className="text-sm text-slate-800 truncate">{miembro.nombreCompleto}</p>
+                          <p className="text-xs text-slate-500 truncate">{miembro.correo}</p>
+                        </div>
+                        <Link
+                          href={`/cpanel/usuarios/${miembro.folioRegistro}`}
+                          className="font-mono text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline whitespace-nowrap"
+                        >
+                          {miembro.folioRegistro}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <h2 className="text-base font-semibold text-slate-900 mb-4">

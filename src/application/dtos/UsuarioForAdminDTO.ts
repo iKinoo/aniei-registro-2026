@@ -6,6 +6,7 @@ export interface UsuarioForAdminDTO {
   institucion: string;
   tipoUsuario: string;
   fechaRegistro: Date;
+  registradoPor: string | null;
   deposito: {
     monto: number;
     fecha: Date;
