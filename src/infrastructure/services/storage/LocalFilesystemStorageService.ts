@@ -1,7 +1,7 @@
-import { createHmac } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FileReference, IStorageService } from "@/application/ports/IStorageService";
+import { crearEnlaceArchivo } from './firmaEnlaceArchivo';
 
 /**
  * Almacenamiento en el sistema de archivos del proyecto (./storage).
@@ -11,12 +11,10 @@ import type { FileReference, IStorageService } from "@/application/ports/IStorag
 export class LocalFilesystemStorageService implements IStorageService {
   private readonly baseDir: string;
   private readonly secret: string;
-  private readonly ttlSeconds: number;
 
-  constructor(baseDir: string, secret: string, ttlSeconds = 300) {
+  constructor(baseDir: string, secret: string) {
     this.baseDir = path.resolve(baseDir);
     this.secret = secret;
-    this.ttlSeconds = ttlSeconds;
   }
 
   private resolveRuta(ruta: string): string {
@@ -55,24 +53,6 @@ export class LocalFilesystemStorageService implements IStorageService {
   async getAccess(file: FileReference): Promise<string> {
     const ruta = `${file.bucket}/${file.path}`;
     this.resolveRuta(ruta); // valida antes de firmar
-    const exp = Math.floor(Date.now() / 1000) + this.ttlSeconds;
-    const sig = createHmac("sha256", this.secret).update(`${ruta}:${exp}`).digest("hex");
-    return `/api/archivos/${ruta}?exp=${exp}&sig=${sig}`;
-  }
-}
-
-/** Verifica firmas generadas por getAccess. */
-export function verificarFirma(ruta: string, exp: string, sig: string, secret: string): boolean {
-  const expNum = Number(exp);
-  if (!Number.isFinite(expNum) || expNum * 1000 < Date.now()) return false;
-  if (!/^[0-9a-f]{64}$/i.test(sig)) return false;
-  try {
-    const esperado = createHmac("sha256", secret).update(`${ruta}:${expNum}`).digest("hex");
-    if (esperado.length !== sig.length) return false;
-    let diff = 0;
-    for (let i = 0; i < esperado.length; i++) diff |= esperado.charCodeAt(i) ^ sig.charCodeAt(i);
-    return diff === 0;
-  } catch {
-    return false;
+    return crearEnlaceArchivo(ruta, this.secret);
   }
 }

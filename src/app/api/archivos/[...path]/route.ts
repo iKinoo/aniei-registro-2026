@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     } });
   } catch (error) {
     if (error instanceof ArchivoAccesoError) {
-      const status = { ENLACE_INVALIDO: 401, ENLACE_EXPIRADO: 410, SIN_SESION: 401, PROHIBIDO: 403, NO_ENCONTRADO: 404 }[error.motivo];
+      const status = { ENLACE_INVALIDO: 401, SIN_SESION: 401, PROHIBIDO: 403, NO_ENCONTRADO: 404 }[error.motivo];
       return NextResponse.json({ error: error.message }, { status });
     }
     reportarErrorEnAccion('Error al descargar archivo', error);

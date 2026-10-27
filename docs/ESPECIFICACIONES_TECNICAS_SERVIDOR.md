@@ -303,7 +303,7 @@ Con las especificaciones recomendadas (2 vCPU, 2 GB RAM):
 - [ ] Secretos generados con `openssl rand -base64 32`
 - [ ] HTTPS obligatorio (redirección 80 → 443)
 - [ ] MySQL solo escucha localhost
-- [ ] Archivos privados servidos vía URLs firmadas (expiración 5 min)
+- [ ] Archivos privados servidos vía URLs firmadas (HMAC sin expiración) y sesión autenticada
 - [ ] Validación de entrada con Zod (previene inyección SQL/XSS)
 - [ ] Contraseñas hasheadas con bcrypt (cost 10)
 

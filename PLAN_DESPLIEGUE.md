@@ -127,7 +127,6 @@ SHADOW_DATABASE_URL="mysql://aniei:TU-CLAVE-SEGURA@localhost:3306/aniei_shadow"
 STORAGE_PROVIDER="filesystem"
 STORAGE_LOCAL_DIR="./storage"
 STORAGE_URL_SECRET="<salida del openssl #2>"
-FILE_URL_TTL_SECONDS="300"
 
 NEXT_PUBLIC_APP_URL="https://TU-DOMINIO"   # ¡debe ser la URL pública real! (Auth.js la usa)
 AUTH_SECRET="<salida del openssl #1>"
@@ -357,7 +356,7 @@ Firewall mínimo: `sudo ufw allow 22,80,443/tcp && sudo ufw enable`. **No expong
 | 7 | Login ADMIN | Entrar con folio+contraseña §8 → `/cpanel` | Panel visible |
 | 8 | Login USER | Entrar como participante → `/perfil` | Perfil + comprobante abre (200) |
 | 9 | Registro E2E | Alta de prueba con comprobante JPG/PDF | Archivo nuevo en `./storage/comprobantes/`, correo llega |
-| 10 | Seguridad archivos | URL `/api/archivos/...` sin sesión / expirada / de otro folio | 401 / 410 / 403 |
+| 10 | Seguridad archivos | URL `/api/archivos/...` sin sesión / firma alterada / de otro folio | 401 / 401 / 403 |
 | 11 | HTTPS | `curl -sI https://TU-DOMINIO/login` | 200 con TLS válido |
 | 12 | Build limpio | `npm run build`, `npx tsc --noEmit`, `npm run lint` | Verdes |
 

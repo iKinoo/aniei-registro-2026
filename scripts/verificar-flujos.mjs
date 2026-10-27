@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createHmac } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -227,7 +228,7 @@ await test('Archivo exige propietario o administrador y rechaza cuentas inexiste
   accesos.buscarPorFolioRegistro = async () => null;
   await assert.rejects(autorizar.execute('comprobantes/ajeno.pdf'), /Sesión inválida/);
 });
-await test('Filesystem firma, descarga y bloquea traversal, firma alterada y enlaces vencidos', async () => {
+await test('Filesystem firma, descarga y bloquea traversal y firmas alteradas (enlaces sin expiración)', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aniei-arch-test-'));
   const secret = 'clave-de-prueba-de-mas-de-32-caracteres';
   try {
@@ -240,11 +241,17 @@ await test('Filesystem firma, descarga y bloquea traversal, firma alterada y enl
     assert.equal(enlaces.validar('comprobantes/prueba.pdf', exp, sig), 'VALIDO');
     assert.equal(enlaces.validar('../prueba.pdf', exp, sig), 'INVALIDO');
     assert.equal(enlaces.validar('comprobantes/prueba.pdf', exp, '0'.repeat(64)), 'INVALIDO');
-    assert.equal(enlaces.validar('comprobantes/prueba.pdf', '1', sig), 'EXPIRADO');
+    assert.equal(enlaces.validar('comprobantes/prueba.pdf', '1', sig), 'INVALIDO');
+    const expAntigua = '1';
+    const sigAntigua = createHmac('sha256', secret).update(`comprobantes/prueba.pdf:${expAntigua}`).digest('hex');
+    assert.equal(enlaces.validar('comprobantes/prueba.pdf', expAntigua, sigAntigua), 'VALIDO');
     assert.deepEqual(new Uint8Array(await disk.descargar('comprobantes/prueba.pdf')), archivo.buffer);
     await assert.rejects(disk.descargar('../prueba.pdf'), /traversal/);
-    const descargar = new DescargarArchivo(disk, {}, {}, {}, enlaces);
-    await assert.rejects(descargar.execute('comprobantes/prueba.pdf', '1', sig), /expirado/);
+    const auth = { getCurrentSession: async () => ({ folioRegistro: 'ANI26-0001' }) };
+    const accesos = { buscarPorFolioRegistro: async () => ({ folioRegistro: 'ANI26-0001', isAdmin: () => true }) };
+    const descargar = new DescargarArchivo(disk, auth, accesos, { buscarTodosPorUsuario: async () => [] }, enlaces);
+    await assert.rejects(descargar.execute('comprobantes/prueba.pdf', '1', sig), /No autorizado/);
+    assert.deepEqual(new Uint8Array(await descargar.execute('comprobantes/prueba.pdf', expAntigua, sigAntigua)), archivo.buffer);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 await test('Credenciales se validan mediante repositorio y hasher inyectados', async () => {

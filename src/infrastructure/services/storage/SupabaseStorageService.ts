@@ -1,11 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { IStorageService } from '@/application/ports/IStorageService';
+import { crearEnlaceArchivo } from './firmaEnlaceArchivo';
 
 export class SupabaseStorageService implements IStorageService {
   private readonly client: SupabaseClient;
+  private readonly secret: string;
 
-  constructor(supabaseUrl: string, serviceRoleKey: string) {
+  constructor(supabaseUrl: string, serviceRoleKey: string, secret: string) {
     this.client = createClient(supabaseUrl, serviceRoleKey);
+    this.secret = secret;
   }
 
   async subir(ruta: string, buffer: Uint8Array, mime: string): Promise<string> {
@@ -29,15 +32,7 @@ export class SupabaseStorageService implements IStorageService {
   }
 
   async getAccess(file: { bucket: string; path: string; }): Promise<string> {
-    const { data, error } = await this.client.storage
-      .from(file.bucket)
-      .createSignedUrl(file.path, 60 * 5); // 5 minutos
-
-    if (error) {
-      throw new Error(`Error al obtener url firmada de storage: ${error.message}`);
-    }
-
-    return data.signedUrl;
+    return crearEnlaceArchivo(`${file.bucket}/${file.path}`, this.secret);
   }
 
   async eliminar(ruta: string): Promise<void> {

@@ -314,7 +314,10 @@ src/
 │   │   │       ├── GenericConstanciaTemplate.tsx
 │   │   │       └── HojaRegistroGrupoTemplate.tsx
 │   │   ├── storage/
-│   │   │   └── SupabaseStorageService.ts   # buckets: comprobantes / constancias (signedUrl 5min)
+│   │   │   ├── LocalFilesystemStorageService.ts  # ./storage + enlaces HMAC sin expiración
+│   │   │   ├── SupabaseStorageService.ts         # legacy: buckets comprobantes / constancias
+│   │   │   ├── HmacEnlaceArchivoService.ts       # valida la firma de /api/archivos
+│   │   │   └── firmaEnlaceArchivo.ts             # crea y verifica enlaces firmados (sin expiración)
 │   │   ├── auth/
 │   │   │   └── AuthJsAuthService.ts
 │   │   └── PrismaAdminQueryService.ts      # obtenerUsuariosForAdmin con paginación + búsqueda insensible
@@ -1377,7 +1380,7 @@ El CPanel (`/cpanel`) es dashboard protegido (`proxy.ts:37` requiere `ADMIN`):
 - **Gestión de actividades** (`GestionarActividades`).
 - **Gestión de ponentes** (`IPonentesRepository`).
 - **Gestión de precios** (`GestionarPrecios` con límite 3 niveles).
-- **Acceso a archivos protegidos** (`obtenerUrlArchivoAction` → `ObtenerAccesoArchivo` → `SupabaseStorageService.getAccess` con `createSignedUrl(5min)`).
+- **Acceso a archivos protegidos** (`obtenerUrlArchivoAction` → `ObtenerAccesoArchivo` → `IStorageService.getAccess`): enlace HMAC `/api/archivos/...` sin expiración, validado por `HmacEnlaceArchivoService` y servido solo con sesión autorizada.
 
 La consulta de grupos sigue `getGruposAdminAction → ObtenerGruposForAdmin → IAdminQueryService ← PrismaAdminQueryService`, con `requireAdmin` y validación de filtros en la acción. El mapper vincula cada depósito `GRUPO_RAPIDO` mediante el token presente en `comprobantes_grupo/{token}.ext`; usar el último depósito del responsable mezclaría pagos de grupos distintos. El responsable se muestra por separado de los miembros. El esquema actual no tiene una clave foránea entre grupo y depósito; si cambia la convención de almacenamiento, deberá incorporarse una relación explícita y migrar los registros existentes.
 

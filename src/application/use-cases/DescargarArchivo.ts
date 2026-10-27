@@ -13,7 +13,7 @@ export class DescargarArchivo {
 
   async execute(ruta: string, exp: string, sig: string): Promise<Uint8Array> {
     const estado = this.enlaces.validar(ruta, exp, sig);
-    if (estado !== 'VALIDO') throw new ArchivoAccesoError(estado === 'EXPIRADO' ? 'ENLACE_EXPIRADO' : 'ENLACE_INVALIDO');
+    if (estado !== 'VALIDO') throw new ArchivoAccesoError('ENLACE_INVALIDO');
     await new AutorizarArchivo(this.auth, this.accesos, this.depositos).execute(ruta);
     try { return await this.storage.descargar(ruta); }
     catch { throw new ArchivoAccesoError('NO_ENCONTRADO'); }

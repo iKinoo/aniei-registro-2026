@@ -6,7 +6,6 @@ const envSchema = z.object({
   STORAGE_PROVIDER: z.enum(["supabase", "filesystem"]).default("filesystem"),
   STORAGE_LOCAL_DIR: z.string().default("./storage"),
   STORAGE_URL_SECRET: z.string().min(32, "STORAGE_URL_SECRET debe tener min 32 chars"),
-  FILE_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   AUTH_SECRET: z.string().min(16, "AUTH_SECRET falta"),
 });
 
