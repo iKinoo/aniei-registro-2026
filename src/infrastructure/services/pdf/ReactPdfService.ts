@@ -3,7 +3,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { PDFDocument } from 'pdf-lib';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { IPdfService, ListaParticipantesPdfData, ReporteInstitucionesPdfData } from '@/application/ports/IPdfService';
+import { IPdfService, ListaParticipantesPdfData, ReporteInstitucionesPdfData, ReporteTalleristasPdfData } from '@/application/ports/IPdfService';
 import { ContenidoConstancia } from '@/application/dtos/ConstanciaDTO';
 import {
   ConstanciaEventoTemplate,
@@ -12,6 +12,7 @@ import {
 } from './templates/ConstanciaEventoTemplate';
 import { construirListaAsistencia } from './ListaAsistencia';
 import { ReporteInstitucionesTemplate } from './templates/ReporteInstitucionesTemplate';
+import { ReporteTalleristasTemplate } from './templates/ReporteTalleristasTemplate';
 
 let _plantillaCache: Buffer | null = null;
 
@@ -43,6 +44,13 @@ export class ReactPdfService implements IPdfService {
 
   async generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Buffer> {
     const element = React.createElement(ReporteInstitucionesTemplate, { data: datos });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
+    return Buffer.from(buffer);
+  }
+
+  async generarReporteTalleristas(datos: ReporteTalleristasPdfData): Promise<Buffer> {
+    const element = React.createElement(ReporteTalleristasTemplate, { data: datos });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const buffer = await renderToBuffer(element as any);
     return Buffer.from(buffer);

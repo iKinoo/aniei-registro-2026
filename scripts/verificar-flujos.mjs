@@ -37,6 +37,7 @@ const { AutorizarArchivo } = load('@/application/use-cases/AutorizarArchivo');
 const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
 const { GestionarUsuarios } = load('@/application/use-cases/GestionarUsuarios');
+const { DescargarConstanciasTalleristas } = load('@/application/use-cases/DescargarConstanciasTalleristas');
 const { PrismaUsuarioRepository } = load('@/infrastructure/repositories/PrismaUsuarioRepository');
 const { PrismaAdminQueryService } = load('@/infrastructure/services/PrismaAdminQueryService');
 const { PrismaRegistroQueryService } = load('@/infrastructure/services/PrismaRegistroQueryService');
@@ -839,6 +840,98 @@ await test('El pago de perfil usa el precio vigente y no el monto enviado por el
   assert.equal(resultado.monto, 500);
   assert.equal(creado.monto.toNumber(), 500);
   assert.equal(creado.proposito, 'EVENTO_PRINCIPAL');
+});
+
+await test('El ZIP de constancias incluye solo talleres y agrupa por actividad', async () => {
+  const talleres = [
+    {
+      idActividad: 1,
+      nombre: 'Taller de Bases de Datos',
+      activo: true,
+      tipoActividad: { clave: 'TALLER', descripcion: 'Taller' },
+      ponentes: [
+        { folioRegistro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez' },
+        { folioRegistro: 'ANI26-0002', nombre: 'Luis', apellido: 'Gómez' },
+      ],
+    },
+    {
+      idActividad: 2,
+      nombre: 'Ponencia de Redes',
+      activo: true,
+      tipoActividad: { clave: 'PONENCIA', descripcion: 'Ponencia' },
+      ponentes: [{ folioRegistro: 'ANI26-0003', nombre: 'Marta', apellido: 'Ruiz' }],
+    },
+    {
+      idActividad: 3,
+      nombre: 'Taller sin talleristas',
+      activo: true,
+      tipoActividad: { clave: 'TALLER', descripcion: 'Taller' },
+      ponentes: [],
+    },
+    {
+      idActividad: 4,
+      nombre: 'Taller de Redes',
+      activo: true,
+      tipoActividad: { clave: 'TALLER', descripcion: 'Taller' },
+      ponentes: [{ folioRegistro: 'ANI26-0004', nombre: 'José', apellido: 'Núñez' }],
+    },
+    {
+      idActividad: 5,
+      nombre: 'Taller cancelado',
+      activo: false,
+      tipoActividad: { clave: 'TALLER', descripcion: 'Taller' },
+      ponentes: [{ folioRegistro: 'ANI26-0005', nombre: 'Elena', apellido: 'Soto' }],
+    },
+  ];
+  const constancias = [];
+  let archivos = [];
+  const resultado = await new DescargarConstanciasTalleristas(
+    { listar: async () => talleres },
+    {
+      generarConstancia: async (contenido) => {
+        constancias.push(contenido);
+        return new Uint8Array([constancias.length]);
+      },
+    },
+    {
+      comprimir: async (entradas) => {
+        archivos = entradas;
+        return new Uint8Array([9]);
+      },
+    },
+  ).ejecutar();
+
+  assert.equal(resultado.totalTalleres, 2);
+  assert.equal(resultado.totalConstancias, 3);
+  assert.equal(constancias.length, 3);
+  assert.equal(constancias[0].cuerpo[0].segmentos[0].texto, 'por haber impartido el Taller');
+  assert.equal(constancias[0].cuerpo[1].segmentos[0].texto, 'Taller de Bases de Datos');
+  assert.deepEqual(
+    archivos.map((archivo) => archivo.nombre),
+    [
+      '01_Taller_de_Bases_de_Datos/Ana_Perez_ANI26_0001.pdf',
+      '01_Taller_de_Bases_de_Datos/Luis_Gomez_ANI26_0002.pdf',
+      '02_Taller_de_Redes/Jose_Nunez_ANI26_0004.pdf',
+    ],
+  );
+});
+
+await test('El ZIP de constancias no se genera si no hay talleres con talleristas', async () => {
+  const resultado = await new DescargarConstanciasTalleristas(
+    {
+      listar: async () => [{
+        idActividad: 1,
+        nombre: 'Taller vacío',
+        activo: true,
+        tipoActividad: { clave: 'TALLER', descripcion: 'Taller' },
+        ponentes: [],
+      }],
+    },
+    { generarConstancia: async () => assert.fail('No debe generar constancias') },
+    { comprimir: async () => assert.fail('No debe comprimir') },
+  ).ejecutar();
+
+  assert.equal(resultado, null);
 });
 
 fs.rmSync(dirExport, { recursive: true, force: true });

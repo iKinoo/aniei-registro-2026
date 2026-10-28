@@ -3,10 +3,11 @@
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { reportarErrorEnAccion, getRegistroQueryService, getPdfService, getAdminQueryService, getExcelService } from '@/infrastructure/config/container';
 import { GenerarReporteInstituciones } from '@/application/use-cases/GenerarReporteInstituciones';
+import { GenerarReporteTalleristas } from '@/application/use-cases/GenerarReporteTalleristas';
 import { GenerarListaUsuariosXls } from '@/application/use-cases/GenerarListaUsuariosXls';
-import type { InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+import type { InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 
-export type { InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+export type { InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 
 export async function obtenerReporteInstitucionesAction(): Promise<
   { success: true; data: InstitucionReporteItem[]; totalParticipantes: number } | { success: false; error: string }
@@ -44,6 +45,32 @@ export async function generarListaUsuariosXlsAction(): Promise<
   } catch (error) {
     reportarErrorEnAccion('Error al generar lista de usuarios en Excel', error);
     return { success: false, error: 'Error al generar la lista de usuarios' };
+  }
+}
+
+export async function obtenerReporteTalleristasAction(): Promise<
+  { success: true; data: TalleristaReporteItem[] } | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+    const data = await new GenerarReporteTalleristas(getRegistroQueryService(), getPdfService()).obtener();
+    return { success: true, data };
+  } catch (error) {
+    reportarErrorEnAccion('Error al obtener reporte de talleristas', error);
+    return { success: false, error: 'Error al obtener el reporte de talleristas' };
+  }
+}
+
+export async function generarReporteTalleristasPdfAction(): Promise<
+  { success: true; data: { base64: string; nombreArchivo: string } } | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+    const pdf = await new GenerarReporteTalleristas(getRegistroQueryService(), getPdfService()).generar();
+    return { success: true, data: { base64: Buffer.from(pdf).toString('base64'), nombreArchivo: 'reporte_talleristas.pdf' } };
+  } catch (error) {
+    reportarErrorEnAccion('Error al generar reporte de talleristas', error);
+    return { success: false, error: 'Error al generar el reporte de talleristas' };
   }
 }
 

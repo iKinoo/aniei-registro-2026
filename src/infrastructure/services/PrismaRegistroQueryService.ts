@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IRegistroQueryService } from '@/application/ports/IRegistroQueryService';
-import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 import type { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { mapUsuarioConsulta, mapDepositoHistorial } from '@/infrastructure/mappers/ConsultaRegistroMapper';
 import { mapGrupoAdmin, GRUPO_ADMIN_INCLUDE } from '@/infrastructure/mappers/GrupoAdminMapper';
@@ -126,5 +126,28 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
       return [{ idInstitucion: r.id_institucion, nombre: inst?.nombre ?? 'Desconocida',
         abreviatura: inst?.abreviatura ?? null, totalParticipantes: r._count.folio_registro }];
     });
+  }
+
+  async obtenerReporteTalleristas(): Promise<TalleristaReporteItem[]> {
+    const rows = await this.prisma.actividad_ponentes.findMany({
+      where: { actividades: { tipo_actividad: { clave: 'TALLER' }, activo: true } },
+      include: {
+        usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } },
+        actividades: { include: { instituciones: true } },
+      },
+      orderBy: [{ id_actividad: 'asc' }, { folio_registro_ponente: 'asc' }],
+    });
+
+    return rows.map((row) => ({
+      idActividad: row.id_actividad,
+      nombreTaller: row.actividades.nombre,
+      folioRegistro: row.usuarios.folio_registro,
+      nombreTallerista: `${row.usuarios.nombre} ${row.usuarios.apellido}`,
+      correo: row.usuarios.correo,
+      modalidad: (row.actividades.modalidad ?? 'PRESENCIAL') as TalleristaReporteItem['modalidad'],
+      enlaceSesion: row.actividades.enlace_sesion ?? null,
+      sede: row.actividades.instituciones?.nombre ?? null,
+      sala: row.actividades.id_sala ?? null,
+    }));
   }
 }

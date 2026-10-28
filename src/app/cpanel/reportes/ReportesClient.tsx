@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, generarListaUsuariosXlsAction, InstitucionReporteItem } from './actions';
+import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, generarListaUsuariosXlsAction, obtenerReporteTalleristasAction, generarReporteTalleristasPdfAction, InstitucionReporteItem, TalleristaReporteItem } from './actions';
 
 const DownloadIcon = () => (
   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,19 +28,32 @@ const descargarBase64 = (base64: string, nombreArchivo: string, mime: string) =>
   URL.revokeObjectURL(url);
 };
 
+const obtenerLugarSesion = (t: TalleristaReporteItem) => {
+  if (t.modalidad === 'VIRTUAL') return t.enlaceSesion;
+  return [t.sede, t.sala].filter(Boolean).join(' / ') || null;
+};
+
 export function ReportesClient() {
   const [instituciones, setInstituciones] = useState<InstitucionReporteItem[]>([]);
   const [totalParticipantes, setTotalParticipantes] = useState(0);
+  const [talleristas, setTalleristas] = useState<TalleristaReporteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPdf, setLoadingPdf] = useState(false);
+  const [loadingPdfTalleristas, setLoadingPdfTalleristas] = useState(false);
   const [loadingXls, setLoadingXls] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const result = await obtenerReporteInstitucionesAction();
-    if (result.success) {
-      setInstituciones(result.data);
-      setTotalParticipantes(result.totalParticipantes);
+    const [resultInstituciones, resultTalleristas] = await Promise.all([
+      obtenerReporteInstitucionesAction(),
+      obtenerReporteTalleristasAction(),
+    ]);
+    if (resultInstituciones.success) {
+      setInstituciones(resultInstituciones.data);
+      setTotalParticipantes(resultInstituciones.totalParticipantes);
+    }
+    if (resultTalleristas.success) {
+      setTalleristas(resultTalleristas.data);
     }
     setLoading(false);
   }, []);
@@ -78,6 +91,24 @@ export function ReportesClient() {
       setLoadingXls(false);
     }
   };
+
+  const handleDescargarPdfTalleristas = async () => {
+    setLoadingPdfTalleristas(true);
+    try {
+      const result = await generarReporteTalleristasPdfAction();
+      if (result.success) {
+        const { base64, nombreArchivo } = result.data;
+        descargarBase64(base64, nombreArchivo, 'application/pdf');
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setLoadingPdfTalleristas(false);
+    }
+  };
+
+  const totalTalleres = new Set(talleristas.map((t) => t.idActividad)).size;
+  const totalTalleristas = new Set(talleristas.map((t) => t.folioRegistro)).size;
 
   return (
     <div className="space-y-6">
@@ -197,6 +228,103 @@ export function ReportesClient() {
                   </td>
                 </tr>
               </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Talleristas</h3>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {totalTalleres} taller(es) · {totalTalleristas} tallerista(s). Correo y liga o lugar de la sesión.
+            </p>
+          </div>
+          <button
+            onClick={handleDescargarPdfTalleristas}
+            disabled={loadingPdfTalleristas || loading}
+            className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {loadingPdfTalleristas ? (
+              <>
+                <SpinnerIcon />
+                Generando...
+              </>
+            ) : (
+              <>
+                <DownloadIcon />
+                Descargar PDF
+              </>
+            )}
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="px-6 py-12 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="text-slate-500">Cargando reporte...</p>
+            </div>
+          </div>
+        ) : talleristas.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-slate-500">No hay talleristas registrados.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3 font-semibold text-slate-900 w-16">#</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Folio</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Tallerista</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Taller</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Modalidad</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Correo</th>
+                  <th className="px-6 py-3 font-semibold text-slate-900">Liga / Lugar</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {talleristas.map((t, index) => {
+                  const lugar = obtenerLugarSesion(t);
+                  return (
+                    <tr key={`${t.idActividad}-${t.folioRegistro}`} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 text-slate-500">{index + 1}</td>
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs text-slate-700 whitespace-nowrap">{t.folioRegistro}</span>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-slate-900">{t.nombreTallerista}</td>
+                      <td className="px-6 py-4 text-slate-700">{t.nombreTaller}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-md ${t.modalidad === 'VIRTUAL' ? 'bg-sky-50 text-sky-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                          {t.modalidad === 'VIRTUAL' ? 'Virtual' : 'Presencial'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <a href={`mailto:${t.correo}`} className="text-indigo-600 hover:underline">
+                          {t.correo}
+                        </a>
+                      </td>
+                      <td className="px-6 py-4 max-w-xs">
+                        {t.modalidad === 'VIRTUAL' && t.enlaceSesion ? (
+                          <a
+                            href={t.enlaceSesion}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-600 hover:underline break-all"
+                          >
+                            {t.enlaceSesion}
+                          </a>
+                        ) : (
+                          <span className={lugar ? 'text-slate-700' : 'text-slate-400 italic'}>
+                            {lugar ?? (t.modalidad === 'VIRTUAL' ? 'Sin liga' : 'Por definir')}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         )}

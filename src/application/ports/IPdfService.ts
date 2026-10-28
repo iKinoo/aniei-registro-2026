@@ -22,8 +22,23 @@ export interface ReporteInstitucionesPdfData {
   }[];
 }
 
+export interface ReporteTalleristasPdfData {
+  totalTalleres: number;
+  totalTalleristas: number;
+  talleristas: {
+    numero: number;
+    folio: string;
+    nombre: string;
+    taller: string;
+    modalidad: 'PRESENCIAL' | 'VIRTUAL';
+    correo: string;
+    ligaOLugar: string;
+  }[];
+}
+
 export interface IPdfService {
   generarConstancia(datos: ContenidoConstancia): Promise<Uint8Array>;
   generarListaParticipantes(datos: ListaParticipantesPdfData): Promise<Uint8Array>;
   generarReporteInstituciones(datos: ReporteInstitucionesPdfData): Promise<Uint8Array>;
+  generarReporteTalleristas(datos: ReporteTalleristasPdfData): Promise<Uint8Array>;
 }

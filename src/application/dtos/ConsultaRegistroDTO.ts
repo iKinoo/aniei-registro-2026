@@ -89,3 +89,15 @@ export interface InstitucionReporteItem {
   abreviatura: string | null;
   totalParticipantes: number;
 }
+
+export interface TalleristaReporteItem {
+  idActividad: number;
+  nombreTaller: string;
+  folioRegistro: string;
+  nombreTallerista: string;
+  correo: string;
+  modalidad: 'PRESENCIAL' | 'VIRTUAL';
+  enlaceSesion: string | null;
+  sede: string | null;
+  sala: string | null;
+}
