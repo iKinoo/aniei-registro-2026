@@ -9,7 +9,9 @@ export interface ActualizarUsuarioDTO {
   carrera: string | null;
   dependencia: string | null;
   idTitulo: number | null;
+  idTipoParticipante?: number | null;
   idInstitucion: number | null;
+  institucionExterna?: string | null;
   idEntidadFederativa: number | null;
 }
 

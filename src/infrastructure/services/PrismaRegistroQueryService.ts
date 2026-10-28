@@ -15,7 +15,19 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
 
   async obtenerDetalle(folio: string): Promise<DetalleUsuarioDTO | null> {
     const u = await this.prisma.usuarios.findUnique({
-      where: { folio_registro: folio }, include: { instituciones: true, titulos: true, estados: true },
+      where: { folio_registro: folio },
+      include: {
+        instituciones: true,
+        titulos: true,
+        estados: true,
+        grupo_registro: {
+          include: {
+            responsable: {
+              select: { folio_registro: true, nombre: true, apellido: true, correo: true },
+            },
+          },
+        },
+      },
     });
     if (!u) return null;
     const [depositos, f, inscripciones] = await Promise.all([
@@ -39,6 +51,11 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
         razonSocial: f.razon_social, rfc: f.rfc, calle: f.calle, numExterior: f.num_exterior,
         numInterior: f.num_interior, colonia: f.colonia, municipio: f.municipio, codigoPostal: f.codigo_postal,
         constanciaUrl: f.constancia_url, constanciaNombre: f.constancia_nombre,
+      } : null,
+      registradoPor: u.grupo_registro ? {
+        folioRegistro: u.grupo_registro.responsable.folio_registro,
+        nombreCompleto: `${u.grupo_registro.responsable.nombre} ${u.grupo_registro.responsable.apellido}`,
+        correo: u.grupo_registro.responsable.correo,
       } : null,
       inscripciones: inscripciones.map(i => ({
         idInscripcion: i.id_inscripcion, idActividad: i.id_actividad, fechaInscripcion: i.fecha_inscripcion ?? u.fecha_registro ?? new Date(),

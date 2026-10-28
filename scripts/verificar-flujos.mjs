@@ -45,6 +45,9 @@ const { PrismaInscripcionActividadRepository } = load('@/infrastructure/reposito
 const { mapPrismaError } = load('@/infrastructure/errors/prismaErrorMapper');
 const { HmacEnlaceArchivoService } = load('@/infrastructure/services/storage/HmacEnlaceArchivoService');
 const { LocalFilesystemStorageService } = load('@/infrastructure/services/storage/LocalFilesystemStorageService');
+const { CompletarDatosRegistro } = load('@/application/use-cases/CompletarDatosRegistro');
+const { RegistrarPagoRegistro } = load('@/application/use-cases/RegistrarPagoRegistro');
+const { ObtenerPerfilRegistro } = load('@/application/use-cases/ObtenerPerfilRegistro');
 const catalogos = { obtenerInstituciones: async () => [], obtenerTitulos: async () => [] };
 const hasher = { hash: async p => `hash:${p}`, verify: async (p, h) => h === `hash:${p}` };
 const passwords = { generar: () => 'ClaveDePrueba123' };
@@ -218,6 +221,85 @@ await test('Detalle de usuario consulta los grupos que registró como responsabl
   assert.deepEqual(consulta.where, { folio_registro_responsable: 'ANI26-0007' });
   assert.deepEqual(consulta.orderBy, [{ fecha_registro: 'desc' }, { id: 'desc' }]);
   assert.deepEqual(grupos, []);
+});
+await test('Detalle de usuario expone al responsable del grupo que lo registró', async () => {
+  let include;
+  const servicio = new PrismaRegistroQueryService({
+    usuarios: {
+      findUnique: async argumentos => {
+        include = argumentos.include;
+        return {
+          folio_registro: 'ANI26-0008',
+          nombre: 'Luis',
+          apellido: 'Pérez',
+          correo: 'luis@example.com',
+          telefono: null,
+          lada: null,
+          extension: null,
+          genero: null,
+          carrera: null,
+          dependencia: null,
+          id_titulo: null,
+          id_tipo_participante: 1,
+          id_institucion: 1,
+          id_entidad_federativa: 1,
+          institucion_externa: null,
+          fecha_registro: new Date('2026-10-01'),
+          instituciones: null,
+          titulos: null,
+          estados: null,
+          grupo_registro: {
+            responsable: { folio_registro: 'ANI26-0007', nombre: 'Ana', apellido: 'López', correo: 'ana@example.com' },
+          },
+        };
+      },
+    },
+    depositos: { findMany: async () => [] },
+    facturaciones: { findFirst: async () => null },
+    inscripcion_actividades: { findMany: async () => [] },
+  });
+  const detalle = await servicio.obtenerDetalle('ANI26-0008');
+  assert.deepEqual(include.grupo_registro, {
+    include: { responsable: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } } },
+  });
+  assert.deepEqual(detalle.registradoPor, {
+    folioRegistro: 'ANI26-0007',
+    nombreCompleto: 'Ana López',
+    correo: 'ana@example.com',
+  });
+});
+await test('Detalle sin grupo no expone responsable de registro', async () => {
+  const servicio = new PrismaRegistroQueryService({
+    usuarios: {
+      findUnique: async () => ({
+        folio_registro: 'ANI26-0009',
+        nombre: 'Marta',
+        apellido: 'Ruiz',
+        correo: 'marta@example.com',
+        telefono: null,
+        lada: null,
+        extension: null,
+        genero: null,
+        carrera: null,
+        dependencia: null,
+        id_titulo: null,
+        id_tipo_participante: 1,
+        id_institucion: 1,
+        id_entidad_federativa: 1,
+        institucion_externa: null,
+        fecha_registro: new Date('2026-10-01'),
+        instituciones: null,
+        titulos: null,
+        estados: null,
+        grupo_registro: null,
+      }),
+    },
+    depositos: { findMany: async () => [] },
+    facturaciones: { findFirst: async () => null },
+    inscripcion_actividades: { findMany: async () => [] },
+  });
+  const detalle = await servicio.obtenerDetalle('ANI26-0009');
+  assert.equal(detalle.registradoPor, null);
 });
 await test('Inscripciones bloquean actividades en orden y propagan errores de persistencia', async () => {
   const locks = [];
@@ -615,6 +697,148 @@ await test('Un fallo durante la transmisión cierra el flujo, libera recursos y 
   assert.equal(reportes.length, 1);
   assert.match(reportes[0].contexto, /transmitir/);
   servicioExportacion = null;
+});
+
+await test('El perfil identifica miembros de grupo sin exigirles pago', async () => {
+  const usuarioBase = {
+    folioRegistro: 'ANI26-0002', nombre: 'Luis', apellido: 'Pérez', correo: 'luis@example.com',
+    telefono: null, lada: null, extension: null, genero: 'F', carrera: null, dependencia: 'Facultad',
+    idTitulo: 1, idTipoParticipante: 1, idInstitucion: 1, idEntidadFederativa: 1,
+    institucionExterna: null, idGrupoRegistro: 7, fechaRegistro: new Date('2026-10-01'),
+  };
+  const registros = {
+    obtenerPerfil: async () => ({
+      usuario: usuarioBase, depositos: [], facturacion: null, inscripciones: [], equipos: [], registradoPor: null,
+    }),
+  };
+  const precios = { obtenerVigente: async () => { throw new Error('No debe consultar precio de miembro de grupo'); } };
+  const resultado = await new ObtenerPerfilRegistro(registros, precios).execute('ANI26-0002');
+  assert.equal(resultado.estado.esMiembroGrupo, true);
+  assert.equal(resultado.estado.pagoCubiertoPorGrupo, true);
+  assert.equal(resultado.estado.requierePago, false);
+  assert.equal(resultado.estado.precioVigente, null);
+});
+
+await test('El perfil exige completar datos y después calcula el pago vigente', async () => {
+  const incompleto = {
+    folioRegistro: 'ANI26-0010', nombre: 'Aldo', apellido: 'Delgadillo', correo: 'aldo@example.com',
+    telefono: null, lada: null, extension: null, genero: null, carrera: null, dependencia: null,
+    idTitulo: null, idTipoParticipante: null, idInstitucion: null, idEntidadFederativa: null,
+    institucionExterna: null, idGrupoRegistro: null, fechaRegistro: new Date('2026-10-01'),
+  };
+  const precio = { id: 1, idTipoParticipante: 1, esAfiliada: true, fechaLimite: new Date('2026-01-01'), costo: 451, orden: 1, activo: true };
+  const registros = {
+    obtenerPerfil: async () => ({
+      usuario: incompleto, depositos: [], facturacion: null, inscripciones: [], equipos: [], registradoPor: null,
+    }),
+  };
+  const precios = { obtenerVigente: async () => precio };
+  const sinDatos = await new ObtenerPerfilRegistro(registros, precios).execute('ANI26-0010');
+  assert.equal(sinDatos.estado.datosCompletados, false);
+  assert.equal(sinDatos.estado.requierePago, true);
+  assert.equal(sinDatos.estado.precioVigente, null);
+  assert.equal(sinDatos.estado.camposFaltantes.idTitulo, true);
+  assert.equal(sinDatos.estado.camposFaltantes.institucion, true);
+
+  registros.obtenerPerfil = async () => ({
+    usuario: { ...incompleto, genero: 'M', idTitulo: 1, idTipoParticipante: 1, idInstitucion: 1, idEntidadFederativa: 1 },
+    depositos: [], facturacion: null, inscripciones: [], equipos: [], registradoPor: null,
+  });
+  const conDatos = await new ObtenerPerfilRegistro(registros, precios).execute('ANI26-0010');
+  assert.equal(conDatos.estado.datosCompletados, true);
+  assert.equal(conDatos.estado.requierePago, true);
+  assert.equal(conDatos.estado.precioVigente.costo, 451);
+});
+
+await test('Completar datos solo llena campos vacíos y bloquea segundas modificaciones', async () => {
+  const actual = {
+    folioRegistro: 'ANI26-0002', nombre: 'Luis', apellido: 'Pérez', correo: 'luis@example.com',
+    telefono: null, lada: null, extension: null, genero: null, carrera: null, dependencia: 'Facultad',
+    idTitulo: null, idTipoParticipante: 1, idInstitucion: 3, idEntidadFederativa: 1,
+    institucionExterna: null, idGrupoRegistro: 7, fechaRegistro: new Date('2026-10-01'),
+  };
+  let guardado;
+  const registros = { obtenerUsuario: async () => actual };
+  const usuarios = { actualizar: async (folio, data) => { guardado = { folio, data }; } };
+  await new CompletarDatosRegistro(registros, usuarios).execute('ANI26-0002', {
+    genero: 'F', idTitulo: 2, carrera: 'Sistemas', telefono: '9971105996', noAfiliada: false, idInstitucion: 99,
+  });
+  assert.equal(guardado.folio, 'ANI26-0002');
+  assert.equal(guardado.data.genero, 'F');
+  assert.equal(guardado.data.idTitulo, 2);
+  assert.equal(guardado.data.carrera, 'Sistemas');
+  assert.equal(guardado.data.telefono, '9971105996');
+  assert.equal(guardado.data.idInstitucion, 3, 'no debe sobrescribir la institución existente');
+  assert.equal(guardado.data.dependencia, 'Facultad', 'no debe sobrescribir la dependencia existente');
+  assert.equal(guardado.data.idTipoParticipante, 1, 'no debe sobrescribir el tipo de participante existente');
+
+  await assert.rejects(
+    new CompletarDatosRegistro({ obtenerUsuario: async () => ({ ...actual, genero: 'F', idTitulo: 2 }) },
+      { actualizar: async () => assert.fail('No debe actualizar datos completos') })
+      .execute('ANI26-0002', { noAfiliada: false }),
+    /no pueden modificarse/,
+  );
+});
+
+await test('El pago de perfil rechaza miembros de grupo y compensa el comprobante si falla la transacción', async () => {
+  const base = {
+    folioRegistro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com',
+    telefono: '9971105996', lada: null, extension: null, genero: 'F', carrera: null, dependencia: null,
+    idTitulo: 1, idTipoParticipante: 1, idInstitucion: 1, idEntidadFederativa: 1,
+    institucionExterna: null, idGrupoRegistro: null, fechaRegistro: new Date('2026-10-01'),
+  };
+  const precio = { id: 1, idTipoParticipante: 1, esAfiliada: true, fechaLimite: new Date('2026-01-01'), costo: 451, orden: 1, activo: true };
+  const archivoPago = { nombre: 'pago.pdf', mime: 'application/pdf', tamanio: 3, buffer: new Uint8Array([1, 2, 3]) };
+  const pago = { referencia: 'ref-1', fechaDeposito: new Date('2026-10-01'), archivo: archivoPago };
+
+  const grupo = new RegistrarPagoRegistro(
+    { obtenerUsuario: async () => ({ ...base, idGrupoRegistro: 7 }) },
+    { buscarTodosPorUsuario: async () => [] },
+    { obtenerVigente: async () => precio },
+    storage(), { run: async () => assert.fail('No debe iniciar transacción') }, ids,
+  );
+  await assert.rejects(grupo.execute('ANI26-0002', pago), /cubierto por el registro grupal/);
+
+  const disco = storage();
+  const useCase = new RegistrarPagoRegistro(
+    { obtenerUsuario: async () => base },
+    { buscarTodosPorUsuario: async () => [] },
+    { obtenerVigente: async () => precio },
+    disco,
+    { run: async () => { throw new Error('rollback'); } },
+    ids,
+  );
+  await assert.rejects(useCase.execute('ANI26-0001', pago), /rollback/);
+  assert.equal(disco.files.size, 0);
+  assert.deepEqual(disco.eliminados, ['comprobantes/id-prueba.pdf']);
+});
+
+await test('El pago de perfil usa el precio vigente y no el monto enviado por el cliente', async () => {
+  const base = {
+    folioRegistro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com',
+    telefono: '9971105996', lada: null, extension: null, genero: 'F', carrera: null, dependencia: null,
+    idTitulo: 1, idTipoParticipante: 1, idInstitucion: null, idEntidadFederativa: 1,
+    institucionExterna: 'Universidad Externa', idGrupoRegistro: null, fechaRegistro: new Date('2026-10-01'),
+  };
+  let creado;
+  const precio = { id: 3, idTipoParticipante: 1, esAfiliada: false, fechaLimite: new Date('2026-01-01'), costo: 500, orden: 1, activo: true };
+  let solicitado;
+  const useCase = new RegistrarPagoRegistro(
+    { obtenerUsuario: async () => base },
+    { buscarTodosPorUsuario: async () => [] },
+    { obtenerVigente: async (tipo, afiliada) => { solicitado = { tipo, afiliada }; return precio; } },
+    storage(),
+    { run: async fn => fn({ depositoRepo: { buscarTodosPorUsuario: async () => [], crear: async d => { creado = d; } } }) },
+    ids,
+  );
+  const resultado = await useCase.execute('ANI26-0001', {
+    referencia: 'ref-2', fechaDeposito: new Date('2026-10-01'),
+    archivo: { nombre: 'pago.pdf', mime: 'application/pdf', tamanio: 3, buffer: new Uint8Array([1]) },
+  });
+  assert.deepEqual(solicitado, { tipo: 1, afiliada: false });
+  assert.equal(resultado.monto, 500);
+  assert.equal(creado.monto.toNumber(), 500);
+  assert.equal(creado.proposito, 'EVENTO_PRINCIPAL');
 });
 
 fs.rmSync(dirExport, { recursive: true, force: true });

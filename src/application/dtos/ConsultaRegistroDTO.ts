@@ -16,6 +16,7 @@ export interface UsuarioConsultaDTO {
   idInstitucion: number | null;
   idEntidadFederativa: number | null;
   institucionExterna: string | null;
+  idGrupoRegistro: number | null;
   fechaRegistro: Date | null;
 }
 
@@ -68,6 +69,11 @@ export interface DetalleUsuarioDTO {
     constanciaNombre: string | null;
   } | null;
   inscripciones: InscripcionConsultaDTO[];
+  registradoPor: {
+    folioRegistro: string;
+    nombreCompleto: string;
+    correo: string;
+  } | null;
 }
 
 export interface PerfilDTO extends DetalleUsuarioDTO {

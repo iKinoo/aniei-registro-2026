@@ -1,11 +1,19 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getRegistroQueryService } from '@/infrastructure/config/container';
-import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
+import {
+  getCatalogoRepository,
+  getPrecioInscripcionRepository,
+  getRegistroQueryService,
+  getTipoParticipanteRepository,
+} from '@/infrastructure/config/container';
+import { ObtenerPerfilRegistro } from '@/application/use-cases/ObtenerPerfilRegistro';
+import { PrepararRegistro } from '@/application/use-cases/PrepararRegistro';
 import { HistorialDepositosUsuario } from '@/app/components/HistorialDepositosUsuario';
 import AutoLogout from './AutoLogout';
 import { CerrarSesionButton } from './CerrarSesionButton';
+import { CompletarDatosForm } from './CompletarDatosForm';
+import { PagoRegistroForm } from './PagoRegistroForm';
 import styles from './page.module.css';
 
 export const metadata = { title: 'Mi Perfil | ANIEI 2026' };
@@ -18,9 +26,23 @@ export default async function PerfilPage() {
     redirect('/login');
   }
 
-  const perfil = await new ConsultarRegistros(getRegistroQueryService()).obtenerPerfil(folioRegistro);
-  if (!perfil) return <AutoLogout />;
-  const { usuario, inscripciones, depositos, equipos } = perfil;
+  const resultado = await new ObtenerPerfilRegistro(
+    getRegistroQueryService(),
+    getPrecioInscripcionRepository(),
+  ).execute(folioRegistro);
+  if (!resultado) return <AutoLogout />;
+
+  const { perfil, estado } = resultado;
+  const { usuario, inscripciones, depositos, equipos, registradoPor } = perfil;
+  const esAdmin = (session?.user?.role ?? '').toUpperCase() === 'ADMIN';
+
+  const { catalogos, precios, tiposParticipante } = !esAdmin && !estado.datosCompletados
+    ? await new PrepararRegistro(
+        getCatalogoRepository(),
+        getPrecioInscripcionRepository(),
+        getTipoParticipanteRepository(),
+      ).execute()
+    : { catalogos: { titulos: [], estados: [], instituciones: [] }, precios: [], tiposParticipante: [] };
 
   return (
     <div className={styles.container}>
@@ -48,6 +70,15 @@ export default async function PerfilPage() {
               <span className={styles.label}>Institución</span>
               <span className={styles.value}>{usuario.institucion?.nombre || 'N/A'}</span>
             </div>
+            {registradoPor && (
+              <div className={styles.field}>
+                <span className={styles.label}>Registrado por</span>
+                <span className={styles.value}>{registradoPor.nombreCompleto}</span>
+                <span className={styles.valueSecondary}>
+                  {registradoPor.folioRegistro} · {registradoPor.correo}
+                </span>
+              </div>
+            )}
             <div className={styles.field}>
               <span className={styles.label}>Fecha de Registro</span>
               <span className={styles.value}>
@@ -59,7 +90,61 @@ export default async function PerfilPage() {
               </span>
             </div>
           </div>
-            
+
+          {!esAdmin && !estado.datosCompletados && (
+            <>
+              <div className={styles.sectionTitle}>Completar Registro</div>
+              <div className="mb-8">
+                <CompletarDatosForm
+                  usuario={usuario}
+                  faltantes={estado.camposFaltantes}
+                  catalogos={catalogos}
+                  precios={precios}
+                  tiposParticipante={tiposParticipante}
+                />
+              </div>
+            </>
+          )}
+
+          {!esAdmin && estado.esMiembroGrupo && (
+            <div className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+              <p className="font-semibold">Pago cubierto por registro grupal</p>
+              <p className="text-sm mt-1">
+                No necesitas capturar datos de depósito ni comprobante: tu pago fue cubierto por el responsable del grupo.
+              </p>
+            </div>
+          )}
+
+          {!esAdmin && !estado.esMiembroGrupo && !estado.tienePagoPrincipal && !estado.datosCompletados && (
+            <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
+              <p className="font-semibold">Pago de inscripción pendiente</p>
+              <p className="text-sm mt-1">
+                Después de completar tus datos podrás registrar los datos del depósito y subir tu comprobante.
+              </p>
+            </div>
+          )}
+
+          {!esAdmin && !estado.esMiembroGrupo && !estado.tienePagoPrincipal && estado.datosCompletados && (
+            <>
+              <div className={styles.sectionTitle}>Pago de Inscripción</div>
+              <div className="mb-8">
+                {estado.precioVigente && estado.precioVigente.costo > 0 ? (
+                  <PagoRegistroForm monto={estado.precioVigente.costo} />
+                ) : estado.precioVigente && estado.precioVigente.costo === 0 ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+                    <p className="font-semibold">Tu inscripción no requiere pago</p>
+                    <p className="text-sm mt-1">No hay un monto pendiente para tu tipo de participante.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
+                    <p className="font-semibold">No hay un precio vigente configurado</p>
+                    <p className="text-sm mt-1">Contacta a la organización para completar tu pago.</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <div className={styles.sectionTitle}>
             Mis Actividades
             <span className={styles.actividadesBadge}>{inscripciones.length}</span>

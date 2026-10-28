@@ -7,7 +7,8 @@ export function mapUsuarioConsulta(u: usuarios): UsuarioConsultaDTO {
     telefono: u.telefono, lada: u.lada, extension: u.extension, genero: u.genero, carrera: u.carrera,
     dependencia: u.dependencia, idTitulo: u.id_titulo, idTipoParticipante: u.id_tipo_participante,
     idInstitucion: u.id_institucion, idEntidadFederativa: u.id_entidad_federativa,
-    institucionExterna: u.institucion_externa, fechaRegistro: u.fecha_registro,
+    institucionExterna: u.institucion_externa, idGrupoRegistro: u.id_grupo_registro ?? null,
+    fechaRegistro: u.fecha_registro,
   };
 }
 

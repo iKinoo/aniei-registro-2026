@@ -17,7 +17,9 @@ export class PrismaUsuarioRepository implements IUsuarioRepository {
     await this.prisma.usuarios.update({ where: { folio_registro: folio }, data: {
       nombre: d.nombre, apellido: d.apellido, correo: d.correo, telefono: d.telefono, lada: d.lada,
       extension: d.extension, genero: d.genero, carrera: d.carrera, dependencia: d.dependencia,
-      id_titulo: d.idTitulo, id_institucion: d.idInstitucion, id_entidad_federativa: d.idEntidadFederativa,
+      id_titulo: d.idTitulo, id_tipo_participante: d.idTipoParticipante,
+      id_institucion: d.idInstitucion, institucion_externa: d.institucionExterna,
+      id_entidad_federativa: d.idEntidadFederativa,
     } });
   }
 

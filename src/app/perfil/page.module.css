@@ -120,6 +120,12 @@
   font-weight: 600;
 }
 
+.valueSecondary {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
 /* ---- Actividades ---- */
 .emptyActividades {
   display: flex;
