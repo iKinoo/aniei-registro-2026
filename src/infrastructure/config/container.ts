@@ -25,7 +25,9 @@ import { SupabaseStorageService } from '@/infrastructure/services/storage/Supaba
 import { LocalFilesystemStorageService } from '@/infrastructure/services/storage/LocalFilesystemStorageService';
 import { AuthJsAuthService } from '@/infrastructure/services/auth/AuthJsAuthService';
 import { ExcelJsService } from '@/infrastructure/services/excel/ExcelJsService';
+import { FflateZipService } from '@/infrastructure/services/zip/FflateZipService';
 import type { IExcelService } from '@/application/ports/IExcelService';
+import type { IZipService } from '@/application/ports/IZipService';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { IAuthService } from '@/application/ports/IAuthService';
 import { IDepositoRepository } from '@/application/ports/IDepositoRepository';
@@ -92,6 +94,10 @@ export function getEmailService(): IEmailService {
 
 export function getPdfService(): IPdfService {
   return new ReactPdfService();
+}
+
+export function getZipService(): IZipService {
+  return new FflateZipService();
 }
 
 export function getExcelService(): IExcelService {

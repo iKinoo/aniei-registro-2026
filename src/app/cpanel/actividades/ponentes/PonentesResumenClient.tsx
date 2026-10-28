@@ -13,8 +13,9 @@ export default function PonentesResumenClient({ ponentes }: Props) {
   const [busqueda, setBusqueda] = useState('');
   const [enviandoFolio, setEnviandoFolio] = useState<string | null>(null);
   const [enviandoTodas, setEnviandoTodas] = useState(false);
+  const [descargandoZip, setDescargandoZip] = useState(false);
 
-  const ocupado = enviandoTodas || enviandoFolio !== null;
+  const ocupado = enviandoTodas || descargandoZip || enviandoFolio !== null;
 
   const actividadesUnicas = useMemo(
     () => new Set(ponentes.flatMap((p) => p.actividades.map((a) => a.idActividad))).size,
@@ -51,6 +52,35 @@ export default function PonentesResumenClient({ ponentes }: Props) {
     }
   };
 
+  const handleDescargarZip = async () => {
+    setDescargandoZip(true);
+    try {
+      const res = await fetch('/api/cpanel/actividades/listas-asistencia', { cache: 'no-store' });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        const mensaje = data?.error ?? 'No se pudieron generar las listas de asistencia';
+        alert('Error: ' + mensaje);
+        return;
+      }
+
+      const blob = await res.blob();
+      const coincidencia = res.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/);
+      const nombreArchivo = coincidencia?.[1] ?? 'listas_asistencia_ANIEI_2026.zip';
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = nombreArchivo;
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Error: no se pudo descargar el archivo ZIP');
+    } finally {
+      setDescargandoZip(false);
+    }
+  };
+
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     if (!q) return ponentes;
@@ -63,7 +93,7 @@ export default function PonentesResumenClient({ ponentes }: Props) {
     <div className="p-8 font-sans min-h-full">
       <div className="max-w-6xl mx-auto space-y-8">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4">
           <div>
             <Link href="/cpanel/actividades" className="text-slate-300 hover:text-white transition-colors text-sm">
               ← Volver a actividades
@@ -73,14 +103,32 @@ export default function PonentesResumenClient({ ponentes }: Props) {
               {ponentes.length} ponente{ponentes.length === 1 ? '' : 's'} con actividades asignadas en el congreso.
             </p>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto lg:justify-end">
             <input
               type="search"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por nombre, correo o folio…"
-              className="w-full md:w-80 px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full sm:w-64 lg:w-60 px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white text-slate-900 placeholder:text-slate-400 caret-indigo-600 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            <button
+              onClick={handleDescargarZip}
+              disabled={ocupado}
+              title="Descarga un ZIP con la lista de asistencia de todas las actividades registradas"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 bg-white text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 whitespace-nowrap"
+            >
+              {descargandoZip ? (
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              )}
+              {descargandoZip ? 'Generando ZIP…' : 'Descargar listas (.zip)'}
+            </button>
             <button
               onClick={handleEnviarTodas}
               disabled={ocupado || ponentes.length === 0}
