@@ -108,4 +108,5 @@ export interface ParticipanteTallerReporteItem {
   folioRegistro: string;
   nombreParticipante: string;
   correo: string;
+  incluirEnConstancia: boolean;
 }

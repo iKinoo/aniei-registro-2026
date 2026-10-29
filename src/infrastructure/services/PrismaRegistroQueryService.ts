@@ -173,6 +173,7 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
         folioRegistro: row.usuarios.folio_registro,
         nombreParticipante: `${row.usuarios.nombre} ${row.usuarios.apellido}`,
         correo: row.usuarios.correo,
+        incluirEnConstancia: row.incluir_en_constancia,
       }];
     });
   }

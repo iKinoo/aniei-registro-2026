@@ -939,11 +939,11 @@ await test('El ZIP de constancias no se genera si no hay talleres con tallerista
   assert.equal(resultado, null);
 });
 
-await test('El reporte XLS de participantes de talleres usa taller, folio, nombre y correo', async () => {
+await test('El reporte XLS de participantes de talleres usa taller, folio, nombre, correo y asistencia', async () => {
   const participantes = [
-    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0002', nombreParticipante: 'Luis Gómez', correo: 'luis@example.com' },
-    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0003', nombreParticipante: 'Marta Ruiz', correo: 'marta@example.com' },
-    { idActividad: 1, nombreTaller: 'Taller A', folioRegistro: 'ANI26-0001', nombreParticipante: 'Ana Pérez', correo: 'ana@example.com' },
+    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0002', nombreParticipante: 'Luis Gómez', correo: 'luis@example.com', incluirEnConstancia: true },
+    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0003', nombreParticipante: 'Marta Ruiz', correo: 'marta@example.com', incluirEnConstancia: false },
+    { idActividad: 1, nombreTaller: 'Taller A', folioRegistro: 'ANI26-0001', nombreParticipante: 'Ana Pérez', correo: 'ana@example.com', incluirEnConstancia: true },
   ];
   let hoja;
   const resultado = await new GenerarReporteParticipantesTalleresXls(
@@ -962,12 +962,14 @@ await test('El reporte XLS de participantes de talleres usa taller, folio, nombr
     'Folio del participante',
     'Nombre del participante',
     'Correo electrónico',
+    'Asistencia',
   ]);
   assert.deepEqual(hoja.filas, participantes.map((participante) => [
     participante.nombreTaller,
     participante.folioRegistro,
     participante.nombreParticipante,
     participante.correo,
+    participante.incluirEnConstancia ? 'Sí' : 'No',
   ]));
   assert.deepEqual([...resultado], [7, 8]);
 });

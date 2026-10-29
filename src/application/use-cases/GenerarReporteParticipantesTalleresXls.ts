@@ -18,12 +18,14 @@ export class GenerarReporteParticipantesTalleresXls {
         { titulo: 'Folio del participante', tipo: 'texto', ancho: 20 },
         { titulo: 'Nombre del participante', tipo: 'texto', ancho: 34 },
         { titulo: 'Correo electrónico', tipo: 'texto', ancho: 34 },
+        { titulo: 'Asistencia', tipo: 'texto', ancho: 12 },
       ],
       filas: participantes.map((participante) => [
         participante.nombreTaller,
         participante.folioRegistro,
         participante.nombreParticipante,
         participante.correo,
+        participante.incluirEnConstancia ? 'Sí' : 'No',
       ]),
     };
     return this.excel.generarHoja(hoja);

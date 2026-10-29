@@ -351,7 +351,7 @@ export function ReportesClient() {
           <div>
             <h3 className="text-base font-semibold text-slate-900">Participantes Inscritos a Talleres</h3>
             <p className="text-sm text-slate-500 mt-0.5">
-              Lista agrupada por taller con folio, nombre y correo del participante.
+              Lista agrupada por taller con folio, nombre, correo y asistencia del participante.
             </p>
           </div>
           <button
