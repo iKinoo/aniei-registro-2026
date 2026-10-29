@@ -13,6 +13,21 @@ function formatFecha(iso: string) {
   });
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+function fechaLocalISO(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function actividadEnFecha(a: ActividadDTO, fecha: string): boolean {
+  if (!fecha) return true;
+  const fechas = a.horarios.length > 0
+    ? a.horarios.flatMap((h) => [h.fechaInicio, h.fechaFin])
+    : [a.fechaInicio, a.fechaFin];
+  return fechas.some((f) => fechaLocalISO(f) === fecha);
+}
+
 const PlusIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -95,6 +110,7 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
   const [editingActividad, setEditingActividad] = useState<ActividadDTO | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<number | undefined>(undefined);
+  const [filtroFecha, setFiltroFecha] = useState('');
   const [msg, setMsg] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
@@ -132,9 +148,10 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
     }
   }
 
-  const actividadesFiltradas = filtroTipo != null
-    ? actividades.filter((a) => a.idTipoActividad === filtroTipo)
-    : actividades;
+  const actividadesFiltradas = actividades.filter((a) => {
+    if (filtroTipo != null && a.idTipoActividad !== filtroTipo) return false;
+    return actividadEnFecha(a, filtroFecha);
+  });
 
   const refresh = useCallback(async () => {
     const res = await getActividadesAction();
@@ -199,17 +216,42 @@ export default function ActividadesClient({ initialActividades, tiposActividad, 
               </div>
             );
           })}
-          <div className="ml-auto">
-            <select
-              value={filtroTipo ?? ''}
-              onChange={(e) => setFiltroTipo(e.target.value ? Number(e.target.value) : undefined)}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-            >
-              <option value="">Todos los tipos</option>
-              {tiposActividad.map((t) => (
-                <option key={t.idTipoActividad} value={t.idTipoActividad}>{t.descripcion}</option>
-              ))}
-            </select>
+          <div className="ml-auto flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filtro-fecha-actividades" className="text-xs text-slate-500 uppercase tracking-wide">Fecha</label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="filtro-fecha-actividades"
+                  type="date"
+                  value={filtroFecha}
+                  onChange={(e) => setFiltroFecha(e.target.value)}
+                  className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                />
+                {filtroFecha && (
+                  <button
+                    type="button"
+                    onClick={() => setFiltroFecha('')}
+                    className="text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filtro-tipo-actividades" className="text-xs text-slate-500 uppercase tracking-wide">Tipo</label>
+              <select
+                id="filtro-tipo-actividades"
+                value={filtroTipo ?? ''}
+                onChange={(e) => setFiltroTipo(e.target.value ? Number(e.target.value) : undefined)}
+                className="px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              >
+                <option value="">Todos los tipos</option>
+                {tiposActividad.map((t) => (
+                  <option key={t.idTipoActividad} value={t.idTipoActividad}>{t.descripcion}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
