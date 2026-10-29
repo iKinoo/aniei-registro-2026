@@ -1,5 +1,6 @@
 'use server';
 
+import { z } from 'zod';
 import { 
   reportarErrorEnAccion,
   getActividadRepository, 
@@ -9,7 +10,9 @@ import {
   getStorageService,
   getUsuarioRepository,
   getEmailService,
-  getCatalogoRepository
+  getCatalogoRepository,
+  getRegistroQueryService,
+  getTransactionManager
 } from '@/infrastructure/config/container';
 import { GenerarConstanciaPonenteUseCase } from '@/application/use-cases/GenerarConstanciaPonenteUseCase';
 import { EnviarConstanciaPonenteUseCase } from '@/application/use-cases/EnviarConstanciaPonenteUseCase';
@@ -19,7 +22,96 @@ import { EnviarConstanciaParticipanteUseCase } from '@/application/use-cases/Env
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarDetalleActividad } from '@/application/use-cases/ConsultarDetalleActividad';
 import { EliminarInscripcionActividad } from '@/application/use-cases/EliminarInscripcionActividad';
+import { InscribirParticipantesActividad } from '@/application/use-cases/InscribirParticipantesActividad';
+import { ActualizarSeleccionConstancia } from '@/application/use-cases/ActualizarSeleccionConstancia';
+import { ConsultarRegistros } from '@/application/use-cases/ConsultarRegistros';
+import type { ResultadoInscripcionManualDTO } from '@/application/dtos/InscripcionActividadDTO';
 import { RegistroError } from '@/core/errors/RegistroError';
+
+export interface UsuarioInscripcionBusqueda {
+  folioRegistro: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+}
+
+const inscribirParticipantesSchema = z.object({
+  idActividad: z.number().int().positive(),
+  folios: z.array(z.string().trim().min(1).max(15)).min(1).max(50),
+});
+
+const seleccionConstanciaSchema = z.object({
+  idActividad: z.number().int().positive(),
+  folioRegistro: z.string().trim().min(1).max(15).nullable(),
+  incluir: z.boolean(),
+});
+
+export async function buscarUsuariosInscripcionAction(
+  query: string,
+): Promise<{ success: true; data: UsuarioInscripcionBusqueda[] } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+    const termino = query.trim().slice(0, 100);
+    if (termino.length < 2) return { success: true, data: [] };
+    const data = await new ConsultarRegistros(getRegistroQueryService()).buscarUsuarios(termino);
+    return { success: true, data };
+  } catch (error) {
+    reportarErrorEnAccion('Error en buscarUsuariosInscripcionAction', error);
+    return { success: false, error: 'Error al buscar usuarios' };
+  }
+}
+
+export async function inscribirParticipantesAction(
+  idActividad: number,
+  folios: string[],
+): Promise<{ success: true; resultados: ResultadoInscripcionManualDTO[] } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+    const parsed = inscribirParticipantesSchema.safeParse({ idActividad, folios });
+    if (!parsed.success) {
+      return { success: false, error: 'Los datos de la inscripción son inválidos' };
+    }
+
+    const resultados = await new InscribirParticipantesActividad(
+      getActividadRepository(),
+      getTransactionManager(),
+    ).execute(parsed.data.idActividad, parsed.data.folios);
+
+    return { success: true, resultados };
+  } catch (error) {
+    if (error instanceof RegistroError) return { success: false, error: error.message };
+    reportarErrorEnAccion(`Error en inscribirParticipantesAction actividad ${idActividad}`, error);
+    return { success: false, error: 'Ocurrió un error al inscribir a los participantes' };
+  }
+}
+
+export async function actualizarSeleccionConstanciaAction(
+  idActividad: number,
+  folioRegistro: string | null,
+  incluir: boolean,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+    const parsed = seleccionConstanciaSchema.safeParse({ idActividad, folioRegistro, incluir });
+    if (!parsed.success) {
+      return { success: false, error: 'Los datos de la selección son inválidos' };
+    }
+
+    await new ActualizarSeleccionConstancia(getTransactionManager()).execute(
+      parsed.data.idActividad,
+      parsed.data.folioRegistro,
+      parsed.data.incluir,
+    );
+    return { success: true };
+  } catch (error) {
+    if (error instanceof RegistroError) return { success: false, error: error.message };
+    reportarErrorEnAccion(
+      `Error en actualizarSeleccionConstanciaAction actividad ${idActividad} folio ${folioRegistro ?? 'todos'}`,
+      error,
+    );
+    return { success: false, error: 'Ocurrió un error al guardar la selección de constancias' };
+  }
+}
 
 export async function getDetalleActividadAction(idActividadStr: string) {
   try {

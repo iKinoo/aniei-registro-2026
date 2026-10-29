@@ -33,6 +33,8 @@ function load(name, from = root) {
 const { RegistrarUsuario } = load('@/application/use-cases/RegistrarUsuario');
 const { RegistrarGrupoRapido } = load('@/application/use-cases/RegistrarGrupoRapido');
 const { ConfirmarInscripciones } = load('@/application/use-cases/ConfirmarInscripciones');
+const { InscribirParticipantesActividad } = load('@/application/use-cases/InscribirParticipantesActividad');
+const { ActualizarSeleccionConstancia } = load('@/application/use-cases/ActualizarSeleccionConstancia');
 const { AutorizarArchivo } = load('@/application/use-cases/AutorizarArchivo');
 const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
@@ -966,6 +968,114 @@ await test('El reporte XLS de participantes de talleres usa taller, folio, nombr
     participante.correo,
   ]));
   assert.deepEqual([...resultado], [7, 8]);
+});
+
+await test('La inscripción manual de actividades reporta cupo y usuarios inexistentes por participante', async () => {
+  const usuarios = new Map([
+    ['ANI26-0001', { nombre: 'Ana', apellido: 'Pérez' }],
+    ['ANI26-0002', { nombre: 'Luis', apellido: 'Gómez' }],
+  ]);
+  const inscripciones = new Map([['ANI26-0001', []]]);
+  let cupo = 1;
+  const ctx = {
+    usuarioRepo: { buscarPorId: async (folio) => usuarios.get(folio) ?? null },
+    inscripcionRepo: {
+      obtenerIdsPorUsuario: async (folio) => inscripciones.get(folio) ?? [],
+      crearMuchasConValidacion: async (folio, ids) => {
+        if (cupo <= 0) return { ok: [], sinCupo: ids };
+        inscripciones.set(folio, [...(inscripciones.get(folio) ?? []), ...ids]);
+        cupo -= 1;
+        return { ok: ids, sinCupo: [] };
+      },
+    },
+  };
+  const caso = new InscribirParticipantesActividad(
+    { obtenerPorId: async () => ({ idActividad: 18, nombre: 'Taller' }) },
+    { run: async (fn) => fn(ctx) },
+  );
+
+  const resultados = await caso.execute(18, ['ANI26-0001', 'ANI26-0002', 'ANI26-0001', 'ANI26-9999']);
+  assert.deepEqual(resultados.map((resultado) => [resultado.folioRegistro, resultado.exito]), [
+    ['ANI26-0001', true],
+    ['ANI26-0002', false],
+    ['ANI26-9999', false],
+  ]);
+  assert.match(resultados[1].error, /cupo/i);
+  assert.match(resultados[2].error, /no existe/i);
+});
+
+await test('La inscripción manual rechaza duplicados sin intentar escribir la inscripción', async () => {
+  const ctx = {
+    usuarioRepo: { buscarPorId: async () => ({ nombre: 'Ana', apellido: 'Pérez' }) },
+    inscripcionRepo: {
+      obtenerIdsPorUsuario: async () => [18],
+      crearMuchasConValidacion: async () => assert.fail('No debe intentar inscribir un duplicado'),
+    },
+  };
+  const caso = new InscribirParticipantesActividad(
+    { obtenerPorId: async (id) => (id === 18 ? { idActividad: 18, nombre: 'Taller' } : null) },
+    { run: async (fn) => fn(ctx) },
+  );
+
+  const [resultado] = await caso.execute(18, ['ANI26-0001']);
+  assert.equal(resultado.exito, false);
+  assert.match(resultado.error, /ya está inscrito/i);
+  await assert.rejects(caso.execute(99, ['ANI26-0001']), /Actividad no encontrada/);
+});
+
+await test('La selección de constancias se guarda por participante y en bloque', async () => {
+  const llamadas = [];
+  const ctx = {
+    inscripcionRepo: {
+      actualizarInclusionConstancia: async (idActividad, folioRegistro, incluir) => {
+        llamadas.push({ tipo: 'individual', idActividad, folioRegistro, incluir });
+      },
+      actualizarInclusionConstanciaMasiva: async (idActividad, incluir) => {
+        llamadas.push({ tipo: 'masiva', idActividad, incluir });
+      },
+    },
+  };
+  const caso = new ActualizarSeleccionConstancia({ run: async (fn) => fn(ctx) });
+
+  await caso.execute(18, 'ANI26-0001', false);
+  await caso.execute(18, null, true);
+
+  assert.deepEqual(llamadas, [
+    { tipo: 'individual', idActividad: 18, folioRegistro: 'ANI26-0001', incluir: false },
+    { tipo: 'masiva', idActividad: 18, incluir: true },
+  ]);
+  await assert.rejects(caso.execute(0, 'ANI26-0001', true), /actividad no es válida/i);
+});
+
+await test('La consulta de inscritos expone la selección persistente de constancias', async () => {
+  const repo = new PrismaInscripcionActividadRepository({
+    inscripcion_actividades: {
+      findMany: async () => [{
+        usuarios: { folio_registro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com' },
+        fecha_inscripcion: new Date('2026-10-29'),
+        url_constancia: null,
+        incluir_en_constancia: false,
+      }],
+    },
+  });
+
+  const [inscrito] = await repo.obtenerPorActividad(18);
+  assert.equal(inscrito.incluirEnConstancia, false);
+});
+
+await test('La búsqueda administrativa de usuarios también encuentra por folio', async () => {
+  let where;
+  const servicio = new PrismaRegistroQueryService({
+    usuarios: {
+      findMany: async (argumentos) => {
+        where = argumentos.where;
+        return [];
+      },
+    },
+  });
+
+  await servicio.buscarUsuarios('ANI26-0001');
+  assert.ok(where.OR.some((condicion) => condicion.folio_registro?.contains === 'ANI26-0001'));
 });
 
 fs.rmSync(dirExport, { recursive: true, force: true });

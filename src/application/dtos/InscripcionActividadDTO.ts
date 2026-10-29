@@ -5,3 +5,9 @@ export interface InscripcionActividadDTO {
   fechaInscripcion: string;
   urlConstancia?: string | null;
 }
+
+export interface ResultadoInscripcionManualDTO {
+  folioRegistro: string;
+  exito: boolean;
+  error?: string;
+}

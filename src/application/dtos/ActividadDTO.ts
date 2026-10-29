@@ -14,6 +14,7 @@ export interface InscritoDTO {
   correo: string;
   fechaInscripcion: Date | null;
   urlConstancia?: string | null;
+  incluirEnConstancia: boolean;
 }
 
 /** Relación ponente-actividad sin agrupar (una fila por vínculo) */

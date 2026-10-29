@@ -1273,14 +1273,14 @@ classDiagram
 
 ### 13.1 Visión General
 
-El sistema permite la **inscripción a actividades** del congreso (talleres, cursos, conferencias) tanto en el flujo de registro individual (`actividadesIds` en `RegistroUsuarioDTO`) como desde `/actividades/checkout` para usuarios ya registrados. El CPanel permite CRUD de actividades y gestión de **ponentes**.
+El sistema permite la **inscripción a actividades** del congreso (talleres, cursos, conferencias) tanto en el flujo de registro individual (`actividadesIds` en `RegistroUsuarioDTO`) como desde `/actividades/checkout` para usuarios ya registrados. El CPanel permite CRUD de actividades, gestión de **ponentes** e **inscripción manual de usuarios** desde el detalle de cada actividad.
 
 ### 13.2 Modelo de Datos (Prisma `src/prisma/schema.prisma:32`)
 
 ```
 actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo_actividad, id_institucion_sede, id_sala, costo)
 ├── tipo_actividad (id_tipo_actividad, clave, descripcion, maneja_equipos, genera_constancia_participante)
-├── inscripcion_actividades (id_inscripcion, folio_registro, id_actividad, fecha_inscripcion, url_constancia) UNIQUE(folio_registro, id_actividad)
+├── inscripcion_actividades (id_inscripcion, folio_registro, id_actividad, fecha_inscripcion, url_constancia, incluir_en_constancia) UNIQUE(folio_registro, id_actividad)
 ├── actividad_ponentes (id_actividad, folio_registro_ponente, rol, url_constancia) PK(id_actividad, folio_registro_ponente) → usuarios
 ├── asistencia_actividades (id_asistencia, folio_registro, id_actividad, fecha_hora_marcaje) UNIQUE(folio_registro, id_actividad)
 └── equipos / equipo_integrantes (para actividades con manejaEquipos)
@@ -1299,7 +1299,7 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 | Puerto                              | Responsabilidad                                        |
 |-------------------------------------|--------------------------------------------------------|
 | `IActividadRepository`              | CRUD de actividades + listado de tipos + DTO con `cupoOcupado` y `ponentes` |
-| `IInscripcionActividadRepository`   | `crearMuchas`, `crearMuchasConValidacion` (FOR UPDATE), `obtenerPorActividad`, `obtenerIdsPorUsuario`, `actualizarUrlConstancia` |
+| `IInscripcionActividadRepository`   | `crearMuchas`, `crearMuchasConValidacion` (FOR UPDATE), `obtenerPorActividad`, `obtenerIdsPorUsuario`, `actualizarUrlConstancia`, `actualizarInclusionConstancia` |
 | `IPonentesRepository`               | Gestión de ponentes por actividad                      |
 
 ### 13.5 Casos de Uso de Actividades
@@ -1307,6 +1307,7 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 | Caso de Uso                          | Descripción                                            |
 |--------------------------------------|--------------------------------------------------------|
 | `GestionarActividades`               | CRUD de actividades desde CPanel                       |
+| `InscribirParticipantesActividad`    | Inscripción manual de usuarios con validación de cupo  |
 | `GenerarConstanciaParticipanteUseCase` | Genera PDF de constancia de participación             |
 | `GenerarConstanciaPonenteUseCase`    | Genera PDF de constancia de ponencia                   |
 | `EnviarConstanciaParticipanteUseCase` | Envía constancia de participación por email            |
@@ -1316,6 +1317,8 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 
 - **Flujo individual:** `RegistroUsuarioDTO.actividadesIds?: number[]` → `RegistrarUsuario` llama `inscripcionRepo.crearMuchasConValidacion(folio, ids)` (`src/application/use-cases/RegistrarUsuario.ts:118`).
 - **Flujo checkout:** `/actividades/checkout` para usuarios ya registrados (requiere auth vía `proxy.ts`).
+- **Flujo manual (CPanel):** `/cpanel/actividades/[id]` → `InscribirParticipantesActividad` busca usuarios registrados por nombre, correo o folio y los inscribe sin registrar pago; el cupo se valida en la misma transacción con `crearMuchasConValidacion`.
+- **Selección persistente de constancias:** `inscripcion_actividades.incluir_en_constancia` guarda los checkboxes del detalle de actividad mediante `ActualizarSeleccionConstancia`; por defecto toda inscripción queda incluida.
 - **Validación de cupo atómica** (`src/infrastructure/repositories/PrismaInscripcionActividadRepository.ts:59`): por cada `idActividad` abre transacción, `SELECT cupo_maximo FROM actividades WHERE id_actividad=$1 FOR UPDATE` (bloqueo pesimista), `COUNT(*) FROM inscripcion_actividades WHERE id_actividad=$1`, si `count >= cupo_maximo` → `SIN_CUPO`, sino `INSERT`. Retorna `{ok, sinCupo}`.
 - Costo de actividad (`actividades.costo`) informativo; el monto pagado sigue siendo el del `depositos` del evento principal.
 
@@ -1370,7 +1373,7 @@ El CPanel (`/cpanel`) es dashboard protegido (`proxy.ts:37` requiere `ADMIN`):
 | `/cpanel/usuarios`         | Gestión de usuarios: búsqueda, paginación y acceso a grupos |
 | `/cpanel/usuarios/grupos`  | Grupos registrados: miembros, responsable, depósito y comprobante firmado |
 | `/cpanel/actividades`      | CRUD de actividades                                        |
-| `/cpanel/actividades/[id]` | Detalle de actividad + gestión de ponentes                 |
+| `/cpanel/actividades/[id]` | Detalle de actividad + ponentes + inscripción manual        |
 | `/cpanel/configuracion`    | Precios escalonados (`GestionarPrecios`)                   |
 | `/cpanel/usuarios/[folio]` | Detalle de depósitos del usuario                          |
 
@@ -1800,7 +1803,7 @@ graph LR
 | `TipoActividad` (cat) | `tipo_actividad`       |                                              |
 | `PrecioInscripcion`   | `precios_inscripcion`  | `fecha_limite, costo, costo_miembro, orden, activo` |
 | `Actividad`            | `actividades`          | `costo, cupo_maximo, fecha_inicio/fin`       |
-| `InscripcionActividad` | `inscripcion_actividades` | `folio_registro, id_actividad, url_constancia` UNIQUE |
+| `InscripcionActividad` | `inscripcion_actividades` | `folio_registro, id_actividad, url_constancia, incluir_en_constancia` UNIQUE |
 | `Ponente`              | `actividad_ponentes`   | `id_actividad, folio_registro_ponente` PK compuesta |
 | `Cargo`                | `cargos`               | Existe en BD pero no expuesto por catálogo actualmente |
 
@@ -1851,7 +1854,7 @@ NEXT_PUBLIC_BASE_URL="https://aniei-registro-2026.vercel.app" # para QR de grupo
 | `/cpanel/usuarios` | `app/cpanel/usuarios/page.tsx` | `ADMIN` | Gestión de usuarios |
 | `/cpanel/usuarios/grupos` | `app/cpanel/usuarios/grupos/page.tsx` | `ADMIN` | Grupos, miembros, responsable y depósito |
 | `/cpanel/actividades` | `app/cpanel/actividades/page.tsx` | `ADMIN` | CRUD actividades |
-| `/cpanel/actividades/[id]` | `app/cpanel/actividades/[id]/page.tsx` | `ADMIN` | Detalle + ponentes |
+| `/cpanel/actividades/[id]` | `app/cpanel/actividades/[id]/page.tsx` | `ADMIN` | Detalle + ponentes + inscripción manual |
 | `/cpanel/configuracion` | `app/cpanel/configuracion/page.tsx` | `ADMIN` | Precios |
 | `/cpanel/usuarios/[folio]` | `app/cpanel/usuarios/[folio]/page.tsx` | `ADMIN` | Depósitos usuario |
 | `/constancia/[folio]` | `app/constancia/[folio]/page.tsx` | No | Vista constancia |

@@ -105,7 +105,7 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
     const q = query.trim();
     if (q.length < 2) return [];
     const rows = await this.prisma.usuarios.findMany({
-      where: { OR: [{ nombre: { contains: q } }, { apellido: { contains: q } }, { correo: { contains: q } }] },
+      where: { OR: [{ folio_registro: { contains: q } }, { nombre: { contains: q } }, { apellido: { contains: q } }, { correo: { contains: q } }] },
       select: { folio_registro: true, nombre: true, apellido: true, correo: true },
       take: 10, orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
     });

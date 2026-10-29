@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ActividadDTO, PonenteDTO, InscritoDTO } from '@/application/dtos/ActividadDTO';
@@ -12,12 +12,14 @@ import {
   enviarConstanciaParticipanteAction,
   generarConstanciaParticipanteBatchAction,
   generarListaParticipantesPdfAction,
-  eliminarInscripcionAction
+  eliminarInscripcionAction,
+  actualizarSeleccionConstanciaAction
 } from './actions';
 import { obtenerUrlArchivoAction } from '@/app/cpanel/actions';
 import { extraerRutaArchivo } from '@/shared/utils/archivos';
 import { ActividadModal } from '../ActividadModal';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
+import InscribirParticipantesModal from './InscribirParticipantesModal';
 
 interface Props {
   actividad: ActividadDTO;
@@ -34,22 +36,41 @@ const EditIcon = () => (
   </svg>
 );
 
+const PlusIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
+
 export default function DetalleActividadClient({ actividad, nombreTipo, ponentes, inscritos, tiposActividad, instituciones }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [loadingGenerar, setLoadingGenerar] = useState<string | null>(null);
   const [loadingSend, setLoadingSend] = useState<string | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isInscribirOpen, setIsInscribirOpen] = useState(false);
 
   const manejaConstanciasParticipantes = actividad.tipoActividad?.generaConstanciaParticipante ?? false;
   const [selectedInscritos, setSelectedInscritos] = useState<Set<string>>(
-    new Set(manejaConstanciasParticipantes ? inscritos.map(i => i.folioRegistro) : [])
+    new Set(manejaConstanciasParticipantes
+      ? inscritos.filter(i => i.incluirEnConstancia).map(i => i.folioRegistro)
+      : [])
   );
+  const [guardandoSeleccion, setGuardandoSeleccion] = useState<Set<string>>(new Set());
+  const [guardandoSeleccionMasiva, setGuardandoSeleccionMasiva] = useState(false);
   const [loadingBatch, setLoadingBatch] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [abriendoConstancia, setAbriendoConstancia] = useState<string | null>(null);
   const [inscritoAEliminar, setInscritoAEliminar] = useState<InscritoDTO | null>(null);
   const [eliminandoInscripcion, setEliminandoInscripcion] = useState(false);
+
+  useEffect(() => {
+    setSelectedInscritos(new Set(
+      manejaConstanciasParticipantes
+        ? inscritos.filter(i => i.incluirEnConstancia).map(i => i.folioRegistro)
+        : []
+    ));
+  }, [inscritos, manejaConstanciasParticipantes]);
 
   const handleAbrirConstancia = async (valor: string) => {
     const ruta = extraerRutaArchivo(valor);
@@ -67,16 +88,67 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     startTransition(() => router.refresh());
   }, [router]);
 
-  const toggleSeleccionInscrito = (id: string) => {
-    const next = new Set(selectedInscritos);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedInscritos(next);
+  const toggleSeleccionInscrito = (folioRegistro: string) => {
+    if (guardandoSeleccion.has(folioRegistro) || guardandoSeleccionMasiva) return;
+
+    const incluir = !selectedInscritos.has(folioRegistro);
+    const siguiente = new Set(selectedInscritos);
+    if (incluir) siguiente.add(folioRegistro);
+    else siguiente.delete(folioRegistro);
+
+    const restaurar = () => {
+      setSelectedInscritos(prev => {
+        const restaurado = new Set(prev);
+        if (incluir) restaurado.delete(folioRegistro);
+        else restaurado.add(folioRegistro);
+        return restaurado;
+      });
+    };
+
+    setSelectedInscritos(siguiente);
+    setGuardandoSeleccion(prev => new Set(prev).add(folioRegistro));
+
+    actualizarSeleccionConstanciaAction(actividad.idActividad, folioRegistro, incluir)
+      .then((res) => {
+        if (res.success) return;
+        restaurar();
+        alert(res.error);
+      })
+      .catch(() => {
+        restaurar();
+        alert('Error al guardar la selección de constancias');
+      })
+      .finally(() => {
+        setGuardandoSeleccion(prev => {
+          const siguiente = new Set(prev);
+          siguiente.delete(folioRegistro);
+          return siguiente;
+        });
+      });
   };
 
   const toggleSeleccionTodosInscritos = () => {
-    if (selectedInscritos.size === inscritos.length) setSelectedInscritos(new Set());
-    else setSelectedInscritos(new Set(inscritos.map(i => i.folioRegistro)));
+    if (guardandoSeleccionMasiva || guardandoSeleccion.size > 0) return;
+
+    const todosSeleccionados = inscritos.length > 0
+      && inscritos.every(i => selectedInscritos.has(i.folioRegistro));
+    const incluir = !todosSeleccionados;
+    const anterior = new Set(selectedInscritos);
+
+    setSelectedInscritos(incluir ? new Set(inscritos.map(i => i.folioRegistro)) : new Set());
+    setGuardandoSeleccionMasiva(true);
+
+    actualizarSeleccionConstanciaAction(actividad.idActividad, null, incluir)
+      .then((res) => {
+        if (res.success) return;
+        setSelectedInscritos(anterior);
+        alert(res.error);
+      })
+      .catch(() => {
+        setSelectedInscritos(anterior);
+        alert('Error al guardar la selección de constancias');
+      })
+      .finally(() => setGuardandoSeleccionMasiva(false));
   };
 
   const handleGenerarParticipanteBatch = async () => {
@@ -346,8 +418,20 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
         {/* Inscritos */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-lg font-semibold text-slate-800">Participantes Inscritos ({inscritos.length})</h2>
-            <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Participantes Inscritos ({inscritos.length})
+              {(guardandoSeleccionMasiva || guardandoSeleccion.size > 0) && (
+                <span className="ml-2 text-xs font-normal text-slate-400">Guardando selección...</span>
+              )}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsInscribirOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <PlusIcon />
+                Inscribir participantes
+              </button>
               <button
                 onClick={handleDescargarListaPdf}
                 disabled={loadingPdf || inscritos.length === 0}
@@ -373,7 +457,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
               {manejaConstanciasParticipantes && inscritos.length > 0 && (
                 <button
                   onClick={handleGenerarParticipanteBatch}
-                  disabled={loadingBatch || selectedInscritos.size === 0}
+                  disabled={loadingBatch || selectedInscritos.size === 0 || guardandoSeleccionMasiva || guardandoSeleccion.size > 0}
                   className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                 >
                   {loadingBatch ? 'Generando en lote...' : `Generar constancias (${selectedInscritos.size})`}
@@ -390,9 +474,11 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                       <input
                         type="checkbox"
                         className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
-                        checked={selectedInscritos.size === inscritos.length && inscritos.length > 0}
+                        checked={inscritos.length > 0 && inscritos.every(i => selectedInscritos.has(i.folioRegistro))}
                         onChange={toggleSeleccionTodosInscritos}
-                        disabled={loadingBatch}
+                        disabled={loadingBatch || guardandoSeleccionMasiva || guardandoSeleccion.size > 0}
+                        title="Seleccionar a todos para constancias"
+                        aria-label="Seleccionar a todos para constancias"
                       />
                     </th>
                   )}
@@ -422,7 +508,9 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
                             checked={selectedInscritos.has(i.folioRegistro)}
                             onChange={() => toggleSeleccionInscrito(i.folioRegistro)}
-                            disabled={loadingBatch}
+                            disabled={loadingBatch || guardandoSeleccionMasiva || guardandoSeleccion.has(i.folioRegistro)}
+                            title="Incluir en la generación de constancias"
+                            aria-label={`Incluir a ${i.nombre} ${i.apellido} en la generación de constancias`}
                           />
                         </td>
                       )}
@@ -495,6 +583,18 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           instituciones={instituciones}
           onSuccess={refreshPage}
           onClose={() => setIsEditOpen(false)}
+        />
+      )}
+
+      {isInscribirOpen && (
+        <InscribirParticipantesModal
+          idActividad={actividad.idActividad}
+          nombreActividad={actividad.nombre}
+          inscritos={inscritos}
+          cupoMaximo={actividad.cupoMaximo}
+          costo={actividad.costo}
+          onSuccess={refreshPage}
+          onClose={() => setIsInscribirOpen(false)}
         />
       )}
 

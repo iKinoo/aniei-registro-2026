@@ -21,6 +21,7 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
       correo: r.usuarios!.correo,
       fechaInscripcion: r.fecha_inscripcion,
       urlConstancia: r.url_constancia,
+      incluirEnConstancia: r.incluir_en_constancia,
     }));
   }
 
@@ -103,6 +104,27 @@ export class PrismaInscripcionActividadRepository implements IInscripcionActivid
       data: {
         url_constancia: url,
       },
+    });
+  }
+
+  async actualizarInclusionConstancia(idActividad: number, folioRegistro: string, incluir: boolean): Promise<void> {
+    await this.prisma.inscripcion_actividades.update({
+      where: {
+        folio_registro_id_actividad: {
+          folio_registro: folioRegistro,
+          id_actividad: idActividad,
+        },
+      },
+      data: {
+        incluir_en_constancia: incluir,
+      },
+    });
+  }
+
+  async actualizarInclusionConstanciaMasiva(idActividad: number, incluir: boolean): Promise<void> {
+    await this.prisma.inscripcion_actividades.updateMany({
+      where: { id_actividad: idActividad },
+      data: { incluir_en_constancia: incluir },
     });
   }
 }

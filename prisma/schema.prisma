@@ -175,13 +175,14 @@ model facturaciones {
 }
 
 model inscripcion_actividades {
-  id_inscripcion    Int          @id @default(autoincrement())
-  folio_registro    String       @db.VarChar(15)
-  id_actividad      Int?
-  fecha_inscripcion DateTime     @default(now()) @db.DateTime(6)
-  url_constancia    String?      @db.VarChar(500)
-  actividades       actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
-  usuarios          usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
+  id_inscripcion        Int          @id @default(autoincrement())
+  folio_registro        String       @db.VarChar(15)
+  id_actividad          Int?
+  fecha_inscripcion     DateTime     @default(now()) @db.DateTime(6)
+  url_constancia        String?      @db.VarChar(500)
+  incluir_en_constancia Boolean      @default(true)
+  actividades           actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
+  usuarios              usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([folio_registro, id_actividad])
   @@index([folio_registro])

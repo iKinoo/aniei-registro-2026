@@ -20,6 +20,12 @@ export interface IInscripcionActividadRepository {
   /** Actualiza la url de la constancia generada para el usuario participante */
   actualizarUrlConstancia(idActividad: number, folioRegistro: string, url: string): Promise<void>;
 
+  /** Guarda si el participante se incluye en la generación de constancias */
+  actualizarInclusionConstancia(idActividad: number, folioRegistro: string, incluir: boolean): Promise<void>;
+
+  /** Guarda la inclusión de todos los participantes de una actividad */
+  actualizarInclusionConstanciaMasiva(idActividad: number, incluir: boolean): Promise<void>;
+
   /**
    * Elimina la inscripción de un usuario a una actividad.
    * @returns ruta de la constancia generada, o null si no tenía
