@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, generarListaUsuariosXlsAction, obtenerReporteTalleristasAction, generarReporteTalleristasPdfAction, InstitucionReporteItem, TalleristaReporteItem } from './actions';
+import { obtenerReporteInstitucionesAction, generarReporteInstitucionesPdfAction, generarListaUsuariosXlsAction, obtenerReporteTalleristasAction, generarReporteTalleristasPdfAction, generarReporteParticipantesTalleresXlsAction, InstitucionReporteItem, TalleristaReporteItem } from './actions';
 
 const DownloadIcon = () => (
   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,6 +41,7 @@ export function ReportesClient() {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingPdfTalleristas, setLoadingPdfTalleristas] = useState(false);
   const [loadingXls, setLoadingXls] = useState(false);
+  const [loadingXlsParticipantesTalleres, setLoadingXlsParticipantesTalleres] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -89,6 +90,21 @@ export function ReportesClient() {
       }
     } finally {
       setLoadingXls(false);
+    }
+  };
+
+  const handleDescargarXlsParticipantesTalleres = async () => {
+    setLoadingXlsParticipantesTalleres(true);
+    try {
+      const result = await generarReporteParticipantesTalleresXlsAction();
+      if (result.success) {
+        const { base64, nombreArchivo } = result.data;
+        descargarBase64(base64, nombreArchivo, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      } else {
+        alert(result.error);
+      }
+    } finally {
+      setLoadingXlsParticipantesTalleres(false);
     }
   };
 
@@ -328,6 +344,34 @@ export function ReportesClient() {
             </table>
           </div>
         )}
+      </div>
+      {/* Participantes inscritos a talleres */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Participantes Inscritos a Talleres</h3>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Lista agrupada por taller con folio, nombre y correo del participante.
+            </p>
+          </div>
+          <button
+            onClick={handleDescargarXlsParticipantesTalleres}
+            disabled={loadingXlsParticipantesTalleres || loading}
+            className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {loadingXlsParticipantesTalleres ? (
+              <>
+                <SpinnerIcon />
+                Generando...
+              </>
+            ) : (
+              <>
+                <DownloadIcon />
+                Descargar XLS
+              </>
+            )}
+          </button>
+        </div>
       </div>
       {/* Lista total de usuarios */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

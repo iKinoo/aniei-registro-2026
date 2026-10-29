@@ -1,4 +1,4 @@
-import type { UsuarioConsultaDTO, DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem, TalleristaReporteItem } from '../dtos/ConsultaRegistroDTO';
+import type { UsuarioConsultaDTO, DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem, TalleristaReporteItem, ParticipanteTallerReporteItem } from '../dtos/ConsultaRegistroDTO';
 import type { GrupoForAdminDTO } from '../dtos/GrupoForAdminDTO';
 
 export interface IRegistroQueryService {
@@ -9,4 +9,5 @@ export interface IRegistroQueryService {
   buscarUsuarios(query: string): Promise<Array<Pick<UsuarioConsultaDTO, 'folioRegistro' | 'nombre' | 'apellido' | 'correo'>>>;
   obtenerReporteInstituciones(): Promise<InstitucionReporteItem[]>;
   obtenerReporteTalleristas(): Promise<TalleristaReporteItem[]>;
+  obtenerReporteParticipantesTalleres(): Promise<ParticipanteTallerReporteItem[]>;
 }

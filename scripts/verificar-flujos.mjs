@@ -38,6 +38,7 @@ const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
 const { GestionarUsuarios } = load('@/application/use-cases/GestionarUsuarios');
 const { DescargarConstanciasTalleristas } = load('@/application/use-cases/DescargarConstanciasTalleristas');
+const { GenerarReporteParticipantesTalleresXls } = load('@/application/use-cases/GenerarReporteParticipantesTalleresXls');
 const { PrismaUsuarioRepository } = load('@/infrastructure/repositories/PrismaUsuarioRepository');
 const { PrismaAdminQueryService } = load('@/infrastructure/services/PrismaAdminQueryService');
 const { PrismaRegistroQueryService } = load('@/infrastructure/services/PrismaRegistroQueryService');
@@ -932,6 +933,39 @@ await test('El ZIP de constancias no se genera si no hay talleres con tallerista
   ).ejecutar();
 
   assert.equal(resultado, null);
+});
+
+await test('El reporte XLS de participantes de talleres usa taller, folio, nombre y correo', async () => {
+  const participantes = [
+    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0002', nombreParticipante: 'Luis Gómez', correo: 'luis@example.com' },
+    { idActividad: 2, nombreTaller: 'Taller B', folioRegistro: 'ANI26-0003', nombreParticipante: 'Marta Ruiz', correo: 'marta@example.com' },
+    { idActividad: 1, nombreTaller: 'Taller A', folioRegistro: 'ANI26-0001', nombreParticipante: 'Ana Pérez', correo: 'ana@example.com' },
+  ];
+  let hoja;
+  const resultado = await new GenerarReporteParticipantesTalleresXls(
+    { obtenerReporteParticipantesTalleres: async () => participantes },
+    {
+      generarHoja: async (recibida) => {
+        hoja = recibida;
+        return new Uint8Array([7, 8]);
+      },
+    },
+  ).generar();
+
+  assert.equal(hoja.nombre, 'Participantes por taller');
+  assert.deepEqual(hoja.columnas.map((columna) => columna.titulo), [
+    'Taller',
+    'Folio del participante',
+    'Nombre del participante',
+    'Correo electrónico',
+  ]);
+  assert.deepEqual(hoja.filas, participantes.map((participante) => [
+    participante.nombreTaller,
+    participante.folioRegistro,
+    participante.nombreParticipante,
+    participante.correo,
+  ]));
+  assert.deepEqual([...resultado], [7, 8]);
 });
 
 fs.rmSync(dirExport, { recursive: true, force: true });

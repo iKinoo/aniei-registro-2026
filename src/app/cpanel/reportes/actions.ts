@@ -5,6 +5,7 @@ import { reportarErrorEnAccion, getRegistroQueryService, getPdfService, getAdmin
 import { GenerarReporteInstituciones } from '@/application/use-cases/GenerarReporteInstituciones';
 import { GenerarReporteTalleristas } from '@/application/use-cases/GenerarReporteTalleristas';
 import { GenerarListaUsuariosXls } from '@/application/use-cases/GenerarListaUsuariosXls';
+import { GenerarReporteParticipantesTalleresXls } from '@/application/use-cases/GenerarReporteParticipantesTalleresXls';
 import type { InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 
 export type { InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
@@ -45,6 +46,19 @@ export async function generarListaUsuariosXlsAction(): Promise<
   } catch (error) {
     reportarErrorEnAccion('Error al generar lista de usuarios en Excel', error);
     return { success: false, error: 'Error al generar la lista de usuarios' };
+  }
+}
+
+export async function generarReporteParticipantesTalleresXlsAction(): Promise<
+  { success: true; data: { base64: string; nombreArchivo: string } } | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+    const xls = await new GenerarReporteParticipantesTalleresXls(getRegistroQueryService(), getExcelService()).generar();
+    return { success: true, data: { base64: Buffer.from(xls).toString('base64'), nombreArchivo: 'participantes_inscritos_talleres.xlsx' } };
+  } catch (error) {
+    reportarErrorEnAccion('Error al generar reporte de participantes inscritos a talleres', error);
+    return { success: false, error: 'Error al generar el reporte de participantes inscritos a talleres' };
   }
 }
 

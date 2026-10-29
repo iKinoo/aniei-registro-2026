@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@/generated/prisma/client';
 import type { IRegistroQueryService } from '@/application/ports/IRegistroQueryService';
-import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem, TalleristaReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
+import type { DetalleUsuarioDTO, PerfilDTO, InstitucionReporteItem, TalleristaReporteItem, ParticipanteTallerReporteItem } from '@/application/dtos/ConsultaRegistroDTO';
 import type { GrupoForAdminDTO } from '@/application/dtos/GrupoForAdminDTO';
 import { mapUsuarioConsulta, mapDepositoHistorial } from '@/infrastructure/mappers/ConsultaRegistroMapper';
 import { mapGrupoAdmin, GRUPO_ADMIN_INCLUDE } from '@/infrastructure/mappers/GrupoAdminMapper';
@@ -149,5 +149,31 @@ export class PrismaRegistroQueryService implements IRegistroQueryService {
       sede: row.actividades.instituciones?.nombre ?? null,
       sala: row.actividades.id_sala ?? null,
     }));
+  }
+
+  async obtenerReporteParticipantesTalleres(): Promise<ParticipanteTallerReporteItem[]> {
+    const rows = await this.prisma.inscripcion_actividades.findMany({
+      where: { actividades: { tipo_actividad: { clave: 'TALLER' }, activo: true } },
+      include: {
+        usuarios: { select: { folio_registro: true, nombre: true, apellido: true, correo: true } },
+        actividades: { select: { id_actividad: true, nombre: true } },
+      },
+      orderBy: [
+        { actividades: { nombre: 'asc' } },
+        { usuarios: { apellido: 'asc' } },
+        { usuarios: { nombre: 'asc' } },
+      ],
+    });
+
+    return rows.flatMap((row) => {
+      if (!row.actividades) return [];
+      return [{
+        idActividad: row.actividades.id_actividad,
+        nombreTaller: row.actividades.nombre,
+        folioRegistro: row.usuarios.folio_registro,
+        nombreParticipante: `${row.usuarios.nombre} ${row.usuarios.apellido}`,
+        correo: row.usuarios.correo,
+      }];
+    });
   }
 }

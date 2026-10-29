@@ -101,3 +101,11 @@ export interface TalleristaReporteItem {
   sede: string | null;
   sala: string | null;
 }
+
+export interface ParticipanteTallerReporteItem {
+  idActividad: number;
+  nombreTaller: string;
+  folioRegistro: string;
+  nombreParticipante: string;
+  correo: string;
+}
