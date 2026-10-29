@@ -1,5 +1,6 @@
 'use server';
 
+import { after } from 'next/server';
 import { z } from 'zod';
 import { 
   reportarErrorEnAccion,
@@ -18,6 +19,7 @@ import { GenerarConstanciaPonenteUseCase } from '@/application/use-cases/Generar
 import { EnviarConstanciaPonenteUseCase } from '@/application/use-cases/EnviarConstanciaPonenteUseCase';
 import { GenerarConstanciaParticipanteUseCase } from '@/application/use-cases/GenerarConstanciaParticipanteUseCase';
 import { EnviarConstanciaParticipanteUseCase } from '@/application/use-cases/EnviarConstanciaParticipanteUseCase';
+import { EnviarConstanciasParticipantesActividad } from '@/application/use-cases/EnviarConstanciasParticipantesActividad';
 
 import { requireAdmin } from '@/shared/auth/requireAdmin';
 import { ConsultarDetalleActividad } from '@/application/use-cases/ConsultarDetalleActividad';
@@ -178,8 +180,8 @@ export async function generarConstanciaParticipanteAction(idActividad: number, f
       getUsuarioRepository()
     );
 
-    const url = await useCase.execute(idActividad, folioRegistro);
-    return { success: true as const, url };
+    const { ruta } = await useCase.execute(idActividad, folioRegistro);
+    return { success: true as const, url: ruta };
   } catch (error) {
     reportarErrorEnAccion('Error en generarConstanciaParticipanteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al generar' };
@@ -193,7 +195,8 @@ export async function enviarConstanciaParticipanteAction(idActividad: number, fo
       getPdfService(),
       getEmailService(),
       getActividadRepository(),
-      getUsuarioRepository()
+      getUsuarioRepository(),
+      getInscripcionActividadRepository(),
     );
 
     await useCase.execute(idActividad, folioRegistro);
@@ -201,6 +204,61 @@ export async function enviarConstanciaParticipanteAction(idActividad: number, fo
   } catch (error) {
     reportarErrorEnAccion('Error en enviarConstanciaParticipanteAction', error);
     return { success: false as const, error: error instanceof Error ? error.message : 'Error al enviar por correo' };
+  }
+}
+
+export async function enviarConstanciasParticipantesAction(idActividad: number): Promise<
+  | { success: true; data: { total: number; garantizadas: number; porGenerar: number } }
+  | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+    if (!Number.isSafeInteger(idActividad) || idActividad <= 0) {
+      return { success: false, error: 'La actividad no es válida' };
+    }
+
+    const generarConstancia = new GenerarConstanciaParticipanteUseCase(
+      getPdfService(),
+      getStorageService(),
+      getActividadRepository(),
+      getInscripcionActividadRepository(),
+      getUsuarioRepository(),
+    );
+    const useCase = new EnviarConstanciasParticipantesActividad(
+      getInscripcionActividadRepository(),
+      getActividadRepository(),
+      generarConstancia,
+      getEmailService(),
+    );
+
+    const resumen = await useCase.preparar(idActividad);
+    after(async () => {
+      try {
+        const resultados = await useCase.enviar(resumen);
+        for (const fallo of resultados.filter((resultado) => !resultado.exito)) {
+          reportarErrorEnAccion(
+            `Error al enviar constancia de la actividad ${idActividad} al folio ${fallo.folioRegistro}`,
+            new Error(fallo.error ?? 'Error desconocido'),
+            { folio: fallo.folioRegistro },
+          );
+        }
+      } catch (error) {
+        reportarErrorEnAccion(`Error al enviar constancias de la actividad ${idActividad}`, error);
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        total: resumen.total,
+        garantizadas: resumen.garantizadas,
+        porGenerar: resumen.porGenerar,
+      },
+    };
+  } catch (error) {
+    if (error instanceof RegistroError) return { success: false, error: error.message };
+    reportarErrorEnAccion(`Error en enviarConstanciasParticipantesAction actividad ${idActividad}`, error);
+    return { success: false, error: 'Ocurrió un error al programar el envío de constancias' };
   }
 }
 
@@ -218,11 +276,10 @@ export async function generarConstanciaParticipanteBatchAction(idActividad: numb
     const resultados = [];
     for (const id of folioRegistros) {
       try {
-    await requireAdmin();
-        const url = await useCase.execute(idActividad, id);
-        resultados.push({ folioRegistro: id, success: true, url });
+        const { ruta } = await useCase.execute(idActividad, id);
+        resultados.push({ folioRegistro: id, success: true, url: ruta });
       } catch (e) {
-         resultados.push({ folioRegistro: id, success: false, error: e instanceof Error ? e.message : 'Error desconocido' });
+        resultados.push({ folioRegistro: id, success: false, error: e instanceof Error ? e.message : 'Error desconocido' });
       }
     }
     

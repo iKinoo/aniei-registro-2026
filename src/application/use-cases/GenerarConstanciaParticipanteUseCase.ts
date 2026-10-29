@@ -14,7 +14,7 @@ export class GenerarConstanciaParticipanteUseCase {
     private readonly usuarioRepo: IUsuarioRepository,
   ) {}
 
-  async execute(idActividad: number, folioRegistro: string): Promise<string> {
+  async execute(idActividad: number, folioRegistro: string): Promise<{ ruta: string; pdf: Uint8Array }> {
     const [actividad, usuario] = await Promise.all([
       this.actividadRepo.obtenerPorId(idActividad),
       this.usuarioRepo.buscarPorId(folioRegistro),
@@ -42,6 +42,6 @@ export class GenerarConstanciaParticipanteUseCase {
 
     await this.inscripcionRepo.actualizarUrlConstancia(idActividad, folioRegistro, ruta);
 
-    return ruta;
+    return { ruta, pdf: pdfUint8Array };
   }
 }

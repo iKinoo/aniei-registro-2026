@@ -20,6 +20,7 @@ import { extraerRutaArchivo } from '@/shared/utils/archivos';
 import { ActividadModal } from '../ActividadModal';
 import { ConfirmDialog } from '@/app/components/ConfirmDialog';
 import InscribirParticipantesModal from './InscribirParticipantesModal';
+import EnviarConstanciasModal from './EnviarConstanciasModal';
 
 interface Props {
   actividad: ActividadDTO;
@@ -49,6 +50,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
   const [loadingSend, setLoadingSend] = useState<string | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isInscribirOpen, setIsInscribirOpen] = useState(false);
+  const [isEnviarOpen, setIsEnviarOpen] = useState(false);
 
   const manejaConstanciasParticipantes = actividad.tipoActividad?.generaConstanciaParticipante ?? false;
   const [selectedInscritos, setSelectedInscritos] = useState<Set<string>>(
@@ -71,6 +73,8 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
         : []
     ));
   }, [inscritos, manejaConstanciasParticipantes]);
+
+  const participantesSeleccionados = inscritos.filter((inscrito) => selectedInscritos.has(inscrito.folioRegistro));
 
   const handleAbrirConstancia = async (valor: string) => {
     const ruta = extraerRutaArchivo(valor);
@@ -206,8 +210,12 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
     setLoadingSend(folioRegistro);
     try {
       const res = await enviarConstanciaParticipanteAction(actividad.idActividad, folioRegistro);
-      if (!res.success) alert(res.error || 'Error al enviar por correo');
-      else alert('Constancia enviada correctamente al correo del participante.');
+      if (!res.success) {
+        alert(res.error || 'Error al enviar por correo');
+      } else {
+        alert('Constancia enviada correctamente al correo del participante.');
+        startTransition(() => router.refresh());
+      }
     } finally {
       setLoadingSend(null);
     }
@@ -455,13 +463,22 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                 )}
               </button>
               {manejaConstanciasParticipantes && inscritos.length > 0 && (
-                <button
-                  onClick={handleGenerarParticipanteBatch}
-                  disabled={loadingBatch || selectedInscritos.size === 0 || guardandoSeleccionMasiva || guardandoSeleccion.size > 0}
-                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  {loadingBatch ? 'Generando en lote...' : `Generar constancias (${selectedInscritos.size})`}
-                </button>
+                <>
+                  <button
+                    onClick={handleGenerarParticipanteBatch}
+                    disabled={loadingBatch || selectedInscritos.size === 0 || guardandoSeleccionMasiva || guardandoSeleccion.size > 0}
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {loadingBatch ? 'Generando en lote...' : `Generar constancias (${selectedInscritos.size})`}
+                  </button>
+                  <button
+                    onClick={() => setIsEnviarOpen(true)}
+                    disabled={loadingBatch || participantesSeleccionados.length === 0 || guardandoSeleccionMasiva || guardandoSeleccion.size > 0}
+                    className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  >
+                    Enviar constancias ({participantesSeleccionados.length})
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -486,7 +503,10 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                   <th className="px-6 py-3 font-semibold">Correo</th>
                   <th className="px-6 py-3 font-semibold">Fecha de Inscripción</th>
                   {manejaConstanciasParticipantes && (
-                    <th className="px-6 py-3 font-semibold text-right">Constancia</th>
+                    <>
+                      <th className="px-6 py-3 font-semibold text-right">Constancia</th>
+                      <th className="px-6 py-3 font-semibold text-center">Correo enviado</th>
+                    </>
                   )}
                   <th className="px-6 py-3 font-semibold text-right">Acciones</th>
                 </tr>
@@ -494,7 +514,7 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
               <tbody className="divide-y divide-slate-100">
                 {inscritos.length === 0 ? (
                   <tr>
-                    <td colSpan={manejaConstanciasParticipantes ? 6 : 4} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={manejaConstanciasParticipantes ? 7 : 4} className="px-6 py-8 text-center text-slate-500">
                       Ningún participante inscrito aún.
                     </td>
                   </tr>
@@ -553,6 +573,19 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
                           </div>
                         </td>
                       )}
+                      {manejaConstanciasParticipantes && (
+                        <td className="px-6 py-3 text-center align-middle">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              i.correoEnviado
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}
+                          >
+                            {i.correoEnviado ? 'Sí' : 'No'}
+                          </span>
+                        </td>
+                      )}
                       <td className="px-6 py-3 text-right">
                         <button
                           onClick={() => setInscritoAEliminar(i)}
@@ -595,6 +628,15 @@ export default function DetalleActividadClient({ actividad, nombreTipo, ponentes
           costo={actividad.costo}
           onSuccess={refreshPage}
           onClose={() => setIsInscribirOpen(false)}
+        />
+      )}
+
+      {isEnviarOpen && (
+        <EnviarConstanciasModal
+          idActividad={actividad.idActividad}
+          nombreActividad={actividad.nombre}
+          participantes={participantesSeleccionados}
+          onClose={() => setIsEnviarOpen(false)}
         />
       )}
 

@@ -1,6 +1,7 @@
 import { IPdfService } from '@/application/ports/IPdfService';
 import { IEmailService } from '@/application/ports/IEmailService';
 import { IActividadRepository } from '@/application/ports/IActividadRepository';
+import { IInscripcionActividadRepository } from '@/application/ports/IInscripcionActividadRepository';
 import { IUsuarioRepository } from '@/application/ports/IUsuarioRepository';
 import { contenidoPorTipoActividad } from '@/application/services/RedactorConstancia';
 
@@ -10,6 +11,7 @@ export class EnviarConstanciaParticipanteUseCase {
     private readonly emailService: IEmailService,
     private readonly actividadRepo: IActividadRepository,
     private readonly usuarioRepo: IUsuarioRepository,
+    private readonly inscripcionRepo: IInscripcionActividadRepository,
   ) {}
 
   async execute(idActividad: number, folioRegistro: string): Promise<void> {
@@ -41,5 +43,6 @@ export class EnviarConstanciaParticipanteUseCase {
       `${usuario.nombre} ${usuario.apellido}`,
       actividad.nombre
     );
+    await this.inscripcionRepo.marcarCorreoEnviado(idActividad, folioRegistro);
   }
 }

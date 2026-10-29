@@ -15,6 +15,7 @@ export interface InscritoDTO {
   fechaInscripcion: Date | null;
   urlConstancia?: string | null;
   incluirEnConstancia: boolean;
+  correoEnviado: boolean;
 }
 
 /** Relación ponente-actividad sin agrupar (una fila por vínculo) */
@@ -43,6 +44,15 @@ export interface ResultadoEnvioListasDTO {
   nombre: string;
   correo: string;
   actividades: number;
+  exito: boolean;
+  error?: string;
+}
+
+/** Resultado del envío de constancia a un participante */
+export interface ResultadoEnvioConstanciaDTO {
+  folioRegistro: string;
+  nombre: string;
+  correo: string;
   exito: boolean;
   error?: string;
 }

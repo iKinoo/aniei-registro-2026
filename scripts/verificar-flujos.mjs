@@ -35,6 +35,8 @@ const { RegistrarGrupoRapido } = load('@/application/use-cases/RegistrarGrupoRap
 const { ConfirmarInscripciones } = load('@/application/use-cases/ConfirmarInscripciones');
 const { InscribirParticipantesActividad } = load('@/application/use-cases/InscribirParticipantesActividad');
 const { ActualizarSeleccionConstancia } = load('@/application/use-cases/ActualizarSeleccionConstancia');
+const { EnviarConstanciasParticipantesActividad } = load('@/application/use-cases/EnviarConstanciasParticipantesActividad');
+const { EnviarConstanciaParticipanteUseCase } = load('@/application/use-cases/EnviarConstanciaParticipanteUseCase');
 const { AutorizarArchivo } = load('@/application/use-cases/AutorizarArchivo');
 const { DescargarArchivo } = load('@/application/use-cases/DescargarArchivo');
 const { ValidarCredenciales } = load('@/application/use-cases/ValidarCredenciales');
@@ -1047,6 +1049,97 @@ await test('La selección de constancias se guarda por participante y en bloque'
   await assert.rejects(caso.execute(0, 'ANI26-0001', true), /actividad no es válida/i);
 });
 
+await test('El envío de constancias omite no seleccionados y continúa ante fallos', async () => {
+  const llamadas = [];
+  const generador = {
+    execute: async (idActividad, folioRegistro) => {
+      llamadas.push(['generar', idActividad, folioRegistro]);
+      if (folioRegistro === 'ANI26-0002') throw new Error('PDF');
+      return { ruta: `constancias/${folioRegistro}.pdf`, pdf: new Uint8Array([idActividad]) };
+    },
+  };
+  const email = {
+    enviarConstanciaParticipante: async (correo, pdf, nombre, actividad) => {
+      llamadas.push(['enviar', correo, nombre, actividad, [...pdf]]);
+    },
+  };
+  const inscripciones = {
+    obtenerPorActividad: async () => [
+      { folioRegistro: 'ANI26-0001', nombre: 'Ana', apellido: 'Pérez', correo: 'ana@example.com', fechaInscripcion: null, incluirEnConstancia: true, correoEnviado: false, urlConstancia: 'constancias/ANA.pdf' },
+      { folioRegistro: 'ANI26-0002', nombre: 'Luis', apellido: 'Gómez', correo: 'luis@example.com', fechaInscripcion: null, incluirEnConstancia: true, correoEnviado: false, urlConstancia: null },
+      { folioRegistro: 'ANI26-0003', nombre: 'Marta', apellido: 'Ruiz', correo: 'marta@example.com', fechaInscripcion: null, incluirEnConstancia: false, correoEnviado: false, urlConstancia: null },
+    ],
+    marcarCorreoEnviado: async (idActividad, folioRegistro) => {
+      llamadas.push(['marcar', idActividad, folioRegistro]);
+    },
+  };
+  const caso = new EnviarConstanciasParticipantesActividad(
+    inscripciones,
+    { obtenerPorId: async () => ({ idActividad: 18, nombre: 'Taller' }) },
+    generador,
+    email,
+  );
+
+  const resumen = await caso.preparar(18);
+  assert.equal(resumen.total, 2);
+  assert.equal(resumen.garantizadas, 1);
+  assert.equal(resumen.porGenerar, 1);
+
+  const resultados = await caso.enviar(resumen);
+  assert.deepEqual(resultados.map((resultado) => [resultado.folioRegistro, resultado.exito]), [
+    ['ANI26-0001', true],
+    ['ANI26-0002', false],
+  ]);
+  assert.match(resultados[1].error, /PDF/);
+  assert.deepEqual(llamadas, [
+    ['generar', 18, 'ANI26-0001'],
+    ['enviar', 'ana@example.com', 'Ana Pérez', 'Taller', [18]],
+    ['marcar', 18, 'ANI26-0001'],
+    ['generar', 18, 'ANI26-0002'],
+  ]);
+
+  const sinSeleccion = new EnviarConstanciasParticipantesActividad(
+    { obtenerPorActividad: async () => [] },
+    { obtenerPorId: async () => ({ idActividad: 18, nombre: 'Taller' }) },
+    generador,
+    email,
+  );
+  await assert.rejects(sinSeleccion.preparar(18), /No hay participantes seleccionados/);
+});
+
+await test('El envío individual marca el correo como enviado después del SMTP', async () => {
+  let marcado = false;
+  const caso = new EnviarConstanciaParticipanteUseCase(
+    { generarConstancia: async () => new Uint8Array([1]) },
+    {
+      enviarConstanciaParticipante: async () => {
+        assert.equal(marcado, false);
+      },
+    },
+    {
+      obtenerPorId: async () => ({ idActividad: 18, nombre: 'Taller', idTipoActividad: 1 }),
+      obtenerTiposActividad: async () => [],
+    },
+    {
+      buscarPorId: async () => ({
+        nombre: 'Ana',
+        apellido: 'Pérez',
+        correo: { toString: () => 'ana@example.com' },
+      }),
+    },
+    {
+      marcarCorreoEnviado: async (idActividad, folioRegistro) => {
+        marcado = true;
+        assert.equal(idActividad, 18);
+        assert.equal(folioRegistro, 'ANI26-0001');
+      },
+    },
+  );
+
+  await caso.execute(18, 'ANI26-0001');
+  assert.equal(marcado, true);
+});
+
 await test('La consulta de inscritos expone la selección persistente de constancias', async () => {
   const repo = new PrismaInscripcionActividadRepository({
     inscripcion_actividades: {
@@ -1055,12 +1148,14 @@ await test('La consulta de inscritos expone la selección persistente de constan
         fecha_inscripcion: new Date('2026-10-29'),
         url_constancia: null,
         incluir_en_constancia: false,
+        correo_enviado: true,
       }],
     },
   });
 
   const [inscrito] = await repo.obtenerPorActividad(18);
   assert.equal(inscrito.incluirEnConstancia, false);
+  assert.equal(inscrito.correoEnviado, true);
 });
 
 await test('La búsqueda administrativa de usuarios también encuentra por folio', async () => {

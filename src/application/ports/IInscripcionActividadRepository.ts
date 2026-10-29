@@ -26,6 +26,9 @@ export interface IInscripcionActividadRepository {
   /** Guarda la inclusión de todos los participantes de una actividad */
   actualizarInclusionConstanciaMasiva(idActividad: number, incluir: boolean): Promise<void>;
 
+  /** Marca que la constancia del participante fue enviada por correo al menos una vez */
+  marcarCorreoEnviado(idActividad: number, folioRegistro: string): Promise<void>;
+
   /**
    * Elimina la inscripción de un usuario a una actividad.
    * @returns ruta de la constancia generada, o null si no tenía

@@ -1280,7 +1280,7 @@ El sistema permite la **inscripción a actividades** del congreso (talleres, cur
 ```
 actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo_actividad, id_institucion_sede, id_sala, costo)
 ├── tipo_actividad (id_tipo_actividad, clave, descripcion, maneja_equipos, genera_constancia_participante)
-├── inscripcion_actividades (id_inscripcion, folio_registro, id_actividad, fecha_inscripcion, url_constancia, incluir_en_constancia) UNIQUE(folio_registro, id_actividad)
+├── inscripcion_actividades (id_inscripcion, folio_registro, id_actividad, fecha_inscripcion, url_constancia, incluir_en_constancia, correo_enviado) UNIQUE(folio_registro, id_actividad)
 ├── actividad_ponentes (id_actividad, folio_registro_ponente, rol, url_constancia) PK(id_actividad, folio_registro_ponente) → usuarios
 ├── asistencia_actividades (id_asistencia, folio_registro, id_actividad, fecha_hora_marcaje) UNIQUE(folio_registro, id_actividad)
 └── equipos / equipo_integrantes (para actividades con manejaEquipos)
@@ -1299,7 +1299,7 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 | Puerto                              | Responsabilidad                                        |
 |-------------------------------------|--------------------------------------------------------|
 | `IActividadRepository`              | CRUD de actividades + listado de tipos + DTO con `cupoOcupado` y `ponentes` |
-| `IInscripcionActividadRepository`   | `crearMuchas`, `crearMuchasConValidacion` (FOR UPDATE), `obtenerPorActividad`, `obtenerIdsPorUsuario`, `actualizarUrlConstancia`, `actualizarInclusionConstancia` |
+| `IInscripcionActividadRepository`   | `crearMuchas`, `crearMuchasConValidacion` (FOR UPDATE), `obtenerPorActividad`, `obtenerIdsPorUsuario`, `actualizarUrlConstancia`, `actualizarInclusionConstancia`, `marcarCorreoEnviado` |
 | `IPonentesRepository`               | Gestión de ponentes por actividad                      |
 
 ### 13.5 Casos de Uso de Actividades
@@ -1308,6 +1308,7 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 |--------------------------------------|--------------------------------------------------------|
 | `GestionarActividades`               | CRUD de actividades desde CPanel                       |
 | `InscribirParticipantesActividad`    | Inscripción manual de usuarios con validación de cupo  |
+| `EnviarConstanciasParticipantesActividad` | Genera y envía constancias a los participantes seleccionados |
 | `GenerarConstanciaParticipanteUseCase` | Genera PDF de constancia de participación             |
 | `GenerarConstanciaPonenteUseCase`    | Genera PDF de constancia de ponencia                   |
 | `EnviarConstanciaParticipanteUseCase` | Envía constancia de participación por email            |
@@ -1319,6 +1320,8 @@ actividades (id_actividad, nombre, cupo_maximo, fecha_inicio, fecha_fin, id_tipo
 - **Flujo checkout:** `/actividades/checkout` para usuarios ya registrados (requiere auth vía `proxy.ts`).
 - **Flujo manual (CPanel):** `/cpanel/actividades/[id]` → `InscribirParticipantesActividad` busca usuarios registrados por nombre, correo o folio y los inscribe sin registrar pago; el cupo se valida en la misma transacción con `crearMuchasConValidacion`.
 - **Selección persistente de constancias:** `inscripcion_actividades.incluir_en_constancia` guarda los checkboxes del detalle de actividad mediante `ActualizarSeleccionConstancia`; por defecto toda inscripción queda incluida.
+- **Envío masivo asíncrono:** el detalle de actividad muestra el total seleccionado y las constancias ya generadas antes de confirmar. `enviarConstanciasParticipantesAction` prepara el resumen y registra el envío con `after` de Next.js; la generación de PDFs y el SMTP se ejecutan después de responder, sin bloquear al administrador.
+- **Seguimiento de envío:** `inscripcion_actividades.correo_enviado` se marca en `true` únicamente después de que el SMTP acepta la constancia, tanto en el envío individual como en el masivo. El detalle de actividad lo muestra en la columna “Correo enviado”.
 - **Validación de cupo atómica** (`src/infrastructure/repositories/PrismaInscripcionActividadRepository.ts:59`): por cada `idActividad` abre transacción, `SELECT cupo_maximo FROM actividades WHERE id_actividad=$1 FOR UPDATE` (bloqueo pesimista), `COUNT(*) FROM inscripcion_actividades WHERE id_actividad=$1`, si `count >= cupo_maximo` → `SIN_CUPO`, sino `INSERT`. Retorna `{ok, sinCupo}`.
 - Costo de actividad (`actividades.costo`) informativo; el monto pagado sigue siendo el del `depositos` del evento principal.
 
@@ -1803,7 +1806,7 @@ graph LR
 | `TipoActividad` (cat) | `tipo_actividad`       |                                              |
 | `PrecioInscripcion`   | `precios_inscripcion`  | `fecha_limite, costo, costo_miembro, orden, activo` |
 | `Actividad`            | `actividades`          | `costo, cupo_maximo, fecha_inicio/fin`       |
-| `InscripcionActividad` | `inscripcion_actividades` | `folio_registro, id_actividad, url_constancia, incluir_en_constancia` UNIQUE |
+| `InscripcionActividad` | `inscripcion_actividades` | `folio_registro, id_actividad, url_constancia, incluir_en_constancia, correo_enviado` UNIQUE |
 | `Ponente`              | `actividad_ponentes`   | `id_actividad, folio_registro_ponente` PK compuesta |
 | `Cargo`                | `cargos`               | Existe en BD pero no expuesto por catálogo actualmente |
 

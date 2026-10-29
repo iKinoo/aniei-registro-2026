@@ -181,6 +181,7 @@ model inscripcion_actividades {
   fecha_inscripcion     DateTime     @default(now()) @db.DateTime(6)
   url_constancia        String?      @db.VarChar(500)
   incluir_en_constancia Boolean      @default(true)
+  correo_enviado        Boolean      @default(false)
   actividades           actividades? @relation(fields: [id_actividad], references: [id_actividad], onDelete: Cascade, onUpdate: NoAction)
   usuarios              usuarios     @relation(fields: [folio_registro], references: [folio_registro], onDelete: Cascade, onUpdate: NoAction)
 
